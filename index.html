@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.38</title>
+<title>Dương Tú v0.39</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -518,6 +518,23 @@ input,select,button{
   .staffLine{font-size:11px!important}
 }
 
+
+/* v0.39 - Thu hồi phân công nhưng vẫn giữ lịch sử đã làm */
+.withdraw{
+  background:#475569!important;
+  color:#fff!important;
+  border:1px dashed #f59e0b!important;
+}
+.badgeWithdraw{
+  display:inline-block;
+  background:#3f2e13;
+  color:#ffd37b;
+  border:1px solid #f59e0b;
+  border-radius:999px;
+  padding:2px 7px;
+  font-weight:900;
+}
+
 </style>
 </head>
 <body>
@@ -783,14 +800,15 @@ function thongKeNV(ma){
 }
 function dangLam(ma){
   const now=hienTaiAbs();
-  const ds=state.phanCong.filter(pc=>pc.maNV===ma&&pc.batDauAbs<=now&&now<=pc.ketThucAbs);
+  const ds=state.phanCong.filter(pc=>pc.maNV===ma&&!pc.thuHoi&&pc.batDauAbs<=now&&now<=pc.ketThucAbs);
   if(ds.length){const cb=chuyen(ds[0].maChuyen);return {ban:true,text:`Đang làm ${cb?cb.flight:ds[0].maChuyen} | Còn ${Math.round(ds[0].ketThucAbs-now)}'`};}
   return {ban:false,text:"Rảnh"};
 }
 function trung(a,b){return a.maNV===b.maNV&&a.maChuyen!==b.maChuyen&&!(a.ketThucAbs<=b.batDauAbs||a.batDauAbs>=b.ketThucAbs);}
-function soGoc(ma){return state.phanCong.filter(pc=>pc.maChuyen===ma).length;}
+function pcDangHieuLuc(pc){return !pc.thuHoi;}
+function soGoc(ma){return state.phanCong.filter(pc=>pc.maChuyen===ma&&pcDangHieuLuc(pc)).length;}
 function soHieuLuc(ma){
-  const pcs=state.phanCong.filter(pc=>pc.maChuyen===ma); const lay=new Set();
+  const pcs=state.phanCong.filter(pc=>pc.maChuyen===ma&&pcDangHieuLuc(pc)); const lay=new Set();
   pcs.forEach(cu=>{if(state.phanCong.some(moi=>moi.dieuDongTu===ma&&trung(cu,moi)))lay.add(cu.maNV);});
   return pcs.length-lay.size;
 }
@@ -813,7 +831,7 @@ function veHeader(el){
 function veTimelineChuyen(){
   const el=$("timelineChuyenBay"); veHeader(el);
   state.danhSachChuyenBay.filter(cb=>cb.ngay===state.ngayKhaiThac).sort((a,b)=>batDauAbs(a)-batDauAbs(b)).forEach(cb=>{
-    const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma), names=pcs.map(pc=>tenNV(pc.maNV)).join(" | ")||"chưa chọn nhân sự";
+    const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)), names=pcs.map(pc=>tenNV(pc.maNV)).join(" | ")||"chưa chọn nhân sự";
     const mau=mauChuyen(cb.ma), left=viTri(batDauAbs(cb)), width=rong(batDauAbs(cb),ketThucAbs(cb)), sel=cb.ma===chuyenDangChon;
     el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div><div class="tenSau" style="left:${left+width+6}px">${names}</div></div></div>`;
   });
@@ -830,7 +848,12 @@ function veTimelineNhanSu(){
         if(kt>bd)bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"}" style="left:${viTri(bd)}px;width:${rong(bd,kt)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
       });
     }
-    pcs.forEach(pc=>{const cb=chuyen(pc.maChuyen),cut=biDieuDongDi(pc),kt=cut||pc.ketThucAbs,cls=pc.dieuDongTu?"transfer":cut?"cut":"staff",txt=pc.dieuDongTu?`ĐIỀU ĐỘNG ${cb?cb.flight:pc.maChuyen}`:`${cb?cb.flight:pc.maChuyen} - Bãi ${cb?cb.baiDo:""}`;if(kt>pc.batDauAbs)bars+=`<div class="bar staff ${cls}" style="left:${viTri(pc.batDauAbs)}px;width:${rong(pc.batDauAbs,kt)}px">${txt}</div>`;});
+    pcs.forEach(pc=>{
+      const cb=chuyen(pc.maChuyen),cut=biDieuDongDi(pc),kt=cut||pc.ketThucAbs;
+      const cls=pc.thuHoi?"withdraw":pc.dieuDongTu?"transfer":cut?"cut":"staff";
+      const txt=pc.thuHoi?`THU HỒI ${cb?cb.flight:pc.maChuyen}`:pc.dieuDongTu?`ĐIỀU ĐỘNG ${cb?cb.flight:pc.maChuyen}`:`${cb?cb.flight:pc.maChuyen} - Bãi ${cb?cb.baiDo:""}`;
+      if(kt>pc.batDauAbs)bars+=`<div class="bar staff ${cls}" style="left:${viTri(pc.batDauAbs)}px;width:${rong(pc.batDauAbs,kt)}px">${txt}</div>`;
+    });
     if(!bars){
       caSegments(ns.ma).forEach(seg=>{
         bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"}" style="left:${viTri(seg.vao)}px;width:${rong(seg.vao,seg.ra)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
@@ -878,9 +901,9 @@ function tenChuyenTuPC(pc){
 function chiTietNhanSu(ma){
   const now=hienTaiAbs();
   const pcs=state.phanCong.filter(pc=>pc.maNV===ma).sort((a,b)=>a.batDauAbs-b.batDauAbs);
-  const dang=pcs.find(pc=>pc.batDauAbs<=now && now<=pc.ketThucAbs);
+  const dang=pcs.find(pc=>!pc.thuHoi && pc.batDauAbs<=now && now<=pc.ketThucAbs);
   const truoc=[...pcs].filter(pc=>pc.ketThucAbs<=now).sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0]||null;
-  const tiep=pcs.find(pc=>pc.batDauAbs>now)||null;
+  const tiep=pcs.find(pc=>!pc.thuHoi && pc.batDauAbs>now)||null;
   const ttCa=trangThaiCa(ma);
   const tk=thongKeNV(ma);
 
@@ -961,7 +984,7 @@ function chiTietNhanSu(ma){
 function uuTienRanh(ns){
   const now=hienTaiAbs();
   const pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs);
-  const dang=pcs.find(pc=>pc.batDauAbs<=now && now<=pc.ketThucAbs);
+  const dang=pcs.find(pc=>!pc.thuHoi && pc.batDauAbs<=now && now<=pc.ketThucAbs);
   const truoc=[...pcs].filter(pc=>pc.ketThucAbs<=now).sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0]||null;
 
   // Người đang rảnh: ưu tiên cao hơn người đang bận, ai rảnh lâu hơn lên trước.
@@ -984,7 +1007,7 @@ function veDanhSachChon(){
     .filter(ns=>datCap(ns.cap,loc))
     .map(ns=>{
       const ct=chiTietNhanSu(ns.ma);
-      const chon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma);
+      const chon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma&&pcDangHieuLuc(pc));
       return {...ns,ct,chon};
     });
 
@@ -1064,10 +1087,31 @@ function ganBoNV(ma){
   if(ctCanhBao.coChuyenTiepNguyCo){
     if(!confirm(`${tenNV(ma)} đang bận và còn chuyến tiếp:\n${ctCanhBao.trangThai}\n\nBạn vẫn muốn điều động?`)) return;
   }
-  const co=state.phanCong.find(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ma);
-  if(co){state.phanCong=state.phanCong.filter(pc=>!(pc.maChuyen===chuyenDangChon&&pc.maNV===ma)); luu(); veTatCa(); return;}
+  const co=state.phanCong.find(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ma&&pcDangHieuLuc(pc));
+  if(co){
+    const now=hienTaiAbs();
+
+    // Chuyến chưa tới giờ làm: bỏ phân công như cũ, vì chưa phát sinh thực tế.
+    if(now < co.batDauAbs){
+      state.phanCong=state.phanCong.filter(pc=>pc.id!==co.id);
+      luu(); veTatCa(); return;
+    }
+
+    // Chuyến đã bắt đầu / đã hạ cánh: không xóa trắng, ghi nhận đã làm tới lúc bấm bỏ chọn.
+    const msg=`${tenNV(ma)} đã được phân công cho chuyến này.\n\n`+
+      `Hệ thống sẽ ghi nhận đã làm từ ${gioTuPhut(co.batDauAbs)} đến ${gioTuPhut(now)} và đánh dấu THU HỒI.\n\n`+
+      `Bạn xác nhận thu hồi?`;
+    if(!confirm(msg)) return;
+
+    co.thuHoi=true;
+    co.thuHoiAbs=now;
+    co.ketThucGocAbs=co.ketThucAbs;
+    co.ketThucAbs=now;
+    co.ghiChuThuHoi=`Thu hồi lúc ${gioTuPhut(now)}`;
+    luu(); veTatCa(); return;
+  }
   const pc={id:"PC"+Date.now(),maChuyen:chuyenDangChon,maNV:ma,batDauAbs:batDauAbs(cb),ketThucAbs:ketThucAbs(cb),dieuDongTu:null};
-  const trungPc=state.phanCong.find(x=>x.maNV===ma&&!(x.ketThucAbs<=pc.batDauAbs||x.batDauAbs>=pc.ketThucAbs));
+  const trungPc=state.phanCong.find(x=>x.maNV===ma&&pcDangHieuLuc(x)&&!(x.ketThucAbs<=pc.batDauAbs||x.batDauAbs>=pc.ketThucAbs));
   if(trungPc){const cbCu=chuyen(trungPc.maChuyen); if(!confirm(`${tenNV(ma)} đang có lịch ${cbCu?cbCu.flight:trungPc.maChuyen}. Vẫn điều động?`))return; pc.dieuDongTu=trungPc.maChuyen; pc.batDauAbs=hienTaiAbs();}
   state.phanCong.push(pc); luu(); veTatCa();
 }
