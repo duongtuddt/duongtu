@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.29</title>
+<title>Dương Tú v0.30</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -220,6 +220,40 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
   .staffLabel{min-width:82px!important}
 }
 
+
+/* v0.30 - kéo cột phải gần lại, không để card rộng quá */
+.staffCard{
+  max-width:1180px!important;
+  min-width:980px!important;
+}
+.staffInfo{
+  grid-template-columns:620px 360px!important;
+  justify-content:start!important;
+  gap:42px!important;
+}
+.staffLine .staffValue{
+  max-width:500px!important;
+}
+.staffInfo > div:nth-child(2) .staffLabel{
+  min-width:82px!important;
+}
+.staffInfo > div:nth-child(2) .staffValue{
+  max-width:260px!important;
+}
+@media(max-width:900px){
+  .staffCard{
+    min-width:980px!important;
+    max-width:980px!important;
+  }
+  .staffInfo{
+    grid-template-columns:570px 320px!important;
+    gap:32px!important;
+  }
+  .staffLine .staffValue{
+    max-width:455px!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -280,7 +314,7 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
 </div>
 
 <script>
-const KHO_LUU="duong_tu_rampops_v029";
+const KHO_LUU="duong_tu_rampops_v030";
 const GIO_BAT_DAU=6*60, SO_GIO=25, RONG_GIO=60;
 
 function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
