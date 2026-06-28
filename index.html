@@ -42,6 +42,94 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
   .badge{font-size:9px!important}
 }
 
+
+@media (max-width: 900px){
+  /* Mobile: phần Chọn nhân sự chuyển sang card gọn, không còn các cột cách xa nhau */
+  .staffHeader{
+    display:none!important;
+  }
+
+  .staffCard{
+    display:grid!important;
+    grid-template-columns:14px 1fr auto!important;
+    grid-template-rows:auto auto auto!important;
+    gap:2px 6px!important;
+    align-items:center!important;
+    padding:6px 8px!important;
+    margin-bottom:4px!important;
+    font-size:10px!important;
+    line-height:1.15!important;
+  }
+
+  .staffCard .dot{
+    grid-column:1!important;
+    grid-row:1 / span 3!important;
+    width:8px!important;
+    height:8px!important;
+  }
+
+  .staffCard b{
+    grid-column:2!important;
+    grid-row:1!important;
+    font-size:12px!important;
+    line-height:1.1!important;
+  }
+
+  .staffCard span:nth-child(3){
+    grid-column:3!important;
+    grid-row:1!important;
+    font-size:9px!important;
+    text-align:right!important;
+  }
+
+  .staffCard span:nth-child(4),
+  .staffCard span:nth-child(5),
+  .staffCard span:nth-child(6){
+    grid-row:2!important;
+    font-size:9px!important;
+    color:#b7d5ff!important;
+    white-space:nowrap!important;
+  }
+
+  .staffCard span:nth-child(4){
+    grid-column:2!important;
+  }
+
+  .staffCard span:nth-child(5){
+    grid-column:2!important;
+    margin-left:54px!important;
+  }
+
+  .staffCard span:nth-child(6){
+    grid-column:3!important;
+    text-align:right!important;
+  }
+
+  .staffCard span:nth-child(7){
+    grid-column:2 / span 2!important;
+    grid-row:3!important;
+    font-size:10px!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  .staffCard span:nth-child(8){
+    grid-column:3!important;
+    grid-row:3!important;
+    text-align:right!important;
+  }
+
+  #chuyenDangChonText{
+    font-size:11px!important;
+    line-height:1.2!important;
+  }
+
+  #danhSachChonNhanSu{
+    max-width:520px!important;
+  }
+}
+
 </style>
 </head>
 <body>
