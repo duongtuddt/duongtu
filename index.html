@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.34</title>
+<title>Dương Tú v0.35</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -831,7 +831,7 @@ function veDanhSachChon(){
   }).join("");
 }
 
-function veTatCa(){ if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; capNhatDongHo(); }
+function veTatCa(){ if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
 function chonChuyen(ma){ if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; luu(); veTatCa();
 setTimeout(canhTheoVachHienTai,100); }
@@ -928,32 +928,56 @@ function doiNgayLamViecMoi(val){
 setInterval(()=>{
   capNhatDongHo();
   if(!dangNhapLieu()){
+    const a=document.getElementById("khungTimelineChuyenBay");
+    const viTriCu=a?a.scrollLeft:0;
+
     veTimelineChuyen();
     veTimelineNhanSu();
     veDanhSachChon();
     veBangPhanCa();
+
+    const b=document.getElementById("khungTimelineNhanSu");
+    if(a)a.scrollLeft=viTriCu;
+    if(b)b.scrollLeft=viTriCu;
+    dongBoKeoTimeline();
   }
 },20000);
+
 
 function dongBoKeoTimeline(){
   const a=document.getElementById("khungTimelineChuyenBay");
   const b=document.getElementById("khungTimelineNhanSu");
-  if(!a||!b||a.dataset.syncReady==="1")return;
+  if(!a||!b)return;
 
+  if(a.dataset.syncReady==="1")return;
   let khoa=false;
+
   function syncScroll(src,dst){
     if(khoa)return;
     khoa=true;
-    const tiLe = src.scrollLeft / Math.max(1, src.scrollWidth - src.clientWidth);
-    dst.scrollLeft = tiLe * Math.max(1, dst.scrollWidth - dst.clientWidth);
-    setTimeout(()=>khoa=false,0);
+
+    // Hai bảng dùng cùng một timeGrid nên scrollLeft phải bằng nhau tuyệt đối.
+    dst.scrollLeft = src.scrollLeft;
+
+    requestAnimationFrame(()=>{khoa=false;});
   }
 
-  a.addEventListener("scroll",()=>syncScroll(a,b));
-  b.addEventListener("scroll",()=>syncScroll(b,a));
+  a.addEventListener("scroll",()=>syncScroll(a,b),{passive:true});
+  b.addEventListener("scroll",()=>syncScroll(b,a),{passive:true});
 
   a.dataset.syncReady="1";
   b.dataset.syncReady="1";
+}
+
+function dongBoViTriSauRender(){
+  const a=document.getElementById("khungTimelineChuyenBay");
+  const b=document.getElementById("khungTimelineNhanSu");
+  if(!a||!b)return;
+
+  // Khi render lại vì realtime update, giữ 2 bảng luôn cùng vị trí.
+  const x=Math.max(a.scrollLeft,b.scrollLeft);
+  a.scrollLeft=x;
+  b.scrollLeft=x;
 }
 function canhTheoVachHienTai(){
   const a=document.getElementById("khungTimelineChuyenBay");
@@ -968,6 +992,8 @@ function canhTheoVachHienTai(){
 }
 
 veTatCa();
+dongBoKeoTimeline();
+setTimeout(canhTheoVachHienTai,100);
 </script>
 </body>
 </html>
