@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.28</title>
+<title>Dương Tú v0.29</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -158,6 +158,68 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
   }
 }
 
+
+/* v0.29 - Chọn nhân sự: thẻ ngang 2 cột, dễ đọc cho dispatcher */
+.staffHeader{display:none!important}
+.staffCard{
+  display:block!important;
+  border:2px solid var(--line)!important;
+  border-radius:12px!important;
+  padding:12px 14px!important;
+  margin-bottom:10px!important;
+  background:#0a1c31!important;
+  cursor:pointer!important;
+  width:100%!important;
+  min-width:760px!important;
+  line-height:1.35!important;
+}
+.staffCard:hover{background:#102844!important}
+.staffCard.selected{outline:2px solid #38bdf8!important;background:#12385c!important}
+.staffTop{
+  display:grid!important;
+  grid-template-columns:24px 1fr auto!important;
+  align-items:center!important;
+  gap:10px!important;
+  margin-bottom:10px!important;
+}
+.staffTop .dot{width:14px!important;height:14px!important}
+.staffName{font-size:18px!important;font-weight:900!important;color:#eaf3ff!important;white-space:nowrap!important}
+.staffCap{font-size:14px!important;color:#8fb0d4!important;font-weight:800!important;white-space:nowrap!important}
+.staffInfo{
+  display:grid!important;
+  grid-template-columns:1.1fr .9fr!important;
+  gap:18px!important;
+}
+.staffLine{
+  display:flex!important;
+  gap:10px!important;
+  align-items:baseline!important;
+  margin:5px 0!important;
+  min-height:22px!important;
+  white-space:nowrap!important;
+}
+.staffLabel{color:#8fb0d4!important;min-width:95px!important}
+.staffValue{font-weight:800!important;color:#eaf3ff!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.staffValue.statusGreen{color:#70ff9f!important}
+.staffValue.statusOrange{color:#f59e0b!important}
+.staffValue.statusRed{color:#ff7777!important}
+.staffValue.statusBlue{color:#7dd3fc!important}
+.staffWarnGreen{color:#70ff9f!important}
+.staffWarnOrange{color:#f59e0b!important}
+.staffWarnRed{color:#ff7777!important}
+@media(max-width:900px){
+  #danhSachChonNhanSu{max-width:none!important;overflow-x:auto!important}
+  .staffCard{
+    min-width:900px!important;
+    padding:10px 12px!important;
+  }
+  .staffName{font-size:16px!important}
+  .staffCap{font-size:12px!important}
+  .staffInfo{grid-template-columns:1.15fr .85fr!important;gap:12px!important}
+  .staffLine{font-size:12px!important;margin:4px 0!important}
+  .staffLabel{min-width:82px!important}
+}
+
 </style>
 </head>
 <body>
@@ -218,7 +280,7 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
 </div>
 
 <script>
-const KHO_LUU="duong_tu_rampops_v028";
+const KHO_LUU="duong_tu_rampops_v029";
 const GIO_BAT_DAU=6*60, SO_GIO=25, RONG_GIO=60;
 
 function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
@@ -474,13 +536,141 @@ function veBangPhanCa(){
     </tr>`;
   }).join("");
 }
-function veDanhSachChon(){
-  const cb=chuyen(chuyenDangChon); $("chuyenDangChonText").textContent=cb?`Đang chọn: ${cb.flight} - Bãi ${cb.baiDo} - ${gioTuPhut(batDauAbs(cb))}/${cb.std}`:"Đang chọn: chưa có";
-  const loc=$("locCap").value, sx=$("sapXep").value;
-  let ds=state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon).filter(ns=>datCap(ns.cap,loc)).map(ns=>{const tk=thongKeNV(ns.ma),tt=trangThaiCa(ns.ma),lam=dangLam(ns.ma),chon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma);return{...ns,...tk,tt,lam,chon};});
-  ds.sort((a,b)=>sx==="itThoiGian"?a.tg-b.tg:sx==="ranhLau"?b.ranh-a.ranh:a.so-b.so||a.tg-b.tg);
-  $("danhSachChonNhanSu").innerHTML=ds.map(ns=>{const dot=ns.tt.loai==="red"?"red":ns.lam.ban?"orange":"green",cls=ns.tt.loai==="red"?"redText":ns.tt.loai==="orange"?"orangeText":"greenText",warn=ns.tt.loai==="red"?'<span class="badge bg-red">QUÁ GIỜ</span>':ns.lam.ban?'<span class="badge bg-orange">ĐANG BẬN</span>':"";return`<div class="staffCard ${ns.chon?"selected":""}" onclick="ganBoNV('${ns.ma}')"><span class="dot ${dot}"></span><b>${ns.ten}</b><span>${ns.cap}</span><span>${ns.so} chuyến</span><span>${ns.tg}'</span><span>${ns.ranh===999?"Rảnh cả ca":ns.ranh+"'"}</span><span class="${cls}">${ns.lam.text} | ${ns.tt.text}</span><span>${warn}</span></div>`;}).join("");
+
+function fmtPhut(min){
+  if(min===null || min===undefined || !isFinite(min)) return "--";
+  min=Math.max(0,Math.round(min));
+  if(min>=60){
+    const h=Math.floor(min/60), m=min%60;
+    return m?`${h}h${String(m).padStart(2,"0")}'`:`${h}h`;
+  }
+  return `${min}'`;
 }
+function tenChuyenTuPC(pc){
+  const cb=chuyen(pc.maChuyen);
+  return cb?cb.flight:pc.maChuyen;
+}
+function chiTietNhanSu(ma){
+  const now=hienTaiAbs();
+  const pcs=state.phanCong.filter(pc=>pc.maNV===ma).sort((a,b)=>a.batDauAbs-b.batDauAbs);
+  const dang=pcs.find(pc=>pc.batDauAbs<=now && now<=pc.ketThucAbs);
+  const truoc=[...pcs].filter(pc=>pc.ketThucAbs<=now).sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0]||null;
+  const tiep=pcs.find(pc=>pc.batDauAbs>now)||null;
+  const ttCa=trangThaiCa(ma);
+  const tk=thongKeNV(ma);
+
+  let dongTrangThai="", dongTiep="", dongRanhGiua="", mau="green", canhBao="Không", mauCanhBao="staffWarnGreen";
+  if(dang){
+    const ten=tenChuyenTuPC(dang);
+    dongTrangThai=`Đang làm ${ten} | Còn ${fmtPhut(dang.ketThucAbs-now)}`;
+    mau="orange";
+    canhBao="ĐANG BẬN";
+    mauCanhBao="staffWarnOrange";
+
+    if(tiep){
+      const tenTiep=tenChuyenTuPC(tiep);
+      const sau=tiep.batDauAbs-now;
+      const giua=tiep.batDauAbs-dang.ketThucAbs;
+      dongTrangThai+=` | Tiếp: ${tenTiep} sau ${fmtPhut(sau)}`;
+      dongTiep=`Chuyến tiếp: ${tenTiep} sau ${fmtPhut(sau)}`;
+      dongRanhGiua=giua>0?`Rảnh giữa: ${fmtPhut(giua)}`:"Rảnh giữa: Không";
+    }else{
+      dongTiep="Sau đó: Rảnh";
+    }
+  }else{
+    if(truoc){
+      const tenTruoc=tenChuyenTuPC(truoc);
+      dongTrangThai=`Vừa làm ${tenTruoc} | RẢNH ${fmtPhut(now-truoc.ketThucAbs)}`;
+    }else{
+      dongTrangThai="RẢNH cả ca";
+    }
+
+    if(tiep){
+      const tenTiep=tenChuyenTuPC(tiep);
+      dongTrangThai+=` | Tiếp: ${tenTiep} sau ${fmtPhut(tiep.batDauAbs-now)}`;
+      dongTiep=`Sắp làm: ${tenTiep} sau ${fmtPhut(tiep.batDauAbs-now)}`;
+      if(truoc){
+        const giua=tiep.batDauAbs-truoc.ketThucAbs;
+        if(giua>0) dongRanhGiua=`Rảnh giữa 2 chuyến: ${fmtPhut(giua)}`;
+      }
+    }else{
+      dongTiep="Sắp làm: chưa có";
+    }
+  }
+
+  if(ttCa.loai==="red"){
+    mau="red";
+    canhBao=ttCa.text;
+    mauCanhBao="staffWarnRed";
+  }else if(ttCa.loai==="orange" && canhBao==="Không"){
+    mau="orange";
+    canhBao=ttCa.text;
+    mauCanhBao="staffWarnOrange";
+  }
+
+  return {
+    trangThai:dongTrangThai,
+    tiep:dongTiep,
+    ranhGiua:dongRanhGiua,
+    caCon:ttCa.text,
+    daLam:`${tk.so} chuyến | ${tk.tg}'`,
+    luot:ma,
+    canhBao,
+    mau,
+    mauCanhBao,
+    tk,
+    dangLam:!!dang
+  };
+}
+
+function veDanhSachChon(){
+  const cb=chuyen(chuyenDangChon);
+  $("chuyenDangChonText").textContent=cb?`Đang chọn: ${cb.flight} - Bãi ${cb.baiDo} - ${gioTuPhut(batDauAbs(cb))}/${gioTuPhut(ketThucAbs(cb))}`:"Đang chọn: chưa có";
+
+  const loc=$("locCap").value, sx=$("sapXep").value;
+  let ds=state.danhSachNhanSu
+    .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
+    .filter(ns=>datCap(ns.cap,loc))
+    .map(ns=>{
+      const ct=chiTietNhanSu(ns.ma);
+      const chon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma);
+      return {...ns,ct,chon};
+    });
+
+  ds.sort((a,b)=>{
+    if(sx==="itThoiGian") return a.ct.tk.tg-b.ct.tk.tg || a.ct.tk.so-b.ct.tk.so;
+    if(sx==="ranhLau") return b.ct.tk.ranh-a.ct.tk.ranh;
+    return a.ct.tk.so-b.ct.tk.so || a.ct.tk.tg-b.ct.tk.tg;
+  });
+
+  $("danhSachChonNhanSu").innerHTML=ds.map(ns=>{
+    const dot=ns.ct.mau==="red"?"red":ns.ct.mau==="orange"?"orange":"green";
+    const statusClass=ns.ct.mau==="red"?"statusRed":ns.ct.mau==="orange"?"statusOrange":"statusGreen";
+    const ranhGiua = ns.ct.ranhGiua ? `<div class="staffLine"><span class="staffLabel"></span><span class="staffValue">${ns.ct.ranhGiua}</span></div>` : "";
+    return `
+      <div class="staffCard ${ns.chon?"selected":""}" onclick="ganBoNV('${ns.ma}')">
+        <div class="staffTop">
+          <span class="dot ${dot}"></span>
+          <span class="staffName">${ns.ten}</span>
+          <span class="staffCap">Cấp ${ns.cap}</span>
+        </div>
+        <div class="staffInfo">
+          <div>
+            <div class="staffLine"><span class="staffLabel">Trạng thái:</span><span class="staffValue ${statusClass}">${ns.ct.trangThai}</span></div>
+            <div class="staffLine"><span class="staffLabel">Ca còn:</span><span class="staffValue">${ns.ct.caCon}</span></div>
+            <div class="staffLine"><span class="staffLabel">Sắp làm:</span><span class="staffValue">${ns.ct.tiep.replace("Sắp làm: ","").replace("Chuyến tiếp: ","").replace("Sau đó: ","Sau đó: ")}</span></div>
+            ${ranhGiua}
+          </div>
+          <div>
+            <div class="staffLine"><span class="staffLabel">Đã làm:</span><span class="staffValue">${ns.ct.daLam}</span></div>
+            <div class="staffLine"><span class="staffLabel">Lượt:</span><span class="staffValue">${ns.ct.luot}</span></div>
+            <div class="staffLine"><span class="staffLabel">Cảnh báo:</span><span class="staffValue ${ns.ct.mauCanhBao}">${ns.ct.canhBao}</span></div>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
 function veTatCa(){ if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; capNhatDongHo(); }
 
 function chonChuyen(ma){ if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; luu(); veTatCa();
