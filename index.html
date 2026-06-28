@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.33</title>
+<title>Dương Tú v0.34</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -17,10 +17,10 @@ button.primary{background:#1455c8;border-color:#2b77ff}button.good{background:#1
 .grid2{display:grid;grid-template-columns:1fr;gap:8px}.hint{color:var(--muted);font-size:12px;margin-top:5px}.hidden{display:none!important}
 table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;padding:7px;text-align:left;white-space:nowrap}th{color:#b7d5ff;background:#0c1b2f}.scroll{max-height:300px;overflow:auto}
 .greenText{color:#70ff9f;font-weight:800}.orangeText{color:#ffc46b;font-weight:800}.redText{color:#ff7777;font-weight:800}.muted{color:var(--muted)}
-.timeline{overflow:auto;border-top:1px solid var(--line)}.timeGrid{min-width:1650px;display:grid;grid-template-columns:185px repeat(25,60px);position:relative}
+.timeline{overflow:auto;border-top:1px solid var(--line)}.timeGrid{min-width:3185px;display:grid;grid-template-columns:185px repeat(25,120px);position:relative}
 .head{display:contents}.head div{height:28px;border-bottom:1px solid var(--line);border-right:1px solid #132946;color:#9fc0e7;background:#0b1b31;display:flex;align-items:center;justify-content:center;position:sticky;top:0;z-index:3}
 .labelHead{position:sticky;left:0;z-index:4;background:#0b1b31!important}.tlRow{display:contents}.tlLabel{position:sticky;left:0;z-index:2;background:#081a2f;border-right:1px solid var(--line);border-bottom:1px solid #132946;padding:8px;min-height:52px;cursor:pointer}
-.tlLane{grid-column:2/span 25;position:relative;height:52px;border-bottom:1px solid #132946;background:repeating-linear-gradient(to right,transparent 0,transparent 59px,#173150 60px);cursor:pointer}
+.tlLane{grid-column:2/span 25;position:relative;height:52px;border-bottom:1px solid #132946;background:repeating-linear-gradient(to right,transparent 0,transparent 19px,rgba(23,49,80,.55) 20px),repeating-linear-gradient(to right,transparent 0,transparent 59px,rgba(56,189,248,.22) 60px),repeating-linear-gradient(to right,transparent 0,transparent 119px,#173150 120px);cursor:pointer}
 .tlLabel:hover,.tlLane:hover{background-color:#102844}.selected{outline:2px solid #38bdf8;background:#12385c!important}
 .bar{position:absolute;height:24px;top:14px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:white;white-space:nowrap;overflow:hidden;padding:0 6px}
 .flight.ok{background:var(--green)}.flight.warn{background:var(--orange);color:#061120}.flight.miss{background:var(--red)}.staff{background:var(--blue)}.transfer{background:var(--orange);color:#061120}.cut{background:var(--green)}.free{background:var(--gray);min-width:80px}.ot{background:var(--red)}
@@ -282,6 +282,42 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
   border-color:#ef4444!important;
 }
 
+
+/* v0.34 - timeline 10 phút + fix lệch hàng tên/thanh realtime */
+.tlLabel{
+  height:62px!important;
+  min-height:62px!important;
+  display:block!important;
+  overflow:hidden!important;
+}
+.tlLane{
+  height:62px!important;
+  min-height:62px!important;
+}
+.bar{top:18px!important}
+.tenSau{top:20px!important}
+.timeGrid{align-items:stretch!important}
+@media(max-width:900px){
+  .timeGrid{min-width:3185px!important;grid-template-columns:185px repeat(25,120px)!important}
+  .tlLabel,.tlLane{height:62px!important;min-height:62px!important}
+}
+
+
+.gioHead{position:relative!important}
+.gioHead small{
+  position:absolute;
+  bottom:1px;
+  color:#5f8ab9;
+  font-size:8px;
+  font-weight:700;
+  transform:translateX(-50%);
+}
+.gioHead small:nth-of-type(1){left:16.66%}
+.gioHead small:nth-of-type(2){left:33.33%}
+.gioHead small:nth-of-type(3){left:50%}
+.gioHead small:nth-of-type(4){left:66.66%}
+.gioHead small:nth-of-type(5){left:83.33%}
+
 </style>
 </head>
 <body>
@@ -306,6 +342,7 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
 <section class="panel"><h2>Realtime chuyến bay - thanh ngang theo thời gian</h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
 
 <div class="grid2">
+<section class="panel"><h2>Realtime nhân sự hôm nay - bấm trực tiếp để chọn người</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
 <section class="panel">
 <h2>Chọn nhân sự cho chuyến đang chọn</h2>
 <div class="body">
@@ -318,7 +355,6 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
 <div id="danhSachChonNhanSu" style="margin-top:6px"></div>
 </div>
 </section>
-<section class="panel"><h2>Realtime nhân sự hôm nay - bấm trực tiếp để chọn người</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
 </div>
 
 <section class="panel"><h2><span>Phân ca hôm nay + chấm công</span><button class="small ghost" id="nutAnPhanCa">Hiện</button></h2>
@@ -343,7 +379,7 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
 
 <script>
 const KHO_LUU="duong_tu_rampops_v030";
-const GIO_BAT_DAU=6*60, SO_GIO=25, RONG_GIO=60;
+const GIO_BAT_DAU=6*60, SO_GIO=25, RONG_GIO=120;
 
 function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 function duLieuMau(){
@@ -564,7 +600,10 @@ function biDieuDongDi(pc){const ds=state.phanCong.filter(x=>x.dieuDongTu===pc.ma
 
 function veHeader(el){
   let html='<div class="head"><div class="labelHead"></div>';
-  for(let i=0;i<SO_GIO;i++){const abs=startAbs()+i*60;html+=`<div>${gioTuPhut(abs)}${i===24?" +1":""}</div>`;}
+  for(let i=0;i<SO_GIO;i++){
+    const abs=startAbs()+i*60;
+    html+=`<div class="gioHead"><span>${gioTuPhut(abs)}${i===24?" +1":""}</span><small>10</small><small>20</small><small>30</small><small>40</small><small>50</small></div>`;
+  }
   html+='</div>';
   let now=hienTaiAbs(); if(now<startAbs())now=startAbs(); if(now>startAbs()+24*60)now=startAbs()+24*60;
   const x=viTri(now)+185;
