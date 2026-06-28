@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.39</title>
+<title>Dương Tú v0.40</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -808,13 +808,33 @@ function trung(a,b){return a.maNV===b.maNV&&a.maChuyen!==b.maChuyen&&!(a.ketThuc
 function pcDangHieuLuc(pc){return !pc.thuHoi;}
 function soGoc(ma){return state.phanCong.filter(pc=>pc.maChuyen===ma&&pcDangHieuLuc(pc)).length;}
 function soHieuLuc(ma){
-  const pcs=state.phanCong.filter(pc=>pc.maChuyen===ma&&pcDangHieuLuc(pc)); const lay=new Set();
-  pcs.forEach(cu=>{if(state.phanCong.some(moi=>moi.dieuDongTu===ma&&trung(cu,moi)))lay.add(cu.maNV);});
+  const now=hienTaiAbs();
+  const pcs=state.phanCong.filter(pc=>pc.maChuyen===ma&&pcDangHieuLuc(pc));
+  const lay=new Set();
+
+  // Chỉ tính bị lấy người khi đã tới giờ điều động sang chuyến mới.
+  pcs.forEach(cu=>{
+    if(state.phanCong.some(moi=>
+      pcDangHieuLuc(moi) &&
+      moi.dieuDongTu===ma &&
+      moi.batDauAbs<=now &&
+      trung(cu,moi)
+    ))lay.add(cu.maNV);
+  });
+
   return pcs.length-lay.size;
 }
 function mauChuyen(ma){if(soGoc(ma)===0)return"miss";const h=soHieuLuc(ma);if(h<=0)return"miss";if(h===1)return"warn";return"ok";}
 function ghiChu(ma){if(soGoc(ma)===0)return"THIẾU NGƯỜI";const h=soHieuLuc(ma);if(h<=0)return"BỊ LẤY HẾT NGƯỜI";if(h===1)return"CÒN 1 NGƯỜI";return"";}
-function biDieuDongDi(pc){const ds=state.phanCong.filter(x=>x.dieuDongTu===pc.maChuyen&&x.maNV===pc.maNV&&trung(pc,x));return ds.length?ds.sort((a,b)=>a.batDauAbs-b.batDauAbs)[0].batDauAbs:null;}
+function biDieuDongDi(pc){
+  const ds=state.phanCong.filter(x=>
+    pcDangHieuLuc(x) &&
+    x.dieuDongTu===pc.maChuyen &&
+    x.maNV===pc.maNV &&
+    trung(pc,x)
+  );
+  return ds.length?ds.sort((a,b)=>a.batDauAbs-b.batDauAbs)[0].batDauAbs:null;
+}
 
 function veHeader(el){
   let html='<div class="head"><div class="labelHead"></div>';
@@ -851,7 +871,7 @@ function veTimelineNhanSu(){
     pcs.forEach(pc=>{
       const cb=chuyen(pc.maChuyen),cut=biDieuDongDi(pc),kt=cut||pc.ketThucAbs;
       const cls=pc.thuHoi?"withdraw":pc.dieuDongTu?"transfer":cut?"cut":"staff";
-      const txt=pc.thuHoi?`THU HỒI ${cb?cb.flight:pc.maChuyen}`:pc.dieuDongTu?`ĐIỀU ĐỘNG ${cb?cb.flight:pc.maChuyen}`:`${cb?cb.flight:pc.maChuyen} - Bãi ${cb?cb.baiDo:""}`;
+      const txt=pc.thuHoi?`THU HỒI ${cb?cb.flight:pc.maChuyen}`:pc.dieuDongTu?`ĐIỀU ĐỘNG ${cb?cb.flight:pc.maChuyen} từ ${gioTuPhut(pc.batDauAbs)}`:`${cb?cb.flight:pc.maChuyen} - Bãi ${cb?cb.baiDo:""}`;
       if(kt>pc.batDauAbs)bars+=`<div class="bar staff ${cls}" style="left:${viTri(pc.batDauAbs)}px;width:${rong(pc.batDauAbs,kt)}px">${txt}</div>`;
     });
     if(!bars){
@@ -1112,7 +1132,23 @@ function ganBoNV(ma){
   }
   const pc={id:"PC"+Date.now(),maChuyen:chuyenDangChon,maNV:ma,batDauAbs:batDauAbs(cb),ketThucAbs:ketThucAbs(cb),dieuDongTu:null};
   const trungPc=state.phanCong.find(x=>x.maNV===ma&&pcDangHieuLuc(x)&&!(x.ketThucAbs<=pc.batDauAbs||x.batDauAbs>=pc.ketThucAbs));
-  if(trungPc){const cbCu=chuyen(trungPc.maChuyen); if(!confirm(`${tenNV(ma)} đang có lịch ${cbCu?cbCu.flight:trungPc.maChuyen}. Vẫn điều động?`))return; pc.dieuDongTu=trungPc.maChuyen; pc.batDauAbs=hienTaiAbs();}
+  if(trungPc){
+    const cbCu=chuyen(trungPc.maChuyen);
+    const batDauMoiGoc=pc.batDauAbs;
+    const now=hienTaiAbs();
+
+    if(!confirm(
+      `${tenNV(ma)} đang có lịch ${cbCu?cbCu.flight:trungPc.maChuyen}.\n\n`+
+      `Nếu điều động, người này vẫn làm chuyến cũ tới ${gioTuPhut(batDauMoiGoc)} `+
+      `và chỉ chuyển sang chuyến mới khi chuyến mới bắt đầu.\n\n`+
+      `Bạn vẫn muốn điều động?`
+    ))return;
+
+    pc.dieuDongTu=trungPc.maChuyen;
+
+    // Nếu chuyến mới đã bắt đầu trước thời điểm bấm chọn, chỉ ghi nhận từ hiện tại để tránh tạo lịch sử sai.
+    if(pc.batDauAbs < now) pc.batDauAbs = now;
+  }
   state.phanCong.push(pc); luu(); veTatCa();
 }
 function doiNgay(){state.ngayKhaiThac=$("ngayKhaiThac").value;boChon();luu();veTatCa();}
