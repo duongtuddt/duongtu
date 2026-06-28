@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú</title>
+<title>Dương Tú v0.28</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -47,48 +47,93 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
   html{zoom:.55;}
   body{min-width:2400px;}
 
-  /* Giữ dạng cột, nhưng kéo các cột trong phần chọn nhân sự sát nhau */
-  .staffHeader,
+  /* Mobile: phần chọn nhân sự giữ dạng card, nhưng số chuyến và thời gian có cột riêng, không chồng */
+  .staffHeader{
+    display:none!important;
+  }
+
   .staffCard{
     display:grid!important;
-    grid-template-columns:14px 150px 58px 72px 72px 72px 230px 74px!important;
-    gap:4px!important;
+    grid-template-columns:14px 1fr 92px 92px!important;
+    grid-template-rows:auto auto auto!important;
+    column-gap:10px!important;
+    row-gap:4px!important;
     align-items:center!important;
-    width:max-content!important;
-    min-width:760px!important;
-  }
-
-  .staffHeader{
-    font-size:9px!important;
-    padding:4px 6px!important;
-  }
-
-  .staffCard{
+    width:620px!important;
+    min-width:620px!important;
+    padding:7px 9px!important;
+    margin-bottom:5px!important;
     font-size:10px!important;
-    line-height:1.1!important;
-    padding:5px 6px!important;
-    margin-bottom:3px!important;
+    line-height:1.15!important;
+  }
+
+  .staffCard .dot{
+    grid-column:1!important;
+    grid-row:1 / span 3!important;
+    width:8px!important;
+    height:8px!important;
   }
 
   .staffCard b{
-    font-size:11px!important;
+    grid-column:2!important;
+    grid-row:1!important;
+    font-size:13px!important;
     white-space:nowrap!important;
   }
 
-  .staffCard span{
+  /* Cấp */
+  .staffCard span:nth-child(3){
+    grid-column:4!important;
+    grid-row:1!important;
     font-size:9px!important;
+    text-align:right!important;
+    white-space:nowrap!important;
+  }
+
+  /* Số chuyến - cột riêng */
+  .staffCard span:nth-child(4){
+    grid-column:2!important;
+    grid-row:2!important;
+    font-size:10px!important;
+    white-space:nowrap!important;
+    color:#b7d5ff!important;
+  }
+
+  /* Thời gian làm - cột riêng */
+  .staffCard span:nth-child(5){
+    grid-column:3!important;
+    grid-row:2!important;
+    font-size:10px!important;
+    white-space:nowrap!important;
+    color:#b7d5ff!important;
+    text-align:left!important;
+  }
+
+  /* Rảnh */
+  .staffCard span:nth-child(6){
+    grid-column:4!important;
+    grid-row:2!important;
+    font-size:10px!important;
+    white-space:nowrap!important;
+    color:#b7d5ff!important;
+    text-align:right!important;
+  }
+
+  /* Trạng thái */
+  .staffCard span:nth-child(7){
+    grid-column:2 / span 3!important;
+    grid-row:3!important;
+    font-size:10px!important;
     white-space:nowrap!important;
     overflow:hidden!important;
     text-overflow:ellipsis!important;
   }
 
-  .staffCard span:nth-child(7){
-    max-width:230px!important;
-  }
-
-  .staffCard .dot{
-    width:8px!important;
-    height:8px!important;
+  /* Cảnh báo */
+  .staffCard span:nth-child(8){
+    grid-column:4!important;
+    grid-row:3!important;
+    text-align:right!important;
   }
 
   .badge{
@@ -98,12 +143,13 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
 
   #danhSachChonNhanSu{
     overflow-x:auto!important;
-    max-width:820px!important;
+    max-width:650px!important;
     padding-bottom:4px!important;
   }
 
   #chuyenDangChonText{
     font-size:10px!important;
+    line-height:1.2!important;
   }
 
   #locCap,#sapXep{
@@ -172,15 +218,38 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
 </div>
 
 <script>
-const KHO_LUU="duong_tu_rampops_v025";
+const KHO_LUU="duong_tu_rampops_v028";
 const GIO_BAT_DAU=6*60, SO_GIO=25, RONG_GIO=60;
 
 function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 function duLieuMau(){
   const ngay=homNayLocal();
   const ns=[
-    {ma:"NV001",ten:"Le Van A",cap:"1.1/1.2"},{ma:"NV002",ten:"Hoang E",cap:"1.2"},{ma:"NV003",ten:"Phan I",cap:"2.1/2.2"},{ma:"NV004",ten:"Do Q",cap:"3.1/3.2"},
-    {ma:"NV005",ten:"Vo G",cap:"1.2"},{ma:"NV006",ten:"Ly L",cap:"2.1"},{ma:"NV007",ten:"Tran D",cap:"1.1/1.2"},{ma:"NV008",ten:"Ngo H",cap:"2.2"}
+    {ma:"NV001",ten:"Le Van A",cap:"1.1/1.2"},
+    {ma:"NV002",ten:"Hoang E",cap:"1.2"},
+    {ma:"NV003",ten:"Phan I",cap:"2.1/2.2"},
+    {ma:"NV004",ten:"Do Q",cap:"3.1/3.2"},
+    {ma:"NV005",ten:"Vo G",cap:"1.2"},
+    {ma:"NV006",ten:"Ly L",cap:"2.1"},
+    {ma:"NV007",ten:"Tran D",cap:"1.1/1.2"},
+    {ma:"NV008",ten:"Ngo H",cap:"2.2"},
+    {ma:"001",ten:"Khánh",cap:"1.1/1.2/2.2"},
+    {ma:"002",ten:"Vũ Kiss",cap:"1.1/1.2/2.1/2.2/3.1"},
+    {ma:"003",ten:"Tráng",cap:"1.1/1.2"},
+    {ma:"004",ten:"Cường",cap:"1.1/1.2"},
+    {ma:"005",ten:"Minh",cap:"1.1/1.2"},
+    {ma:"006",ten:"Toàn",cap:"1.1/1.2/2.1/2.2/3.1"},
+    {ma:"007",ten:"Xin",cap:"1.1/1.2/2.2"},
+    {ma:"008",ten:"Văn",cap:"1.1/1.2"},
+    {ma:"009",ten:"Thông",cap:"1.1"},
+    {ma:"010",ten:"Trà Chanh",cap:"1.1/1.2/2.1/2.2/3.1"},
+    {ma:"011",ten:"Hoàng Em",cap:"1.1/1.2/2.2"},
+    {ma:"012",ten:"Hùng Google",cap:"1.1/1.2"},
+    {ma:"013",ten:"Hậu",cap:"1.1/1.2"},
+    {ma:"014",ten:"Hoàng Anh",cap:"1.1/1.2/2.1/2.2/3.1"},
+    {ma:"015",ten:"Siêu Nhân",cap:"1.1/1.2/2.1/2.2"},
+    {ma:"016",ten:"Hùng Huế",cap:"1.1/1.2"},
+    {ma:"017",ten:"Quý Ảo",cap:"1.1/1.2"}
   ];
   const phanCa={}, chamCong={};
   ns.forEach(x=>{phanCa[x.ma]={chon:true,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};chamCong[x.ma]={vao:null,ra:null};});
@@ -246,8 +315,8 @@ function stdAbs(cb){
 }
 function batDauAbs(cb){
   const e=etaAbs(cb), s=stdAbs(cb);
-  if(e!==null) return e-30;
-  if(s!==null) return s-75;
+  if(e!==null) return e-10;       // Có ETA: bắt đầu ETA - 10'
+  if(s!==null) return s-75;       // Chỉ có STD: tàu bay nằm sân đi, bắt đầu STD - 75'
   return absNgayGio(cb.ngay,"06:00");
 }
 function ketThucAbs(cb){
