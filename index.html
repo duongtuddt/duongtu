@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.35</title>
+<title>Dương Tú v0.36</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -318,6 +318,39 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
 .gioHead small:nth-of-type(4){left:66.66%}
 .gioHead small:nth-of-type(5){left:83.33%}
 
+
+/* v0.36 - Thu gọn khung realtime, dùng thanh cuộn để xem toàn timeline */
+.realtimeCompact{
+  width:min(1180px, 100%)!important;
+  max-width:1180px!important;
+}
+.realtimeCompact .timeline{
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+  border-bottom:1px solid var(--line)!important;
+}
+.realtimeCompact .timeGrid{
+  width:max-content!important;
+}
+.realtimeCompact .timeline::-webkit-scrollbar{
+  height:12px;
+}
+.realtimeCompact .timeline::-webkit-scrollbar-track{
+  background:#071426;
+}
+.realtimeCompact .timeline::-webkit-scrollbar-thumb{
+  background:#3b82f6;
+  border-radius:999px;
+}
+@media(max-width:900px){
+  .realtimeCompact{
+    width:980px!important;
+    max-width:980px!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -339,10 +372,10 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
 </div>
 </section>
 
-<section class="panel"><h2>Realtime chuyến bay - thanh ngang theo thời gian</h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
+<section class="panel realtimeCompact"><h2>Realtime chuyến bay - thanh ngang theo thời gian</h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
 
 <div class="grid2">
-<section class="panel"><h2>Realtime nhân sự hôm nay - bấm trực tiếp để chọn người</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
+<section class="panel realtimeCompact"><h2>Realtime nhân sự hôm nay - bấm trực tiếp để chọn người</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
 <section class="panel">
 <h2>Chọn nhân sự cho chuyến đang chọn</h2>
 <div class="body">
