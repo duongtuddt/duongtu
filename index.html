@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.32</title>
+<title>Dương Tú v0.33</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -252,6 +252,34 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
   .staffLine .staffValue{
     max-width:455px!important;
   }
+}
+
+
+/* v0.33 - cảnh báo chuyến tiếp theo cho người đang làm */
+@keyframes nhapNhayDo {
+  0%, 100% { background:#7f1d1d; color:#ffffff; box-shadow:0 0 0 0 rgba(239,68,68,.75); }
+  50% { background:#dc2626; color:#ffffff; box-shadow:0 0 10px 2px rgba(239,68,68,.9); }
+}
+.badgeTiepNguyCo{
+  display:inline-block!important;
+  padding:3px 8px!important;
+  border-radius:999px!important;
+  font-weight:900!important;
+  animation:nhapNhayDo 1s infinite!important;
+  margin-left:6px!important;
+}
+.staffNextDanger{
+  color:#fff!important;
+  background:#7f1d1d!important;
+  border:1px solid #ef4444!important;
+  border-radius:8px!important;
+  padding:3px 8px!important;
+  display:inline-block!important;
+  font-weight:900!important;
+  animation:nhapNhayDo 1s infinite!important;
+}
+.staffCard.coChuyenTiepNguyCo{
+  border-color:#ef4444!important;
 }
 
 </style>
@@ -618,6 +646,8 @@ function chiTietNhanSu(ma){
   const tk=thongKeNV(ma);
 
   let dongTrangThai="", dongTiep="", dongRanhGiua="", mau="green", canhBao="Không", mauCanhBao="staffWarnGreen";
+  let coChuyenTiepNguyCo=false;
+  let textChuyenTiepNguyCo="";
   if(dang){
     const ten=tenChuyenTuPC(dang);
     dongTrangThai=`Đang làm ${ten} | Còn ${fmtPhut(dang.ketThucAbs-now)}`;
@@ -629,9 +659,14 @@ function chiTietNhanSu(ma){
       const tenTiep=tenChuyenTuPC(tiep);
       const sau=tiep.batDauAbs-now;
       const giua=tiep.batDauAbs-dang.ketThucAbs;
-      dongTrangThai+=` | Tiếp: ${tenTiep} sau ${fmtPhut(sau)}`;
+      coChuyenTiepNguyCo=true;
+      textChuyenTiepNguyCo=`🚨 TIẾP: ${tenTiep} sau ${fmtPhut(sau)}`;
+      dongTrangThai+=` | ${textChuyenTiepNguyCo}`;
       dongTiep=`Chuyến tiếp: ${tenTiep} sau ${fmtPhut(sau)}`;
       dongRanhGiua=giua>0?`Rảnh giữa: ${fmtPhut(giua)}`:"Rảnh giữa: Không";
+      canhBao=`ĐANG BẬN + CÓ CHUYẾN TIẾP`;
+      mauCanhBao="staffWarnRed";
+      mau="red";
     }else{
       dongTiep="Sau đó: Rảnh";
     }
@@ -676,6 +711,8 @@ function chiTietNhanSu(ma){
     canhBao,
     mau,
     mauCanhBao,
+    coChuyenTiepNguyCo,
+    textChuyenTiepNguyCo,
     tk,
     dangLam:!!dang
   };
@@ -725,8 +762,14 @@ function veDanhSachChon(){
     const dot=ns.ct.mau==="red"?"red":ns.ct.mau==="orange"?"orange":"green";
     const statusClass=ns.ct.mau==="red"?"statusRed":ns.ct.mau==="orange"?"statusOrange":"statusGreen";
     const ranhGiua = ns.ct.ranhGiua ? `<div class="staffLine"><span class="staffLabel"></span><span class="staffValue">${ns.ct.ranhGiua}</span></div>` : "";
+    const trangThaiHienThi = ns.ct.coChuyenTiepNguyCo
+      ? ns.ct.trangThai.replace(ns.ct.textChuyenTiepNguyCo, `<span class="badgeTiepNguyCo">${ns.ct.textChuyenTiepNguyCo}</span>`)
+      : ns.ct.trangThai;
+    const sapLamHienThi = ns.ct.coChuyenTiepNguyCo
+      ? `<span class="staffNextDanger">${ns.ct.tiep.replace("Chuyến tiếp: ","🚨 TIẾP: ")}</span>`
+      : ns.ct.tiep.replace("Sắp làm: ","").replace("Chuyến tiếp: ","").replace("Sau đó: ","Sau đó: ");
     return `
-      <div class="staffCard ${ns.chon?"selected":""}" onclick="ganBoNV('${ns.ma}')">
+      <div class="staffCard ${ns.chon?"selected":""} ${ns.ct.coChuyenTiepNguyCo?"coChuyenTiepNguyCo":""}" onclick="ganBoNV('${ns.ma}')">
         <div class="staffTop">
           <span class="dot ${dot}"></span>
           <span class="staffName">${ns.ten}</span>
@@ -734,9 +777,9 @@ function veDanhSachChon(){
         </div>
         <div class="staffInfo">
           <div>
-            <div class="staffLine"><span class="staffLabel">Trạng thái:</span><span class="staffValue ${statusClass}">${ns.ct.trangThai}</span></div>
+            <div class="staffLine"><span class="staffLabel">Trạng thái:</span><span class="staffValue ${statusClass}">${trangThaiHienThi}</span></div>
             <div class="staffLine"><span class="staffLabel">Ca còn:</span><span class="staffValue">${ns.ct.caCon}</span></div>
-            <div class="staffLine"><span class="staffLabel">Sắp làm:</span><span class="staffValue">${ns.ct.tiep.replace("Sắp làm: ","").replace("Chuyến tiếp: ","").replace("Sau đó: ","Sau đó: ")}</span></div>
+            <div class="staffLine"><span class="staffLabel">Sắp làm:</span><span class="staffValue">${sapLamHienThi}</span></div>
             ${ranhGiua}
           </div>
           <div>
@@ -778,6 +821,10 @@ function themSuaChuyen(){
 }
 function ganBoNV(ma){
   const cb=chuyen(chuyenDangChon); if(!cb)return alert("Chưa chọn chuyến bay.");
+  const ctCanhBao=chiTietNhanSu(ma);
+  if(ctCanhBao.coChuyenTiepNguyCo){
+    if(!confirm(`${tenNV(ma)} đang bận và còn chuyến tiếp:\n${ctCanhBao.trangThai}\n\nBạn vẫn muốn điều động?`)) return;
+  }
   const co=state.phanCong.find(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ma);
   if(co){state.phanCong=state.phanCong.filter(pc=>!(pc.maChuyen===chuyenDangChon&&pc.maNV===ma)); luu(); veTatCa(); return;}
   const pc={id:"PC"+Date.now(),maChuyen:chuyenDangChon,maNV:ma,batDauAbs:batDauAbs(cb),ketThucAbs:ketThucAbs(cb),dieuDongTu:null};
