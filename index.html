@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.30</title>
+<title>Dương Tú v0.32</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -278,19 +278,19 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;
 <section class="panel"><h2>Realtime chuyến bay - thanh ngang theo thời gian</h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
 
 <div class="grid2">
-<section class="panel"><h2>Realtime nhân sự hôm nay - bấm trực tiếp để chọn người</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
 <section class="panel">
 <h2>Chọn nhân sự cho chuyến đang chọn</h2>
 <div class="body">
 <div class="row">
 <select id="locCap"><option value="tatca">Cấp cần: Tất cả</option><option value="1">Cấp 1 trở lên</option><option value="2">Cấp 2 trở lên</option><option value="3">Cấp 3 trở lên</option></select>
-<select id="sapXep"><option value="itChuyen">Ít chuyến nhất</option><option value="itThoiGian">Ít thời gian nhất</option><option value="ranhLau">Rảnh lâu nhất</option></select>
+<select id="sapXep"><option value="itChuyen">Ít chuyến nhất</option><option value="itThoiGian">Ít thời gian nhất</option><option value="ranhLau">Rảnh / sắp rảnh</option></select>
 </div>
 <div class="hint" id="chuyenDangChonText">Đang chọn: chưa có</div>
 <div class="staffHeader"><span></span><b>Họ và tên</b><b>Cấp</b><b>Số chuyến</b><b>Thời gian làm</b><b>Rảnh</b><b>Trạng thái / ca</b><b>Cảnh báo</b></div>
 <div id="danhSachChonNhanSu" style="margin-top:6px"></div>
 </div>
 </section>
+<section class="panel"><h2>Realtime nhân sự hôm nay - bấm trực tiếp để chọn người</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
 </div>
 
 <section class="panel"><h2><span>Phân ca hôm nay + chấm công</span><button class="small ghost" id="nutAnPhanCa">Hiện</button></h2>
@@ -381,6 +381,30 @@ state.danhSachNhanSu.forEach(ns=>{
   state.phanCaHomNay[ns.ma] = chuanHoaCa(state.phanCaHomNay[ns.ma]);
   if(!state.chamCong[ns.ma]) state.chamCong[ns.ma]={vao:null,ra:null};
 });
+
+// v0.31 - lưu sẵn phân ca nhóm chiều/đêm để khỏi nhập tay
+const PHAN_CA_LUU_SAN = {
+  "Trà Chanh": {gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
+  "Hoàng Em": {gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
+  "Hùng Google": {gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
+  "Hậu": {gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
+  "Hoàng Anh": {gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
+  "Siêu Nhân": {gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
+  "Hùng Huế": {gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
+  "Quý Ảo": {gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"}
+};
+state.danhSachNhanSu.forEach(ns=>{
+  const caLuu = PHAN_CA_LUU_SAN[ns.ten];
+  if(caLuu){
+    state.phanCaHomNay[ns.ma] = {
+      ...(state.phanCaHomNay[ns.ma] || {}),
+      chon:true,
+      ...caLuu
+    };
+    if(!state.chamCong[ns.ma]) state.chamCong[ns.ma]={vao:null,ra:null};
+  }
+});
+luu();
 let chuyenDangChon=null;
 
 function luu(){localStorage.setItem(KHO_LUU,JSON.stringify(state));}
@@ -657,6 +681,23 @@ function chiTietNhanSu(ma){
   };
 }
 
+
+function uuTienRanh(ns){
+  const now=hienTaiAbs();
+  const pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs);
+  const dang=pcs.find(pc=>pc.batDauAbs<=now && now<=pc.ketThucAbs);
+  const truoc=[...pcs].filter(pc=>pc.ketThucAbs<=now).sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0]||null;
+
+  // Người đang rảnh: ưu tiên cao hơn người đang bận, ai rảnh lâu hơn lên trước.
+  if(!dang){
+    const ranh = truoc ? Math.max(0, now-truoc.ketThucAbs) : 999999;
+    return {nhom:0, diem:-ranh};
+  }
+
+  // Người đang bận: ai sắp rảnh sớm hơn lên trước.
+  return {nhom:1, diem:Math.max(0, dang.ketThucAbs-now)};
+}
+
 function veDanhSachChon(){
   const cb=chuyen(chuyenDangChon);
   $("chuyenDangChonText").textContent=cb?`Đang chọn: ${cb.flight} - Bãi ${cb.baiDo} - ${gioTuPhut(batDauAbs(cb))}/${gioTuPhut(ketThucAbs(cb))}`:"Đang chọn: chưa có";
@@ -673,7 +714,10 @@ function veDanhSachChon(){
 
   ds.sort((a,b)=>{
     if(sx==="itThoiGian") return a.ct.tk.tg-b.ct.tk.tg || a.ct.tk.so-b.ct.tk.so;
-    if(sx==="ranhLau") return b.ct.tk.ranh-a.ct.tk.ranh;
+    if(sx==="ranhLau"){
+      const ua=uuTienRanh(a), ub=uuTienRanh(b);
+      return ua.nhom-ub.nhom || ua.diem-ub.diem || a.ct.tk.so-b.ct.tk.so || a.ct.tk.tg-b.ct.tk.tg;
+    }
     return a.ct.tk.so-b.ct.tk.so || a.ct.tk.tg-b.ct.tk.tg;
   });
 
