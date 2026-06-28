@@ -1,468 +1,185 @@
-<!doctype html>
-<html lang="vi">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dương Tú v0.25</title>
-<style>
-:root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
-header{position:sticky;top:0;z-index:10;background:#071426;border-bottom:1px solid var(--line);padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
-h1{font-size:18px;margin:0}.live{color:#64ff8f;font-weight:800}.wrap{padding:8px;display:grid;gap:8px}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}.panel h2{font-size:14px;margin:0;padding:9px 11px;border-bottom:1px solid var(--line);background:#0a182b;display:flex;justify-content:space-between;align-items:center}
-.body{padding:9px}.row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
-input,select,button{border:1px solid var(--line);background:#102844;color:var(--text);border-radius:6px;padding:7px 8px;font-size:13px}
-input[type=checkbox]{width:16px;height:16px;accent-color:#38bdf8}button{cursor:pointer;font-weight:700}
-button.primary{background:#1455c8;border-color:#2b77ff}button.good{background:#166534;border-color:#22c55e}button.warn{background:#92400e;border-color:#f59e0b}button.danger{background:#7f1d1d;border-color:#ef4444}button.ghost{background:#0a182b}button.small{padding:4px 7px;font-size:12px}
-.grid2{display:grid;grid-template-columns:1fr;gap:8px}.hint{color:var(--muted);font-size:12px;margin-top:5px}.hidden{display:none!important}
-table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #183251;padding:7px;text-align:left;white-space:nowrap}th{color:#b7d5ff;background:#0c1b2f}.scroll{max-height:300px;overflow:auto}
-.greenText{color:#70ff9f;font-weight:800}.orangeText{color:#ffc46b;font-weight:800}.redText{color:#ff7777;font-weight:800}.muted{color:var(--muted)}
-.timeline{overflow:auto;border-top:1px solid var(--line)}.timeGrid{min-width:1650px;display:grid;grid-template-columns:185px repeat(25,60px);position:relative}
-.head{display:contents}.head div{height:28px;border-bottom:1px solid var(--line);border-right:1px solid #132946;color:#9fc0e7;background:#0b1b31;display:flex;align-items:center;justify-content:center;position:sticky;top:0;z-index:3}
-.labelHead{position:sticky;left:0;z-index:4;background:#0b1b31!important}.tlRow{display:contents}.tlLabel{position:sticky;left:0;z-index:2;background:#081a2f;border-right:1px solid var(--line);border-bottom:1px solid #132946;padding:8px;min-height:52px;cursor:pointer}
-.tlLane{grid-column:2/span 25;position:relative;height:52px;border-bottom:1px solid #132946;background:repeating-linear-gradient(to right,transparent 0,transparent 59px,#173150 60px);cursor:pointer}
-.tlLabel:hover,.tlLane:hover{background-color:#102844}.selected{outline:2px solid #38bdf8;background:#12385c!important}
-.bar{position:absolute;height:24px;top:14px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:white;white-space:nowrap;overflow:hidden;padding:0 6px}
-.flight.ok{background:var(--green)}.flight.warn{background:var(--orange);color:#061120}.flight.miss{background:var(--red)}.staff{background:var(--blue)}.transfer{background:var(--orange);color:#061120}.cut{background:var(--green)}.free{background:var(--gray);min-width:80px}.ot{background:var(--red)}
-.tenSau{position:absolute;top:15px;height:22px;display:flex;align-items:center;font-weight:800;color:#d8ebff;white-space:nowrap;padding-left:8px}
-.nowLine{position:absolute;top:28px;bottom:0;width:2px;background:#38bdf8;z-index:5}.nowLabel{position:absolute;top:4px;transform:translateX(-50%);background:#0ea5e9;color:#00111d;border-radius:4px;padding:2px 5px;font-weight:800;font-size:11px;z-index:6}
-.staffHeader,.staffCard{display:grid;grid-template-columns:24px 1.4fr .65fr .75fr .75fr .8fr 1.5fr 110px;gap:8px;align-items:center}.staffHeader{color:#b7d5ff;font-weight:800;font-size:12px;padding:8px;border-bottom:1px solid var(--line)}
-.staffCard{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:6px;background:#0a1c31;cursor:pointer}.dot{width:10px;height:10px;border-radius:50%;display:inline-block}.dot.green{background:#22c55e}.dot.orange{background:#f59e0b}.dot.red{background:#ef4444}
-.badge{border-radius:999px;padding:3px 7px;font-weight:800;font-size:12px}.bg-orange{background:#4a2d09;color:#ffd37b}.bg-red{background:#4a1111;color:#ff9c9c}
-@media(max-width:900px){.grid2{grid-template-columns:1fr}.staffHeader,.staffCard{grid-template-columns:20px 1.2fr .7fr .7fr}}
-</style>
-</head>
-<body>
-<header><h1>✈ Dương Tú</h1><div class="row" style="padding:0"><label>📅 Ngày làm việc <input type="date" id="lichChinh"></label><div>LIVE <span class="live" id="dongHo">--:--</span></div></div></header>
-<div class="wrap">
-<section class="panel">
-<h2>Nhập / sửa chuyến bay</h2>
-<div class="body">
-<div class="hint">Đổi ngày làm việc ở lịch trên cùng: chuyến bay và phân công của ngày đó được tải riêng; nhân sự và phân ca/chấm công đang có được giữ nguyên.</div>
-<div class="row">
-<label class="hidden">Ngày khai thác <input type="date" id="ngayKhaiThac"></label>
-<input id="flight" placeholder="Chuyến bay VD: RS511/512">
-<input id="eta" placeholder="ETA (có thể trống)">
-<input id="std" placeholder="STD (có thể trống)">
-<input id="baiDo" placeholder="Bãi đỗ">
-<button class="primary" id="nutChuyenBay">Thêm chuyến</button>
-<button class="ghost" id="nutBoChon">Bỏ chọn / làm mới</button>
-</div>
-</div>
-</section>
+from pathlib import Path
+import re
 
-<section class="panel"><h2>Realtime chuyến bay - thanh ngang theo thời gian</h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
+src = Path('/mnt/data/DuongTu_RampOps_v0_25_quay_lai_v23.html')
+html = src.read_text(encoding='utf-8')
+
+# Version and storage
+html = html.replace('<title>Dương Tú v0.25</title>', '<title>Dương Tú v0.26</title>')
+html = html.replace('const KHO_LUU="duong_tu_rampops_v025";', 'const KHO_LUU="duong_tu_rampops_v026";')
+
+# Timeline range: 04:00 -> 06:00 +1, slightly wider
+html = html.replace('const GIO_BAT_DAU=6*60, SO_GIO=25, RONG_GIO=60;', 'const GIO_BAT_DAU=4*60, SO_GIO=27, RONG_GIO=78;')
+html = html.replace('function startAbs(){return absNgayGio(state.ngayKhaiThac,"06:00");}', 'function startAbs(){return absNgayGio(state.ngayKhaiThac,"04:00");}')
+html = html.replace('grid-template-columns:185px repeat(25,60px)', 'grid-template-columns:195px repeat(27,78px)')
+html = html.replace('min-width:1650px', 'min-width:2320px')
+html = html.replace('grid-column:2/span 25', 'grid-column:2/span 27')
+html = html.replace('transparent 0,transparent 59px,#173150 60px', 'transparent 0,transparent 77px,#173150 78px')
+html = html.replace('i===24?" +1":""', 'i===26?" +1":""')
+html = html.replace('if(now>startAbs()+24*60)now=startAbs()+24*60;', 'if(now>startAbs()+26*60)now=startAbs()+26*60;')
+
+# Add group row style and outside shift stripe style
+style_inject = """
+.groupLabel{position:sticky;left:0;z-index:2;background:#102844;border-right:1px solid var(--line);border-bottom:1px solid #132946;padding:8px;min-height:36px;font-weight:900;color:#9fd3ff}
+.groupLane{grid-column:2/span 27;position:relative;height:36px;border-bottom:1px solid #132946;background:#081a2f;color:#9fd3ff;display:flex;align-items:center;padding-left:10px;font-weight:900}
+.wait{background:repeating-linear-gradient(45deg,#7c5a00 0,#7c5a00 8px,#b45309 8px,#b45309 16px);color:#fff3c4!important;opacity:.9}
+.overShift{background:#dc2626!important;color:#fff!important}
+"""
+html = html.replace('</style>', style_inject + '\n</style>')
+
+# Replace two realtime panels with one combined panel; keep selection panel below
+old_block = re.search(
+    r'<section class="panel"><h2>Realtime chuyến bay - thanh ngang theo thời gian</h2>.*?</section>\s*'
+    r'<div class="grid2">\s*'
+    r'<section class="panel"><h2>Realtime nhân sự hôm nay - bấm trực tiếp để chọn người</h2>.*?</section>\s*',
+    html,
+    re.S
+)
+if not old_block:
+    raise RuntimeError("Không tìm thấy block realtime cũ để thay")
+new_block = '''<section class="panel">
+<h2>Realtime điều hành chung</h2>
+<div class="timeline" id="khungTimelineTongHop"><div class="timeGrid" id="timelineTongHop"></div></div>
+</section>
 
 <div class="grid2">
-<section class="panel"><h2>Realtime nhân sự hôm nay - bấm trực tiếp để chọn người</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
-<section class="panel">
-<h2>Chọn nhân sự cho chuyến đang chọn</h2>
-<div class="body">
-<div class="row">
-<select id="locCap"><option value="tatca">Cấp cần: Tất cả</option><option value="1">Cấp 1 trở lên</option><option value="2">Cấp 2 trở lên</option><option value="3">Cấp 3 trở lên</option></select>
-<select id="sapXep"><option value="itChuyen">Ít chuyến nhất</option><option value="itThoiGian">Ít thời gian nhất</option><option value="ranhLau">Rảnh lâu nhất</option></select>
-</div>
-<div class="hint" id="chuyenDangChonText">Đang chọn: chưa có</div>
-<div class="staffHeader"><span></span><b>Họ và tên</b><b>Cấp</b><b>Số chuyến</b><b>Thời gian làm</b><b>Rảnh</b><b>Trạng thái / ca</b><b>Cảnh báo</b></div>
-<div id="danhSachChonNhanSu" style="margin-top:6px"></div>
-</div>
-</section>
-</div>
+'''
+html = html[:old_block.start()] + new_block + html[old_block.end():]
 
-<section class="panel"><h2><span>Phân ca hôm nay + chấm công</span><button class="small ghost" id="nutAnPhanCa">Hiện</button></h2>
-<div class="body hidden" id="khoiPhanCa">
-<div class="row">
-<label class="hidden">Ngày phân ca <input type="date" id="ngayPhanCa"></label>
-<button class="good" id="chonTatCa">Chọn tất cả</button>
-<button class="ghost" id="boTatCa">Bỏ chọn tất cả</button>
-<span class="hint">Giờ nhập được dạng 2200, 22:00, 22h00. Ca 2 để trống hoặc N = không có ca 2.</span>
-</div>
-<div class="scroll" style="margin-top:8px"><table><thead><tr><th>Hôm nay</th><th>Họ tên</th><th>Cấp</th><th>Vào ca 1</th><th>Ra ca 1</th><th>Vào ca 2</th><th>Ra ca 2</th><th>Chấm công vào</th><th>Chấm công ra</th><th>Trạng thái ca</th><th>Nút</th></tr></thead><tbody id="bangPhanCa"></tbody></table></div>
-</div>
-</section>
+# Add helper functions for shift warnings if not exists
+helper = r'''
+function namTrongCaNhanSu(ma, bd, kt){
+  const segs = typeof caSegments==="function" ? caSegments(ma) : (caAbs(ma)?[caAbs(ma)]:[]);
+  if(!segs.length) return false;
+  return segs.some(s => bd >= s.vao && kt <= s.ra);
+}
+function canhBaoQuaCaChoPhanCong(pc){
+  return !namTrongCaNhanSu(pc.maNV, pc.batDauAbs, pc.ketThucAbs);
+}
+'''
+if 'function namTrongCaNhanSu' not in html:
+    html = html.replace('function biDieuDongDi(pc){', helper + '\nfunction biDieuDongDi(pc){')
 
-<section class="panel"><h2><span>Nhân sự</span><button class="small ghost" id="nutAnNhanSu">Hiện</button></h2>
-<div class="body hidden" id="khoiNhanSu">
-<div class="row"><input id="maNV" placeholder="Mã NV"><input id="hoTen" placeholder="Họ tên"><input id="cap" placeholder="Cấp: 1.1/1.2"><button class="primary" id="themSuaNhanSu">Thêm / Sửa</button><button class="ghost" id="lamMoiNhanSu">Làm mới</button><button class="danger" id="xoaHet">Xóa dữ liệu đã lưu</button></div>
-<div class="scroll" style="margin-top:8px"><table><thead><tr><th>Mã NV</th><th>Họ tên</th><th>Cấp</th><th>Trạng thái</th></tr></thead><tbody id="bangNhanSu"></tbody></table></div>
-</div>
-</section>
-</div>
+# New combined realtime renderer
+insert_before = 'function veBangNhanSu(){'
+idx = html.find(insert_before)
+if idx == -1:
+    raise RuntimeError("Không tìm thấy điểm chèn veRealtimeTongHop")
+combined_func = r'''
+function veRealtimeTongHop(){
+  const el=$("timelineTongHop");
+  if(!el)return;
+  veHeader(el);
 
-<script>
-const KHO_LUU="duong_tu_rampops_v025";
-const GIO_BAT_DAU=6*60, SO_GIO=25, RONG_GIO=60;
+  // Nhóm chuyến bay
+  el.innerHTML+=`<div class="tlRow"><div class="groupLabel">✈ CHUYẾN BAY</div><div class="groupLane">Tổng chuyến trong ngày</div></div>`;
+  state.danhSachChuyenBay
+    .filter(cb=>cb.ngay===state.ngayKhaiThac)
+    .sort((a,b)=>batDauAbs(a)-batDauAbs(b))
+    .forEach(cb=>{
+      const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma);
+      const names=pcs.map(pc=>tenNV(pc.maNV)).join(" | ")||"chưa chọn nhân sự";
+      const mau=mauChuyen(cb.ma);
+      const left=viTri(batDauAbs(cb));
+      const width=rong(batDauAbs(cb),ketThucAbs(cb));
+      const sel=cb.ma===chuyenDangChon;
+      el.innerHTML+=`<div class="tlRow">
+        <div class="tlLabel ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')">
+          <b>${cb.flight} - Bãi ${cb.baiDo}</b><br>
+          <span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br>
+          <span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span>
+        </div>
+        <div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')">
+          <div class="bar flight ${mau}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div>
+          <div class="tenSau" style="left:${left+width+6}px">${names}</div>
+        </div>
+      </div>`;
+    });
 
-function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
-function duLieuMau(){
-  const ngay=homNayLocal();
-  const ns=[
-    {ma:"NV001",ten:"Le Van A",cap:"1.1/1.2"},{ma:"NV002",ten:"Hoang E",cap:"1.2"},{ma:"NV003",ten:"Phan I",cap:"2.1/2.2"},{ma:"NV004",ten:"Do Q",cap:"3.1/3.2"},
-    {ma:"NV005",ten:"Vo G",cap:"1.2"},{ma:"NV006",ten:"Ly L",cap:"2.1"},{ma:"NV007",ten:"Tran D",cap:"1.1/1.2"},{ma:"NV008",ten:"Ngo H",cap:"2.2"}
-  ];
-  const phanCa={}, chamCong={};
-  ns.forEach(x=>{phanCa[x.ma]={chon:true,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};chamCong[x.ma]={vao:null,ra:null};});
-  return {
-    ngayKhaiThac:ngay,
-    ngayPhanCa:ngay,
-    danhSachNhanSu:ns,
-    phanCaHomNay:phanCa,
-    chamCong,
-    danhSachChuyenBay:[
-      {ma:"CB001",ngay,flight:"VN123",eta:"10:30",std:"11:20",baiDo:"12"},
-      {ma:"CB002",ngay,flight:"VJ621",eta:"10:50",std:"12:10",baiDo:"08"},
-      {ma:"CB003",ngay,flight:"SQ171",eta:"23:00",std:"00:30",baiDo:"15"}
-    ],
-    phanCong:[]
-  };
-}
-let state;
-try{state=JSON.parse(localStorage.getItem(KHO_LUU)||"null");}catch(e){state=null;}
-if(!state || !Array.isArray(state.danhSachNhanSu) || !Array.isArray(state.danhSachChuyenBay)){state=duLieuMau();}
-if(!state.ngayPhanCa) state.ngayPhanCa = state.ngayKhaiThac || homNayLocal();
-function chuanHoaCa(ca){
-  if(!ca) ca={chon:false};
-  if(ca.gioVao && !ca.gioVao1) ca.gioVao1=ca.gioVao;
-  if(ca.gioRa && !ca.gioRa1) ca.gioRa1=ca.gioRa;
-  ca.gioVao1 = ca.gioVao1 || "06:00";
-  ca.gioRa1 = ca.gioRa1 || "14:00";
-  ca.gioVao2 = ca.gioVao2 || "N";
-  ca.gioRa2 = ca.gioRa2 || "N";
-  return ca;
-}
-state.danhSachNhanSu.forEach(ns=>{
-  state.phanCaHomNay[ns.ma] = chuanHoaCa(state.phanCaHomNay[ns.ma]);
-  if(!state.chamCong[ns.ma]) state.chamCong[ns.ma]={vao:null,ra:null};
-});
-let chuyenDangChon=null;
-
-function luu(){localStorage.setItem(KHO_LUU,JSON.stringify(state));}
-function $(id){return document.getElementById(id);}
-function chuanHoaGio(raw){
-  let s=String(raw||"").trim().toLowerCase().replace("h",":");
-  if(/^\d{4}$/.test(s))s=s.slice(0,2)+":"+s.slice(2);
-  if(/^\d{1,2}:\d{2}$/.test(s)){let [h,m]=s.split(":").map(Number);if(h>=0&&h<24&&m>=0&&m<60)return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");}
-  return null;
-}
-function phutNgay(gio){const [h,m]=String(gio||"00:00").split(":").map(Number);return h*60+(m||0);}
-function gioTuPhut(p){p=((Math.round(p)%1440)+1440)%1440;return String(Math.floor(p/60)).padStart(2,"0")+":"+String(p%60).padStart(2,"0");}
-function chiSoNgay(ngay){const [y,m,d]=ngay.split("-").map(Number);return Math.floor(Date.UTC(y,m-1,d)/86400000);}
-function absNgay(ngay){return chiSoNgay(ngay)*1440;}
-function absNgayGio(ngay,gio){return absNgay(ngay)+phutNgay(gio);}
-function hienTaiAbs(){const d=new Date();return absNgay(homNayLocal())+d.getHours()*60+d.getMinutes();}
-function startAbs(){return absNgayGio(state.ngayKhaiThac,"06:00");}
-function viTri(abs){return ((abs-startAbs())/60)*RONG_GIO;}
-function rong(bd,kt){return Math.max(18,((kt-bd)/60)*RONG_GIO);}
-function coGio(g){return String(g||"").trim()!=="";}
-function etaAbs(cb){return coGio(cb.eta)?absNgayGio(cb.ngay,cb.eta):null;}
-function stdAbs(cb){
-  if(!coGio(cb.std)) return null;
-  let s=absNgayGio(cb.ngay,cb.std);
-  const e=etaAbs(cb);
-  if(e!==null && s<=e) s+=1440;
-  return s;
-}
-function batDauAbs(cb){
-  const e=etaAbs(cb), s=stdAbs(cb);
-  if(e!==null) return e-30;
-  if(s!==null) return s-75;
-  return absNgayGio(cb.ngay,"06:00");
-}
-function ketThucAbs(cb){
-  const e=etaAbs(cb), s=stdAbs(cb);
-  if(s!==null) return s;
-  if(e!==null) return e+30;
-  return batDauAbs(cb)+30;
-}
-function gioHienThi(g){return coGio(g)?g:"--";}
-function tenNV(ma){return (state.danhSachNhanSu.find(x=>x.ma===ma)||{}).ten||ma;}
-function chuyen(ma){return state.danhSachChuyenBay.find(x=>x.ma===ma);}
-function capLonNhat(cap){const a=String(cap).split("/").map(Number).filter(x=>!isNaN(x));return a.length?Math.max(...a):0;}
-function datCap(cap,can){return can==="tatca"||capLonNhat(cap)>=Number(can);}
-function caSegments(ma){
-  const ca=chuanHoaCa(state.phanCaHomNay[ma]);
-  if(!ca || !ca.chon) return [];
-  const segs=[];
-  let v1=chuanHoaGio(ca.gioVao1), r1=chuanHoaGio(ca.gioRa1);
-  if(v1 && r1){
-    let vao=absNgayGio(state.ngayPhanCa,v1), ra=absNgayGio(state.ngayPhanCa,r1);
-    if(ra<=vao) ra+=1440;
-    segs.push({vao,ra,ten:"Ca 1"});
-  }
-  const v2raw=String(ca.gioVao2||"N").trim().toUpperCase();
-  const r2raw=String(ca.gioRa2||"N").trim().toUpperCase();
-  if(v2raw!=="N" && r2raw!=="N" && v2raw!=="" && r2raw!==""){
-    let v2=chuanHoaGio(v2raw), r2=chuanHoaGio(r2raw);
-    if(v2 && r2){
-      let vao=absNgayGio(state.ngayPhanCa,v2), ra=absNgayGio(state.ngayPhanCa,r2);
-      if(segs.length && vao < segs[0].ra) vao += 1440;
-      if(ra<=vao) ra+=1440;
-      segs.push({vao,ra,ten:"Ca 2"});
-    }
-  }
-  return segs;
-}
-function caAbs(ma){
-  const segs=caSegments(ma);
-  if(!segs.length) return null;
-  return {vao:segs[0].vao, ra:segs[segs.length-1].ra};
-}
-function congViecLienQuanOT(ma, mocRaCa){
-  const ds = state.phanCong.filter(pc => pc.maNV===ma && pc.ketThucAbs > mocRaCa);
-  if(!ds.length) return null;
-  return Math.max(...ds.map(pc => pc.ketThucAbs));
-}
-function trangThaiCa(ma){
-  const ca=state.phanCaHomNay[ma]; if(!ca||!ca.chon)return {text:"Không trong ca",loai:"gray"};
+  // Nhóm nhân sự
+  el.innerHTML+=`<div class="tlRow"><div class="groupLabel">👥 NHÂN SỰ</div><div class="groupLane">Bấm trực tiếp vào dòng nhân sự để chọn cho chuyến đang chọn</div></div>`;
   const now=hienTaiAbs();
-  const segs=caSegments(ma);
-  if(!segs.length) return {text:"Chưa nhập giờ ca",loai:"orange"};
+  const khungDau=startAbs();
+  const khungCuoi=khungDau+26*60;
 
-  for(const s of segs){
-    if(now>=s.vao && now<=s.ra){
-      const con=Math.round(s.ra-now);
-      return con<=15?{text:`${s.ten} sắp hết ${con}'`,loai:"orange"}:{text:`${s.ten} còn ${con}'`,loai:"green"};
-    }
-    if(now<s.vao){
-      return {text:`Chưa vào ${s.ten} ${Math.round(s.vao-now)}'`,loai:"blue"};
-    }
-  }
-
-  const last=segs[segs.length-1];
-  const ketThucCongViec = congViecLienQuanOT(ma, last.ra);
-
-  // Không có việc bị giữ lại sau giờ ca thì không tính OT nữa, coi như đã hết ca/về rồi.
-  if(!ketThucCongViec) return {text:"Hết ca",loai:"gray"};
-
-  // Có việc kéo qua giờ ca mới tính OT.
-  const otDen = Math.min(now, ketThucCongViec);
-  if(otDen > last.ra) return {text:`OT ${Math.round(otDen-last.ra)}'`,loai:"red"};
-
-  return {text:"Hết ca",loai:"gray"};
-}
-function thongKeNV(ma){
-  const ds=state.phanCong.filter(pc=>pc.maNV===ma);
-  const so=ds.length, tg=Math.round(ds.reduce((s,pc)=>s+Math.max(0,pc.ketThucAbs-pc.batDauAbs),0));
-  const cuoi=ds.length?Math.max(...ds.map(pc=>pc.ketThucAbs)):null, ranh=cuoi===null?999:Math.max(0,Math.round(hienTaiAbs()-cuoi));
-  return {so,tg,ranh};
-}
-function dangLam(ma){
-  const now=hienTaiAbs();
-  const ds=state.phanCong.filter(pc=>pc.maNV===ma&&pc.batDauAbs<=now&&now<=pc.ketThucAbs);
-  if(ds.length){const cb=chuyen(ds[0].maChuyen);return {ban:true,text:`Đang làm ${cb?cb.flight:ds[0].maChuyen} | Còn ${Math.round(ds[0].ketThucAbs-now)}'`};}
-  return {ban:false,text:"Rảnh"};
-}
-function trung(a,b){return a.maNV===b.maNV&&a.maChuyen!==b.maChuyen&&!(a.ketThucAbs<=b.batDauAbs||a.batDauAbs>=b.ketThucAbs);}
-function soGoc(ma){return state.phanCong.filter(pc=>pc.maChuyen===ma).length;}
-function soHieuLuc(ma){
-  const pcs=state.phanCong.filter(pc=>pc.maChuyen===ma); const lay=new Set();
-  pcs.forEach(cu=>{if(state.phanCong.some(moi=>moi.dieuDongTu===ma&&trung(cu,moi)))lay.add(cu.maNV);});
-  return pcs.length-lay.size;
-}
-function mauChuyen(ma){if(soGoc(ma)===0)return"miss";const h=soHieuLuc(ma);if(h<=0)return"miss";if(h===1)return"warn";return"ok";}
-function ghiChu(ma){if(soGoc(ma)===0)return"THIẾU NGƯỜI";const h=soHieuLuc(ma);if(h<=0)return"BỊ LẤY HẾT NGƯỜI";if(h===1)return"CÒN 1 NGƯỜI";return"";}
-function biDieuDongDi(pc){const ds=state.phanCong.filter(x=>x.dieuDongTu===pc.maChuyen&&x.maNV===pc.maNV&&trung(pc,x));return ds.length?ds.sort((a,b)=>a.batDauAbs-b.batDauAbs)[0].batDauAbs:null;}
-
-function veHeader(el){
-  let html='<div class="head"><div class="labelHead"></div>';
-  for(let i=0;i<SO_GIO;i++){const abs=startAbs()+i*60;html+=`<div>${gioTuPhut(abs)}${i===24?" +1":""}</div>`;}
-  html+='</div>';
-  let now=hienTaiAbs(); if(now<startAbs())now=startAbs(); if(now>startAbs()+24*60)now=startAbs()+24*60;
-  const x=viTri(now)+185;
-  html+=`<div class="nowLabel" style="left:${x}px">${gioTuPhut(now)}</div><div class="nowLine" style="left:${x}px"></div>`;
-  el.innerHTML=html;
-}
-function veTimelineChuyen(){
-  const el=$("timelineChuyenBay"); veHeader(el);
-  state.danhSachChuyenBay.filter(cb=>cb.ngay===state.ngayKhaiThac).sort((a,b)=>batDauAbs(a)-batDauAbs(b)).forEach(cb=>{
-    const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma), names=pcs.map(pc=>tenNV(pc.maNV)).join(" | ")||"chưa chọn nhân sự";
-    const mau=mauChuyen(cb.ma), left=viTri(batDauAbs(cb)), width=rong(batDauAbs(cb),ketThucAbs(cb)), sel=cb.ma===chuyenDangChon;
-    el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div><div class="tenSau" style="left:${left+width+6}px">${names}</div></div></div>`;
-  });
-}
-function veTimelineNhanSu(){
-  const el=$("timelineNhanSu"); veHeader(el); const now=hienTaiAbs();
   state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon).forEach(ns=>{
-    const tt=trangThaiCa(ns.ma), pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs); let bars="";
-    const c=caAbs(ns.ma), dang=pcs.some(pc=>pc.batDauAbs<=now&&now<=pc.ketThucAbs);
+    const tt=trangThaiCa(ns.ma);
+    const pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs);
+    const segs=caSegments(ns.ma);
+    let bars="";
+
+    // Sọc vàng ngoài giờ vào ca
+    if(segs.length){
+      let cursor=khungDau;
+      segs.forEach(seg=>{
+        if(seg.vao>cursor){
+          const bd=Math.max(cursor,khungDau), kt=Math.min(seg.vao,khungCuoi);
+          if(kt>bd) bars+=`<div class="bar wait" style="left:${viTri(bd)}px;width:${rong(bd,kt)}px">Ngoài ca</div>`;
+        }
+        cursor=Math.max(cursor,seg.ra);
+      });
+      if(cursor<khungCuoi){
+        bars+=`<div class="bar wait" style="left:${viTri(cursor)}px;width:${rong(cursor,khungCuoi)}px">Ngoài ca</div>`;
+      }
+    }
+
+    const dang=pcs.some(pc=>pc.batDauAbs<=now&&now<=pc.ketThucAbs);
     if(!dang){
       const next=pcs.find(pc=>pc.batDauAbs>now);
-      caSegments(ns.ma).forEach(seg=>{
+      segs.forEach(seg=>{
         const bd=Math.max(now,seg.vao), kt=next?Math.min(next.batDauAbs,seg.ra):seg.ra;
-        if(kt>bd)bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"}" style="left:${viTri(bd)}px;width:${rong(bd,kt)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
+        if(kt>bd) bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"}" style="left:${viTri(bd)}px;width:${rong(bd,kt)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
       });
     }
-    pcs.forEach(pc=>{const cb=chuyen(pc.maChuyen),cut=biDieuDongDi(pc),kt=cut||pc.ketThucAbs,cls=pc.dieuDongTu?"transfer":cut?"cut":"staff",txt=pc.dieuDongTu?`ĐIỀU ĐỘNG ${cb?cb.flight:pc.maChuyen}`:`${cb?cb.flight:pc.maChuyen} - Bãi ${cb?cb.baiDo:""}`;if(kt>pc.batDauAbs)bars+=`<div class="bar staff ${cls}" style="left:${viTri(pc.batDauAbs)}px;width:${rong(pc.batDauAbs,kt)}px">${txt}</div>`;});
-    if(!bars){
-      caSegments(ns.ma).forEach(seg=>{
-        bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"}" style="left:${viTri(seg.vao)}px;width:${rong(seg.vao,seg.ra)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
-      });
-    }
+
+    pcs.forEach(pc=>{
+      const cb=chuyen(pc.maChuyen);
+      const cut=biDieuDongDi(pc);
+      const kt=cut||pc.ketThucAbs;
+      const quaCa=canhBaoQuaCaChoPhanCong(pc);
+      const cls=quaCa?"overShift":pc.dieuDongTu?"transfer":cut?"cut":"staff";
+      const txt=quaCa?`VƯỢT CA ${cb?cb.flight:pc.maChuyen}`:pc.dieuDongTu?`ĐIỀU ĐỘNG ${cb?cb.flight:pc.maChuyen}`:`${cb?cb.flight:pc.maChuyen} - Bãi ${cb?cb.baiDo:""}`;
+      if(kt>pc.batDauAbs) bars+=`<div class="bar staff ${cls}" style="left:${viTri(pc.batDauAbs)}px;width:${rong(pc.batDauAbs,kt)}px">${txt}</div>`;
+    });
+
     const daChon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma);
-    el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')"><b>${ns.ten}</b><br><span class="muted">Cấp ${ns.cap}</span><br><span class="${tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":"greenText"}">${tt.text}</span></div><div class="tlLane ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
+    el.innerHTML+=`<div class="tlRow">
+      <div class="tlLabel ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')">
+        <b>${ns.ten}</b><br>
+        <span class="muted">Cấp ${ns.cap}</span><br>
+        <span class="${tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":"greenText"}">${tt.text}</span>
+      </div>
+      <div class="tlLane ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div>
+    </div>`;
   });
 }
-function veBangNhanSu(){
-  $("bangNhanSu").innerHTML=state.danhSachNhanSu.map(ns=>`<tr><td>${ns.ma}</td><td>${ns.ten}</td><td>${ns.cap}</td><td><button class="small" onclick="suaNV('${ns.ma}')">Sửa</button> <button class="small danger" onclick="xoaNV('${ns.ma}')">Xóa</button></td></tr>`).join("");
-}
-function veBangPhanCa(){
-  $("bangPhanCa").innerHTML=state.danhSachNhanSu.map(ns=>{
-    if(!state.phanCaHomNay[ns.ma])state.phanCaHomNay[ns.ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};
-    state.phanCaHomNay[ns.ma]=chuanHoaCa(state.phanCaHomNay[ns.ma]);
-    if(!state.chamCong[ns.ma])state.chamCong[ns.ma]={vao:null,ra:null};
-    const ca=state.phanCaHomNay[ns.ma],cc=state.chamCong[ns.ma],tt=trangThaiCa(ns.ma),cls=tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":tt.loai==="green"?"greenText":"muted";
-    return `<tr>
-      <td><input type="checkbox" ${ca.chon?"checked":""} onchange="doiChon('${ns.ma}',this.checked)"></td>
-      <td>${ns.ten}</td><td>${ns.cap}</td>
-      <td><input value="${ca.gioVao1}" onchange="doiGioCa('${ns.ma}','gioVao1',this.value)" style="width:90px"></td>
-      <td><input value="${ca.gioRa1}" onchange="doiGioCa('${ns.ma}','gioRa1',this.value)" style="width:90px"></td>
-      <td><input value="${ca.gioVao2}" onchange="doiGioCa('${ns.ma}','gioVao2',this.value)" style="width:90px"></td>
-      <td><input value="${ca.gioRa2}" onchange="doiGioCa('${ns.ma}','gioRa2',this.value)" style="width:90px"></td>
-      <td>${cc.vao||"-"}</td><td>${cc.ra||"-"}</td><td class="${cls}">${tt.text}</td>
-      <td><button class="small good" onclick="vaoCa('${ns.ma}')">Vào ca</button> <button class="small warn" onclick="raCa('${ns.ma}')">Ra ca</button></td>
-    </tr>`;
-  }).join("");
-}
-function veDanhSachChon(){
-  const cb=chuyen(chuyenDangChon); $("chuyenDangChonText").textContent=cb?`Đang chọn: ${cb.flight} - Bãi ${cb.baiDo} - ${gioTuPhut(batDauAbs(cb))}/${cb.std}`:"Đang chọn: chưa có";
-  const loc=$("locCap").value, sx=$("sapXep").value;
-  let ds=state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon).filter(ns=>datCap(ns.cap,loc)).map(ns=>{const tk=thongKeNV(ns.ma),tt=trangThaiCa(ns.ma),lam=dangLam(ns.ma),chon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma);return{...ns,...tk,tt,lam,chon};});
-  ds.sort((a,b)=>sx==="itThoiGian"?a.tg-b.tg:sx==="ranhLau"?b.ranh-a.ranh:a.so-b.so||a.tg-b.tg);
-  $("danhSachChonNhanSu").innerHTML=ds.map(ns=>{const dot=ns.tt.loai==="red"?"red":ns.lam.ban?"orange":"green",cls=ns.tt.loai==="red"?"redText":ns.tt.loai==="orange"?"orangeText":"greenText",warn=ns.tt.loai==="red"?'<span class="badge bg-red">QUÁ GIỜ</span>':ns.lam.ban?'<span class="badge bg-orange">ĐANG BẬN</span>':"";return`<div class="staffCard ${ns.chon?"selected":""}" onclick="ganBoNV('${ns.ma}')"><span class="dot ${dot}"></span><b>${ns.ten}</b><span>${ns.cap}</span><span>${ns.so} chuyến</span><span>${ns.tg}'</span><span>${ns.ranh===999?"Rảnh cả ca":ns.ranh+"'"}</span><span class="${cls}">${ns.lam.text} | ${ns.tt.text}</span><span>${warn}</span></div>`;}).join("");
-}
-function veTatCa(){ if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; capNhatDongHo(); }
+'''
+html = html[:idx] + combined_func + '\n' + html[idx:]
 
-function chonChuyen(ma){ if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; luu(); veTatCa();
-setTimeout(canhTheoVachHienTai,100); }
-function boChon(){ chuyenDangChon=null; ["flight","eta","std","baiDo"].forEach(id=>$(id).value=""); veTatCa(); }
-function themSuaChuyen(){
-  const flight=$("flight").value.trim();
-  const etaRaw=$("eta").value.trim();
-  const stdRaw=$("std").value.trim();
-  const eta=etaRaw?chuanHoaGio(etaRaw):"";
-  const std=stdRaw?chuanHoaGio(stdRaw):"";
-  const baiDo=$("baiDo").value.trim();
+# Replace render calls: don't render separate timelines anymore
+html = html.replace('veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon();', 'veRealtimeTongHop(); veDanhSachChon();')
+html = html.replace('veTimelineChuyen();veTimelineNhanSu();veDanhSachChon();', 'veRealtimeTongHop();veDanhSachChon();')
+html = html.replace('veTimelineChuyen();veTimelineNhanSu();veDanhSachChon();veBangPhanCa();', 'veRealtimeTongHop();veDanhSachChon();veBangPhanCa();')
 
-  if(!flight||!baiDo)return alert("Nhập Chuyến bay và Bãi đỗ.");
-  if(etaRaw&&!eta)return alert("ETA sai định dạng. Nhập 2300 hoặc 23:00.");
-  if(stdRaw&&!std)return alert("STD sai định dạng. Nhập 0030 hoặc 00:30.");
-  if(!eta&&!std)return alert("Phải có ETA hoặc STD.");
-
-  if(chuyenDangChon){
-    const i=state.danhSachChuyenBay.findIndex(x=>x.ma===chuyenDangChon);
-    if(i>=0)state.danhSachChuyenBay[i]={...state.danhSachChuyenBay[i],ngay:state.ngayKhaiThac,flight,eta,std,baiDo};
-  }else{
-    chuyenDangChon="CB"+Date.now();
-    state.danhSachChuyenBay.push({ma:chuyenDangChon,ngay:state.ngayKhaiThac,flight,eta,std,baiDo});
+# Patch assigning staff: warn if outside shift
+assign_old = '''const pc={id:"PC"+Date.now(),maChuyen:chuyenDangChon,maNV:ma,batDauAbs:batDauAbs(cb),ketThucAbs:ketThucAbs(cb),dieuDongTu:null};
+  const trungPc=state.phanCong.find(x=>x.maNV===ma&&!(x.ketThucAbs<=pc.batDauAbs||x.batDauAbs>=pc.ketThucAbs));'''
+assign_new = '''const pc={id:"PC"+Date.now(),maChuyen:chuyenDangChon,maNV:ma,batDauAbs:batDauAbs(cb),ketThucAbs:ketThucAbs(cb),dieuDongTu:null};
+  if(!namTrongCaNhanSu(ma, pc.batDauAbs, pc.ketThucAbs)){
+    if(!confirm(`${tenNV(ma)} không đủ thời gian ca cho chuyến này (${gioTuPhut(pc.batDauAbs)}-${gioTuPhut(pc.ketThucAbs)}). Vẫn phân công?`))return;
   }
-  luu(); veTatCa();
-}
-function ganBoNV(ma){
-  const cb=chuyen(chuyenDangChon); if(!cb)return alert("Chưa chọn chuyến bay.");
-  const co=state.phanCong.find(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ma);
-  if(co){state.phanCong=state.phanCong.filter(pc=>!(pc.maChuyen===chuyenDangChon&&pc.maNV===ma)); luu(); veTatCa(); return;}
-  const pc={id:"PC"+Date.now(),maChuyen:chuyenDangChon,maNV:ma,batDauAbs:batDauAbs(cb),ketThucAbs:ketThucAbs(cb),dieuDongTu:null};
-  const trungPc=state.phanCong.find(x=>x.maNV===ma&&!(x.ketThucAbs<=pc.batDauAbs||x.batDauAbs>=pc.ketThucAbs));
-  if(trungPc){const cbCu=chuyen(trungPc.maChuyen); if(!confirm(`${tenNV(ma)} đang có lịch ${cbCu?cbCu.flight:trungPc.maChuyen}. Vẫn điều động?`))return; pc.dieuDongTu=trungPc.maChuyen; pc.batDauAbs=hienTaiAbs();}
-  state.phanCong.push(pc); luu(); veTatCa();
-}
-function doiNgay(){state.ngayKhaiThac=$("ngayKhaiThac").value;boChon();luu();veTatCa();}
-function doiChon(ma,val){state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),chon:val};luu();veTatCa();}
-function doiGioCa(ma,field,val){
-  let raw=String(val||"").trim();
-  let g;
-  if(field==="gioVao2" || field==="gioRa2"){
-    if(raw==="" || raw.toUpperCase()==="N") g="N";
-    else g=chuanHoaGio(raw);
-  }else{
-    g=chuanHoaGio(raw);
-  }
-  if(!g)return alert("Nhập giờ dạng 2200 hoặc 22:00. Ca 2 có thể để N.");
-  state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),[field]:g};
-  luu();veTatCa();
-}
-function vaoCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),vao:gioTuPhut(hienTaiAbs())};luu();veTatCa();}
-function raCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),ra:gioTuPhut(hienTaiAbs())};luu();veTatCa();}
-function suaNV(ma){const ns=state.danhSachNhanSu.find(x=>x.ma===ma);$("maNV").value=ns.ma;$("hoTen").value=ns.ten;$("cap").value=ns.cap;}
-function xoaNV(ma){if(!confirm("Xóa nhân sự này?"))return;state.danhSachNhanSu=state.danhSachNhanSu.filter(x=>x.ma!==ma);delete state.phanCaHomNay[ma];delete state.chamCong[ma];state.phanCong=state.phanCong.filter(x=>x.maNV!==ma);luu();veTatCa();}
-function themSuaNV(){const ma=$("maNV").value.trim(),ten=$("hoTen").value.trim(),cap=$("cap").value.trim();if(!ma||!ten||!cap)return alert("Nhập đủ Mã NV / Họ tên / Cấp.");const i=state.danhSachNhanSu.findIndex(x=>x.ma===ma);if(i>=0)state.danhSachNhanSu[i]={ma,ten,cap};else{state.danhSachNhanSu.push({ma,ten,cap});state.phanCaHomNay[ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};state.chamCong[ma]={vao:null,ra:null};}lamMoiNV();luu();veTatCa();}
-function lamMoiNV(){["maNV","hoTen","cap"].forEach(id=>$(id).value="");}
-function capNhatDongHo(){$("dongHo").textContent=new Date().toLocaleTimeString("vi-VN",{hour12:false,hour:"2-digit",minute:"2-digit"});}
+  const trungPc=state.phanCong.find(x=>x.maNV===ma&&!(x.ketThucAbs<=pc.batDauAbs||x.batDauAbs>=pc.ketThucAbs));'''
+html = html.replace(assign_old, assign_new)
 
-$("ngayKhaiThac").onchange=doiNgay; $("lichChinh").onchange=()=>doiNgayLamViecMoi($("lichChinh").value); $("ngayPhanCa").onchange=()=>{state.ngayPhanCa=$("ngayPhanCa").value;luu();veTatCa();}; $("nutChuyenBay").onclick=themSuaChuyen; $("nutBoChon").onclick=boChon;
-$("locCap").onchange=veDanhSachChon; $("sapXep").onchange=veDanhSachChon;
-$("nutAnPhanCa").onclick=()=>{$("khoiPhanCa").classList.toggle("hidden");$("nutAnPhanCa").textContent=$("khoiPhanCa").classList.contains("hidden")?"Hiện":"Ẩn";};
-$("nutAnNhanSu").onclick=()=>{$("khoiNhanSu").classList.toggle("hidden");$("nutAnNhanSu").textContent=$("khoiNhanSu").classList.contains("hidden")?"Hiện":"Ẩn";};
-$("chonTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:true,gioVao1:state.phanCaHomNay[ns.ma]?.gioVao1||"06:00",gioRa1:state.phanCaHomNay[ns.ma]?.gioRa1||"14:00",gioVao2:state.phanCaHomNay[ns.ma]?.gioVao2||"N",gioRa2:state.phanCaHomNay[ns.ma]?.gioRa2||"N"});luu();veTatCa();};
-$("boTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:false});luu();veTatCa();};
-$("themSuaNhanSu").onclick=themSuaNV; $("lamMoiNhanSu").onclick=lamMoiNV; $("xoaHet").onclick=()=>{if(confirm("Xóa toàn bộ dữ liệu đã lưu?")){localStorage.removeItem(KHO_LUU);location.reload();}};
-function dangNhapLieu(){
-  const el=document.activeElement;
-  return el && (el.tagName==="INPUT" || el.tagName==="SELECT" || el.tagName==="TEXTAREA");
-}
+# Staff selection warning badge for over-shift if already assigned
+warn_old = '''warn=ns.tt.loai==="red"?'<span class="badge bg-red">QUÁ GIỜ</span>':ns.lam.ban?'<span class="badge bg-orange">ĐANG BẬN</span>':"";return`<div class="staffCard ${ns.chon?"selected":""}"'''
+warn_new = '''vuotCa=chuyenDangChon&&state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma&&canhBaoQuaCaChoPhanCong(pc)),warn=vuotCa?'<span class="badge bg-red">VƯỢT CA</span>':ns.tt.loai==="red"?'<span class="badge bg-red">QUÁ GIỜ</span>':ns.lam.ban?'<span class="badge bg-orange">ĐANG BẬN</span>':"";return`<div class="staffCard ${ns.chon?"selected":""}"'''
+html = html.replace(warn_old, warn_new)
 
-function doiNgayLamViecMoi(val){
-  if(!val)return;
-  // Ngày làm việc là ngày chính: chuyến bay + phân ca cùng một ngày.
-  // Nhân sự và phân ca/chấm công hiện tại được giữ nguyên; chuyến/phân công của ngày khác vẫn lưu riêng theo ngày.
-  state.ngayKhaiThac = val;
-  state.ngayPhanCa = val;
-  if(typeof chuyenDangChon !== "undefined") chuyenDangChon = null;
-  if(typeof nhanSuDangChon !== "undefined") nhanSuDangChon = null;
-  if(document.getElementById("flight")){
-    ["flight","eta","std","baiDo"].forEach(id=>{const el=document.getElementById(id); if(el)el.value="";});
-  }
-  if(document.getElementById("maNV")){
-    ["maNV","hoTen","cap"].forEach(id=>{const el=document.getElementById(id); if(el)el.value="";});
-  }
-  if(typeof luuDuLieu === "function") luuDuLieu();
-  if(typeof luu === "function") luu();
-  veTatCa();
-}
+# Remove scroll-sync/align functions that reference old panels, if present, no longer needed
+html = html.replace('setTimeout(canhTheoVachHienTai,100);', '')
 
-setInterval(()=>{
-  capNhatDongHo();
-  if(!dangNhapLieu()){
-    veTimelineChuyen();
-    veTimelineNhanSu();
-    veDanhSachChon();
-    veBangPhanCa();
-  }
-},20000);
-
-function dongBoKeoTimeline(){
-  const a=document.getElementById("khungTimelineChuyenBay");
-  const b=document.getElementById("khungTimelineNhanSu");
-  if(!a||!b||a.dataset.syncReady==="1")return;
-
-  let khoa=false;
-  function syncScroll(src,dst){
-    if(khoa)return;
-    khoa=true;
-    const tiLe = src.scrollLeft / Math.max(1, src.scrollWidth - src.clientWidth);
-    dst.scrollLeft = tiLe * Math.max(1, dst.scrollWidth - dst.clientWidth);
-    setTimeout(()=>khoa=false,0);
-  }
-
-  a.addEventListener("scroll",()=>syncScroll(a,b));
-  b.addEventListener("scroll",()=>syncScroll(b,a));
-
-  a.dataset.syncReady="1";
-  b.dataset.syncReady="1";
-}
-function canhTheoVachHienTai(){
-  const a=document.getElementById("khungTimelineChuyenBay");
-  const b=document.getElementById("khungTimelineNhanSu");
-  if(!a||!b)return;
-  const nowLine=a.querySelector(".nowLine");
-  if(!nowLine)return;
-  const x=parseFloat(nowLine.style.left||"0");
-  const mucTieu=Math.max(0,x-450);
-  a.scrollLeft=mucTieu;
-  b.scrollLeft=mucTieu;
-}
-
-veTatCa();
-</script>
-</body>
-</html>
+# Write final index file
+out = Path('/mnt/data/index.html')
+out.write_text(html, encoding='utf-8')
+out
