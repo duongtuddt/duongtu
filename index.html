@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.37</title>
+<title>Dương Tú v0.38</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -421,6 +421,101 @@ header{
   body{
     min-width:1020px!important;
   }
+}
+
+
+/* v0.38 - Dashboard vừa khổ màn hình, không thừa 2 bên trên điện thoại */
+:root{
+  --appWidth: min(1320px, calc(100vw - 16px));
+}
+html, body{
+  max-width:100%!important;
+  overflow-x:hidden!important;
+}
+header{
+  width:var(--appWidth)!important;
+  max-width:var(--appWidth)!important;
+  margin:6px auto 0 auto!important;
+  padding:7px 10px!important;
+}
+.wrap{
+  width:var(--appWidth)!important;
+  max-width:var(--appWidth)!important;
+  margin:0 auto 12px auto!important;
+  padding:6px 0!important;
+  gap:6px!important;
+}
+.panel,
+.grid2,
+.realtimeCompact{
+  width:100%!important;
+  max-width:100%!important;
+  margin:0 auto!important;
+}
+.grid2{
+  gap:6px!important;
+}
+.panel h2{
+  min-height:32px!important;
+  padding:7px 9px!important;
+  font-size:13px!important;
+}
+.body{
+  padding:7px!important;
+}
+input,select,button{
+  padding:5px 7px!important;
+}
+.staffCard{
+  max-width:100%!important;
+  min-width:0!important;
+  padding:9px 11px!important;
+  margin-bottom:7px!important;
+}
+.staffInfo{
+  grid-template-columns:minmax(520px, 1fr) 330px!important;
+  gap:30px!important;
+}
+.realtimeCompact .timeline{
+  width:100%!important;
+}
+.scroll{
+  max-width:100%!important;
+}
+@media(max-width:900px){
+  :root{
+    --appWidth: calc(100vw - 10px);
+  }
+  html{
+    zoom:.72!important;
+  }
+  body{
+    min-width:0!important;
+    width:100%!important;
+    overflow-x:hidden!important;
+  }
+  header,
+  .wrap{
+    width:var(--appWidth)!important;
+    max-width:var(--appWidth)!important;
+  }
+  .panel,
+  .grid2,
+  .realtimeCompact{
+    width:100%!important;
+    max-width:100%!important;
+  }
+  .staffCard{
+    min-width:760px!important;
+    max-width:100%!important;
+  }
+  .staffInfo{
+    grid-template-columns:470px 260px!important;
+    gap:24px!important;
+  }
+  .staffName{font-size:15px!important}
+  .staffCap{font-size:11px!important}
+  .staffLine{font-size:11px!important}
 }
 
 </style>
