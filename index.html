@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.40</title>
+<title>Dương Tú v0.41</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -535,6 +535,42 @@ input,select,button{
   font-weight:900;
 }
 
+
+/* v0.41 - ngoài giờ làm việc + điều động đúng giờ chuyến mới */
+.outsideShift{
+  position:absolute!important;
+  top:0!important;
+  bottom:0!important;
+  height:auto!important;
+  border-radius:0!important;
+  opacity:.42!important;
+  background:repeating-linear-gradient(
+    135deg,
+    rgba(220,38,38,.42) 0px,
+    rgba(220,38,38,.42) 3px,
+    transparent 3px,
+    transparent 13px
+  )!important;
+  border-left:1px solid rgba(239,68,68,.28)!important;
+  border-right:1px solid rgba(239,68,68,.28)!important;
+  z-index:1!important;
+  pointer-events:none!important;
+}
+.bar.staff,
+.bar.free,
+.bar.ot,
+.bar.transfer,
+.bar.cut,
+.bar.withdraw{
+  z-index:3!important;
+}
+.transfer{
+  background:#f59e0b!important;
+  color:#061120!important;
+  border:1px solid #fbbf24!important;
+  font-weight:900!important;
+}
+
 </style>
 </head>
 <body>
@@ -705,6 +741,23 @@ function hienTaiAbs(){const d=new Date();return absNgay(homNayLocal())+d.getHour
 function startAbs(){return absNgayGio(state.ngayKhaiThac,"06:00");}
 function viTri(abs){return ((abs-startAbs())/60)*RONG_GIO;}
 function rong(bd,kt){return Math.max(18,((kt-bd)/60)*RONG_GIO);}
+function bdKhung(){return startAbs();}
+function ktKhung(){return startAbs()+SO_GIO*60;}
+function addBarNgoaiCa(ma){
+  const bd=bdKhung(), kt=ktKhung();
+  const segs=caSegments(ma).slice().sort((a,b)=>a.vao-b.vao);
+  let html="", cur=bd;
+  if(!segs.length){
+    return `<div class="outsideShift" style="left:${viTri(bd)}px;width:${Math.max(1,viTri(kt)-viTri(bd))}px"></div>`;
+  }
+  segs.forEach(seg=>{
+    const s=Math.max(bd,seg.vao), e=Math.min(kt,seg.ra);
+    if(s>cur) html+=`<div class="outsideShift" style="left:${viTri(cur)}px;width:${Math.max(1,viTri(s)-viTri(cur))}px"></div>`;
+    if(e>cur) cur=e;
+  });
+  if(cur<kt) html+=`<div class="outsideShift" style="left:${viTri(cur)}px;width:${Math.max(1,viTri(kt)-viTri(cur))}px"></div>`;
+  return html;
+}
 function coGio(g){return String(g||"").trim()!=="";}
 function etaAbs(cb){return coGio(cb.eta)?absNgayGio(cb.ngay,cb.eta):null;}
 function stdAbs(cb){
@@ -725,6 +778,27 @@ function ketThucAbs(cb){
   if(s!==null) return s;
   if(e!==null) return e+30;
   return batDauAbs(cb)+30;
+}
+function suaDieuDongCu(){
+  let coSua=false;
+  state.phanCong.forEach(pc=>{
+    if(pc.dieuDongTu && !pc.thuHoi){
+      const cbMoi=chuyen(pc.maChuyen);
+      if(cbMoi){
+        const bdDung=batDauAbs(cbMoi);
+        const ktDung=ketThucAbs(cbMoi);
+        if(pc.batDauAbs!==bdDung){
+          pc.batDauAbs=bdDung;
+          coSua=true;
+        }
+        if(!pc.ketThucAbs || pc.ketThucAbs<bdDung){
+          pc.ketThucAbs=ktDung;
+          coSua=true;
+        }
+      }
+    }
+  });
+  if(coSua) luu();
 }
 function gioHienThi(g){return coGio(g)?g:"--";}
 function tenNV(ma){return (state.danhSachNhanSu.find(x=>x.ma===ma)||{}).ten||ma;}
@@ -859,7 +933,7 @@ function veTimelineChuyen(){
 function veTimelineNhanSu(){
   const el=$("timelineNhanSu"); veHeader(el); const now=hienTaiAbs();
   state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon).forEach(ns=>{
-    const tt=trangThaiCa(ns.ma), pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs); let bars="";
+    const tt=trangThaiCa(ns.ma), pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs); let bars=addBarNgoaiCa(ns.ma);
     const c=caAbs(ns.ma), dang=pcs.some(pc=>pc.batDauAbs<=now&&now<=pc.ketThucAbs);
     if(!dang){
       const next=pcs.find(pc=>pc.batDauAbs>now);
@@ -879,7 +953,7 @@ function veTimelineNhanSu(){
         bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"}" style="left:${viTri(seg.vao)}px;width:${rong(seg.vao,seg.ra)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
       });
     }
-    const daChon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma);
+    const daChon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma&&pcDangHieuLuc(pc));
     el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')"><b>${ns.ten}</b><br><span class="muted">Cấp ${ns.cap}</span><br><span class="${tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":"greenText"}">${tt.text}</span></div><div class="tlLane ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
   });
 }
@@ -1146,8 +1220,9 @@ function ganBoNV(ma){
 
     pc.dieuDongTu=trungPc.maChuyen;
 
-    // Nếu chuyến mới đã bắt đầu trước thời điểm bấm chọn, chỉ ghi nhận từ hiện tại để tránh tạo lịch sử sai.
-    if(pc.batDauAbs < now) pc.batDauAbs = now;
+    // Điều động chỉ có hiệu lực từ giờ bắt đầu làm việc của chuyến mới.
+    // Không lấy thời điểm bấm chọn nữa.
+    pc.batDauAbs = batDauMoiGoc;
   }
   state.phanCong.push(pc); luu(); veTatCa();
 }
@@ -1271,6 +1346,7 @@ function canhTheoVachHienTai(){
   b.scrollLeft=mucTieu;
 }
 
+suaDieuDongCu();
 veTatCa();
 dongBoKeoTimeline();
 setTimeout(canhTheoVachHienTai,100);
