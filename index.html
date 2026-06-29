@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.47</title>
+<title>Dương Tú v0.48</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1911,7 +1911,13 @@ function veTimelineChuyen(){
     .filter(cb=>cb.ngay===state.ngayKhaiThac)
     .filter(cb=>{
       if(state.caDangLoc==="tatca") return true;
-      return state.phanCong.some(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)&&caCuaNV(pc.maNV)===state.caDangLoc);
+      const pcsAll=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc));
+
+      // Chuyến chưa phân người thì hiện ở tất cả các ca để ca nào cũng thấy và nhận chuyến được.
+      if(pcsAll.length===0) return true;
+
+      // Khi đã có người, chuyến chỉ hiện ở đúng ca của nhân sự đã phân.
+      return pcsAll.some(pc=>caCuaNV(pc.maNV)===state.caDangLoc);
     })
     .sort((a,b)=>batDauAbs(a)-batDauAbs(b))
     .forEach(cb=>{
