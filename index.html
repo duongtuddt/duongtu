@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.49</title>
+<title>Dương Tú v0.50</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -621,6 +621,34 @@ input,select,button{
   padding:6px 11px;font-weight:900;cursor:pointer
 }
 .mainCaBtn.active,.subCaBtn.active{outline:2px solid #38bdf8;background:#12385c}
+
+
+/* v0.50 - Giám sát chuyến bay: còn bao lâu đáp / còn bao lâu xong */
+.flightMonitor{
+  position:absolute;
+  top:15px;
+  height:22px;
+  width:46px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+  font-size:12px;
+  border-radius:6px;
+  z-index:4;
+  white-space:nowrap;
+}
+.flightMonitor.arrival{
+  background:transparent!important;
+  border:0!important;
+}
+.flightMonitor.work{
+  border:1px solid currentColor;
+  background:#071426;
+}
+.flightMonitor.monGreen{color:#66ff99}
+.flightMonitor.monYellow{color:#facc15}
+.flightMonitor.monRed{color:#ff6b6b}
 
 </style>
 </head>
@@ -1906,6 +1934,37 @@ function veHeader(el){
   html+=`<div class="nowLabel" style="left:${x}px">${gioTuPhut(now)}</div><div class="nowLine" style="left:${x}px"></div>`;
   el.innerHTML=html;
 }
+
+function theoDoiChuyen(cb){
+  const now=hienTaiAbs();
+  const bd=batDauAbs(cb), kt=ketThucAbs(cb), e=etaAbs(cb);
+
+  // Chuyến chưa đáp: hiện còn bao nhiêu phút tới ETA, không có khung.
+  if(e!==null && now<e){
+    const con=Math.max(0,Math.ceil(e-now));
+    const cls=con>30?"monGreen":con>15?"monYellow":"monRed";
+    return {html:`<div class="flightMonitor arrival ${cls}" title="Còn ${con} phút tới ETA">${con}'</div>`, rong:54};
+  }
+
+  // Chuyến đang phục vụ: hiện còn bao nhiêu phút tới kết thúc, có khung.
+  if(now>=bd && now<kt){
+    const total=Math.max(1,kt-bd);
+    const elapsed=Math.max(0,now-bd);
+    const remain=Math.max(0,Math.ceil(kt-now));
+    const firstThird=total/3;
+    const greenWindow=Math.min(total/3,15);
+
+    let cls="monYellow";
+    if(elapsed<firstThird) cls="monRed";
+    else if(remain<=greenWindow) cls="monGreen";
+
+    return {html:`<div class="flightMonitor work ${cls}" title="Còn ${remain} phút xong chuyến">${remain}'</div>`, rong:54};
+  }
+
+  // Chuyến đã xong hoặc chưa đủ dữ liệu thì không hiện gì.
+  return {html:"", rong:0};
+}
+
 function veTimelineChuyen(){
   const el=$("timelineChuyenBay"); veHeader(el);
   state.danhSachChuyenBay
@@ -1926,7 +1985,10 @@ function veTimelineChuyen(){
       const names=pcs.map(pc=>tenNV(pc.maNV)).join(" | ")||"chưa chọn nhân sự";
       const mau=mauChuyen(cb.ma), left=viTri(batDauAbs(cb)), width=rong(batDauAbs(cb),ketThucAbs(cb)), sel=cb.ma===chuyenDangChon;
       const ca=mauCaChuyen(cb.ma), caCls=caClass(ca);
-      el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div><div class="tenSau" style="left:${left+width+6}px">${names}</div></div></div>`;
+      const mon=theoDoiChuyen(cb);
+      const monLeft=left+width+6;
+      const tenLeft=left+width+6+mon.rong;
+      el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
     });
 }
 function veTimelineNhanSu(){
