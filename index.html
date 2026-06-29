@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.46</title>
+<title>Dương Tú v0.47</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -713,33 +713,353 @@ function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.
 function duLieuMau(){
   const ngay=homNayLocal();
   const ns=[
-    {ma:"NV001",ten:"Le Van A",cap:"1.1/1.2"},
-    {ma:"NV002",ten:"Hoang E",cap:"1.2"},
-    {ma:"NV003",ten:"Phan I",cap:"2.1/2.2"},
-    {ma:"NV004",ten:"Do Q",cap:"3.1/3.2"},
-    {ma:"NV005",ten:"Vo G",cap:"1.2"},
-    {ma:"NV006",ten:"Ly L",cap:"2.1"},
-    {ma:"NV007",ten:"Tran D",cap:"1.1/1.2"},
-    {ma:"NV008",ten:"Ngo H",cap:"2.2"},
-    {ma:"001",ten:"Khánh",cap:"1.1/1.2/2.2"},
-    {ma:"002",ten:"Vũ Kiss",cap:"1.1/1.2/2.1/2.2/3.1"},
-    {ma:"003",ten:"Tráng",cap:"1.1/1.2"},
-    {ma:"004",ten:"Cường",cap:"1.1/1.2"},
-    {ma:"005",ten:"Minh",cap:"1.1/1.2"},
-    {ma:"006",ten:"Toàn",cap:"1.1/1.2/2.1/2.2/3.1"},
-    {ma:"007",ten:"Xin",cap:"1.1/1.2/2.2"},
-    {ma:"008",ten:"Văn",cap:"1.1/1.2"},
-    {ma:"009",ten:"Thông",cap:"1.1"},
-    {ma:"010",ten:"Trà Chanh",cap:"1.1/1.2/2.1/2.2/3.1"},
-    {ma:"011",ten:"Hoàng Em",cap:"1.1/1.2/2.2"},
-    {ma:"012",ten:"Hùng Google",cap:"1.1/1.2"},
-    {ma:"013",ten:"Hậu",cap:"1.1/1.2"},
-    {ma:"014",ten:"Hoàng Anh",cap:"1.1/1.2/2.1/2.2/3.1"},
-    {ma:"015",ten:"Siêu Nhân",cap:"1.1/1.2/2.1/2.2"},
-    {ma:"016",ten:"Hùng Huế",cap:"1.1/1.2"},
-    {ma:"017",ten:"Quý Ảo",cap:"1.1/1.2"}
-  ];
-  const dsNhanSu = ns.filter(x=>!/^NV00[1-8]$/.test(x.ma));
+  {
+    "ma": "1754",
+    "ten": "Trương Lợi",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1816",
+    "ten": "Trịnh Minh Hoàng",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1716",
+    "ten": "Nguyễn Tứ",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1757",
+    "ten": "Tô Giang Châu",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1725",
+    "ten": "Ngô Anh Tuấn",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1755",
+    "ten": "Trương Tấn Ánh",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1734",
+    "ten": "Huỳnh Bá Hoàng",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1749",
+    "ten": "Lê Văn Bình",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1730",
+    "ten": "Đặng Dương Tú",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1799",
+    "ten": "Huỳnh Ngọc Cường",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1726",
+    "ten": "Phạm Thanh Vũ",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1822",
+    "ten": "Nguyễn Thanh Cường",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1751",
+    "ten": "Nguyễn Văn Khoa",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1715",
+    "ten": "Lê Công Khánh",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1823",
+    "ten": "Phùng Xuân Mạnh",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1748",
+    "ten": "Trịnh Văn Thu",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "5770",
+    "ten": "Lê Lý Huỳnh",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "2054",
+    "ten": "Nguyễn Thanh Hoàng",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "2446",
+    "ten": "Hồ Hoàng Anh",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "1718",
+    "ten": "Phạm Thanh Sơn 1",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "1727",
+    "ten": "Nguyễn Tuấn Anh 1",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "3115",
+    "ten": "Lại Trọng Thành",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "1798",
+    "ten": "Trần Thúc Cường",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "1810",
+    "ten": "Nguyễn Bảo Vũ",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "3120",
+    "ten": "Trương Hồng Quốc",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "3118",
+    "ten": "Nguyễn Hoàng Phong",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "1800",
+    "ten": "Nguyễn Xuân Hiểu",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "3583",
+    "ten": "Phan Thanh Toàn",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "2444",
+    "ten": "Đinh Phú Nhân",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "3116",
+    "ten": "Nguyễn Đức Hùng",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "1807",
+    "ten": "Trương Thanh Trà",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "4122",
+    "ten": "Hoàng Tấn Bình",
+    "cap": "1.1/1.2/2.1"
+  },
+  {
+    "ma": "4112",
+    "ten": "Nguyễn Văn Khương",
+    "cap": "1.1/1.2/2.1"
+  },
+  {
+    "ma": "4111",
+    "ten": "Nguyễn Xuân Quang",
+    "cap": "1.1/1.2/2.1"
+  },
+  {
+    "ma": "2934",
+    "ten": "Nguyễn Khánh",
+    "cap": "1.1/1.2/2.2"
+  },
+  {
+    "ma": "4114",
+    "ten": "Trần Đức Hai",
+    "cap": "1.1/1.2/2.2"
+  },
+  {
+    "ma": "2056",
+    "ten": "Nguyễn Trọng Hùng",
+    "cap": "1.1/1.2/2.2"
+  },
+  {
+    "ma": "1811",
+    "ten": "Cao Xuân Xin",
+    "cap": "1.1/1.2/2.2"
+  },
+  {
+    "ma": "1797",
+    "ten": "Lê Hoàng Anh",
+    "cap": "1.1/1.2/2.2"
+  },
+  {
+    "ma": "2457",
+    "ten": "Nguyễn Việt Hùng",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "3582",
+    "ten": "Trần Duy Quý",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "4113",
+    "ten": "Nguyễn Tuấn Anh 2",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "2455",
+    "ten": "Trần Hữu Tráng",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "4119",
+    "ten": "Phạm Thanh Vinh",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "4117",
+    "ten": "Nguyễn Văn Kiên",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "2055",
+    "ten": "Nguyễn Bá Hùng",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "2942",
+    "ten": "Hồ Việt Tiến",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "2935",
+    "ten": "Trang Trọng Khoa",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5352",
+    "ten": "Hoàng Thanh Bình Minh",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5618",
+    "ten": "Phạm Thanh Sơn 2",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5621",
+    "ten": "Đoàn Quốc Ân",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5619",
+    "ten": "Nguyễn Công Hậu",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "3340",
+    "ten": "Bùi Thái Nam",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5854",
+    "ten": "Ngô Văn Tuấn",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5020",
+    "ten": "Phan Hồng Linh",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5851",
+    "ten": "Nguyễn Quốc Huy",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5275",
+    "ten": "Hồ Phước Toàn",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5857",
+    "ten": "Lê Phước Lê Văn",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "3574",
+    "ten": "Trịnh Đình Hiệp",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5850",
+    "ten": "Lâm Quang Sĩ",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5264",
+    "ten": "Mai Việt Cường",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5853",
+    "ten": "Phạm Đức Nam",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5855",
+    "ten": "Lê Văn Lúa",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "3342",
+    "ten": "Cao Tiến Thành",
+    "cap": "1.1"
+  },
+  {
+    "ma": "3330",
+    "ten": "Mai Hoàng Minh",
+    "cap": "1.1"
+  },
+  {
+    "ma": "5018",
+    "ten": "Đặng Thanh Vũ",
+    "cap": "1.1"
+  },
+  {
+    "ma": "5279",
+    "ten": "Võ Khánh Thịnh",
+    "cap": "1.1"
+  },
+  {
+    "ma": "6316",
+    "ten": "Đỗ Thiện Thông",
+    "cap": "1.1"
+  },
+  {
+    "ma": "6317",
+    "ten": "Nguyễn Phước Học",
+    "cap": "1.1"
+  }
+];
+  const dsNhanSu = ns;
   const phanCa={}, chamCong={};
   dsNhanSu.forEach(x=>{phanCa[x.ma]={chon:false,ca:"",nhanh:"1",gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};chamCong[x.ma]={vao:null,ra:null};});
   return {
@@ -832,6 +1152,378 @@ if(!state.phanCaTheoNgay[state.ngayKhaiThac]){
   state.chamCongTheoNgay[state.ngayKhaiThac]=JSON.parse(JSON.stringify(state.chamCong||{}));
 }
 taiPhanCaNgay(state.ngayKhaiThac);
+
+
+const DANH_SACH_NHAN_SU_CHUAN_V047 = [
+  {
+    "ma": "1754",
+    "ten": "Trương Lợi",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1816",
+    "ten": "Trịnh Minh Hoàng",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1716",
+    "ten": "Nguyễn Tứ",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1757",
+    "ten": "Tô Giang Châu",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1725",
+    "ten": "Ngô Anh Tuấn",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1755",
+    "ten": "Trương Tấn Ánh",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1734",
+    "ten": "Huỳnh Bá Hoàng",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1749",
+    "ten": "Lê Văn Bình",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1730",
+    "ten": "Đặng Dương Tú",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1799",
+    "ten": "Huỳnh Ngọc Cường",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1726",
+    "ten": "Phạm Thanh Vũ",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1822",
+    "ten": "Nguyễn Thanh Cường",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1751",
+    "ten": "Nguyễn Văn Khoa",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1715",
+    "ten": "Lê Công Khánh",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1823",
+    "ten": "Phùng Xuân Mạnh",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "1748",
+    "ten": "Trịnh Văn Thu",
+    "cap": "1.1/1.2/2.1/2.2/3.1/3.2"
+  },
+  {
+    "ma": "5770",
+    "ten": "Lê Lý Huỳnh",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "2054",
+    "ten": "Nguyễn Thanh Hoàng",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "2446",
+    "ten": "Hồ Hoàng Anh",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "1718",
+    "ten": "Phạm Thanh Sơn 1",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "1727",
+    "ten": "Nguyễn Tuấn Anh 1",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "3115",
+    "ten": "Lại Trọng Thành",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "1798",
+    "ten": "Trần Thúc Cường",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "1810",
+    "ten": "Nguyễn Bảo Vũ",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "3120",
+    "ten": "Trương Hồng Quốc",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "3118",
+    "ten": "Nguyễn Hoàng Phong",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "1800",
+    "ten": "Nguyễn Xuân Hiểu",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "3583",
+    "ten": "Phan Thanh Toàn",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "2444",
+    "ten": "Đinh Phú Nhân",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "3116",
+    "ten": "Nguyễn Đức Hùng",
+    "cap": "1.1/1.2/2.1/2.2"
+  },
+  {
+    "ma": "1807",
+    "ten": "Trương Thanh Trà",
+    "cap": "1.1/1.2/2.1/2.2/3.1"
+  },
+  {
+    "ma": "4122",
+    "ten": "Hoàng Tấn Bình",
+    "cap": "1.1/1.2/2.1"
+  },
+  {
+    "ma": "4112",
+    "ten": "Nguyễn Văn Khương",
+    "cap": "1.1/1.2/2.1"
+  },
+  {
+    "ma": "4111",
+    "ten": "Nguyễn Xuân Quang",
+    "cap": "1.1/1.2/2.1"
+  },
+  {
+    "ma": "2934",
+    "ten": "Nguyễn Khánh",
+    "cap": "1.1/1.2/2.2"
+  },
+  {
+    "ma": "4114",
+    "ten": "Trần Đức Hai",
+    "cap": "1.1/1.2/2.2"
+  },
+  {
+    "ma": "2056",
+    "ten": "Nguyễn Trọng Hùng",
+    "cap": "1.1/1.2/2.2"
+  },
+  {
+    "ma": "1811",
+    "ten": "Cao Xuân Xin",
+    "cap": "1.1/1.2/2.2"
+  },
+  {
+    "ma": "1797",
+    "ten": "Lê Hoàng Anh",
+    "cap": "1.1/1.2/2.2"
+  },
+  {
+    "ma": "2457",
+    "ten": "Nguyễn Việt Hùng",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "3582",
+    "ten": "Trần Duy Quý",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "4113",
+    "ten": "Nguyễn Tuấn Anh 2",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "2455",
+    "ten": "Trần Hữu Tráng",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "4119",
+    "ten": "Phạm Thanh Vinh",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "4117",
+    "ten": "Nguyễn Văn Kiên",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "2055",
+    "ten": "Nguyễn Bá Hùng",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "2942",
+    "ten": "Hồ Việt Tiến",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "2935",
+    "ten": "Trang Trọng Khoa",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5352",
+    "ten": "Hoàng Thanh Bình Minh",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5618",
+    "ten": "Phạm Thanh Sơn 2",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5621",
+    "ten": "Đoàn Quốc Ân",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5619",
+    "ten": "Nguyễn Công Hậu",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "3340",
+    "ten": "Bùi Thái Nam",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5854",
+    "ten": "Ngô Văn Tuấn",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5020",
+    "ten": "Phan Hồng Linh",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5851",
+    "ten": "Nguyễn Quốc Huy",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5275",
+    "ten": "Hồ Phước Toàn",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5857",
+    "ten": "Lê Phước Lê Văn",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "3574",
+    "ten": "Trịnh Đình Hiệp",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5850",
+    "ten": "Lâm Quang Sĩ",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5264",
+    "ten": "Mai Việt Cường",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5853",
+    "ten": "Phạm Đức Nam",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "5855",
+    "ten": "Lê Văn Lúa",
+    "cap": "1.1/1.2"
+  },
+  {
+    "ma": "3342",
+    "ten": "Cao Tiến Thành",
+    "cap": "1.1"
+  },
+  {
+    "ma": "3330",
+    "ten": "Mai Hoàng Minh",
+    "cap": "1.1"
+  },
+  {
+    "ma": "5018",
+    "ten": "Đặng Thanh Vũ",
+    "cap": "1.1"
+  },
+  {
+    "ma": "5279",
+    "ten": "Võ Khánh Thịnh",
+    "cap": "1.1"
+  },
+  {
+    "ma": "6316",
+    "ten": "Đỗ Thiện Thông",
+    "cap": "1.1"
+  },
+  {
+    "ma": "6317",
+    "ten": "Nguyễn Phước Học",
+    "cap": "1.1"
+  }
+];
+
+function thayNhanSuChuanV047(){
+  const currentKey = JSON.stringify((state.danhSachNhanSu||[]).map(x=>x.ma));
+  const newKey = JSON.stringify(DANH_SACH_NHAN_SU_CHUAN_V047.map(x=>x.ma));
+  if(state.danhSachNhanSuVersion==="v047_real_staff" && currentKey===newKey) return;
+
+  state.danhSachNhanSu = DANH_SACH_NHAN_SU_CHUAN_V047.map(x=>({...x}));
+
+  // Xóa phân công/chấm công/ca kíp cũ vì nhân sự cũ đã thay bằng danh sách thật.
+  state.phanCong = [];
+  state.phanCaHomNay = {};
+  state.chamCong = {};
+  state.phanCaTheoNgay = {};
+  state.chamCongTheoNgay = {};
+
+  state.danhSachNhanSu.forEach(ns=>{
+    state.phanCaHomNay[ns.ma]={chon:false,ca:"",nhanh:"1",gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};
+    state.chamCong[ns.ma]={vao:null,ra:null};
+  });
+
+  state.danhSachNhanSuVersion="v047_real_staff";
+}
+thayNhanSuChuanV047();
 
 function luu(){localStorage.setItem(KHO_LUU,JSON.stringify(state));}
 function $(id){return document.getElementById(id);}
