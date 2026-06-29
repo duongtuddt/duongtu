@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.52</title>
+<title>Dương Tú v0.53</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1195,6 +1195,297 @@ state.danhSachNhanSu.forEach(ns=>{
 let chuyenDangChon=null;
 let yeuCauDangSua=null;
 if(!state.yeuCauBaiDo) state.yeuCauBaiDo=[];
+const YEU_CAU_BAI_DO_MAC_DINH_V053 = [
+  {
+    "id": "YC_STAND_01",
+    "baiDo": "01",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_02",
+    "baiDo": "02",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_03",
+    "baiDo": "03",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_04",
+    "baiDo": "04",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_05",
+    "baiDo": "05",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_06",
+    "baiDo": "06",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_07",
+    "baiDo": "07",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_08",
+    "baiDo": "08",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_09",
+    "baiDo": "09",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_10",
+    "baiDo": "10",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_11",
+    "baiDo": "11",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_12",
+    "baiDo": "12",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_14",
+    "baiDo": "14",
+    "coThang": true,
+    "capToiThieu": 1
+  },
+  {
+    "id": "YC_STAND_15",
+    "baiDo": "15",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_16",
+    "baiDo": "16",
+    "coThang": true,
+    "capToiThieu": 1
+  },
+  {
+    "id": "YC_STAND_17",
+    "baiDo": "17",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_18",
+    "baiDo": "18",
+    "coThang": true,
+    "capToiThieu": 1
+  },
+  {
+    "id": "YC_STAND_20",
+    "baiDo": "20",
+    "coThang": true,
+    "capToiThieu": 1
+  },
+  {
+    "id": "YC_STAND_21",
+    "baiDo": "21",
+    "coThang": true,
+    "capToiThieu": 1
+  },
+  {
+    "id": "YC_STAND_22",
+    "baiDo": "22",
+    "coThang": true,
+    "capToiThieu": 1
+  },
+  {
+    "id": "YC_STAND_20A",
+    "baiDo": "20A",
+    "coThang": true,
+    "capToiThieu": 1
+  },
+  {
+    "id": "YC_STAND_23",
+    "baiDo": "23",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_24",
+    "baiDo": "24",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_25",
+    "baiDo": "25",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_26",
+    "baiDo": "26",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_27",
+    "baiDo": "27",
+    "coThang": true,
+    "capToiThieu": 1
+  },
+  {
+    "id": "YC_STAND_28",
+    "baiDo": "28",
+    "coThang": true,
+    "capToiThieu": 1
+  },
+  {
+    "id": "YC_STAND_29",
+    "baiDo": "29",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_30",
+    "baiDo": "30",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_31",
+    "baiDo": "31",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_32",
+    "baiDo": "32",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_33",
+    "baiDo": "33",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_34",
+    "baiDo": "34",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_35",
+    "baiDo": "35",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_36",
+    "baiDo": "36",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_14A",
+    "baiDo": "14A",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_16A",
+    "baiDo": "16A",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_18A",
+    "baiDo": "18A",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_21A",
+    "baiDo": "21A",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_22A",
+    "baiDo": "22A",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_23A",
+    "baiDo": "23A",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_25A",
+    "baiDo": "25A",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_27A",
+    "baiDo": "27A",
+    "coThang": false,
+    "capToiThieu": 2
+  },
+  {
+    "id": "YC_STAND_28A",
+    "baiDo": "28A",
+    "coThang": false,
+    "capToiThieu": 2
+  }
+];
+
+function thuTuBaiDoValue(bai){
+  const s=normBaiDo(bai);
+  const m=s.match(/^(\d+)([A-Z]*)$/);
+  if(!m)return {n:9999,a:s};
+  return {n:Number(m[1]),a:m[2]||""};
+}
+function sapXepYeuCauBaiDo(){
+  if(!Array.isArray(state.yeuCauBaiDo)) state.yeuCauBaiDo=[];
+  state.yeuCauBaiDo.sort((x,y)=>{
+    const a=thuTuBaiDoValue(x.baiDo), b=thuTuBaiDoValue(y.baiDo);
+    return a.n-b.n || a.a.localeCompare(b.a);
+  });
+}
+function napBaiDoMacDinhV053(){
+  if(state.yeuCauBaiDoUserEdited) { sapXepYeuCauBaiDo(); return; }
+
+  // Nếu chưa có dữ liệu hoặc đang nâng cấp từ bản chưa nạp bãi mặc định, nạp danh sách chuẩn Đà Nẵng.
+  if(!state.yeuCauBaiDo || state.yeuCauBaiDo.length===0 || state.yeuCauBaiDoVersion!=="v053_dad_stands"){
+    state.yeuCauBaiDo = YEU_CAU_BAI_DO_MAC_DINH_V053.map(x=>({...x}));
+    state.yeuCauBaiDoVersion="v053_dad_stands";
+  }
+  sapXepYeuCauBaiDo();
+}
+napBaiDoMacDinhV053();
 
 // Xóa dữ liệu nhân sự mẫu cũ nếu còn trong localStorage
 (function xoaNhanSuMauCu(){
@@ -2642,6 +2933,7 @@ function suaNV(ma){const ns=state.danhSachNhanSu.find(x=>x.ma===ma);$("maNV").va
 function xoaNV(ma){if(!confirm("Xóa nhân sự này?"))return;state.danhSachNhanSu=state.danhSachNhanSu.filter(x=>x.ma!==ma);delete state.phanCaHomNay[ma];delete state.chamCong[ma];state.phanCong=state.phanCong.filter(x=>x.maNV!==ma);luu();veTatCa();}
 
 function veBangYeuCau(){
+  sapXepYeuCauBaiDo();
   const ds=state.yeuCauBaiDo||[];
   const el=$("bangYeuCauBaiDo");
   if(!el)return;
@@ -2678,6 +2970,8 @@ function themSuaYeuCau(){
   }else{
     state.yeuCauBaiDo.push({id:"YC"+Date.now(),baiDo:bai,coThang,capToiThieu});
   }
+  state.yeuCauBaiDoUserEdited=true;
+  sapXepYeuCauBaiDo();
   lamMoiYeuCau();
   luu();veTatCa();
 }
@@ -2697,6 +2991,8 @@ function xoaYeuCauBai(id){
   if(!yc)return;
   if(!confirm(`Xóa cấu hình bãi ${yc.baiDo}?`))return;
   state.yeuCauBaiDo=state.yeuCauBaiDo.filter(x=>x.id!==id);
+  state.yeuCauBaiDoUserEdited=true;
+  sapXepYeuCauBaiDo();
   if(yeuCauDangSua===id)lamMoiYeuCau();
   luu();veTatCa();
 }
