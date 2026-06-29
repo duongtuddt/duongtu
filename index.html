@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.53</title>
+<title>Dương Tú v0.57</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -689,6 +689,83 @@ input,select,button{
 .reqOk{color:#66ff99}
 .reqBad{color:#ff6b6b}
 
+
+/* v0.54 - Sắp xếp vị trí nhân sự trong realtime */
+.reorderSelected{
+  outline:2px solid #facc15!important;
+  box-shadow:0 0 0 2px rgba(250,204,21,.25) inset!important;
+}
+.tlRow.dragging{
+  opacity:.45;
+}
+.tlRow.dragTarget .tlLabel,
+.tlRow.dragTarget .tlLane{
+  box-shadow:inset 0 3px #facc15!important;
+}
+.sapXepHint{
+  color:#facc15;
+  font-weight:900;
+  font-size:11px;
+}
+
+
+/* v0.55 - kéo thả ổn định bằng pointer events */
+.dragHandle{
+  display:inline-block;
+  width:13px;
+  height:13px;
+  margin-right:7px;
+  border:2px solid rgba(255,255,255,.28);
+  border-radius:999px;
+  background:var(--caColor,#ffd54a);
+  box-shadow:0 0 8px color-mix(in srgb, var(--caColor,#ffd54a) 55%, transparent);
+  cursor:grab;
+  user-select:none;
+  touch-action:none;
+  vertical-align:middle;
+  opacity:.9;
+  transform:translateY(-1px);
+  transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+.tlLabel:hover .dragHandle{
+  opacity:1;
+  transform:translateY(-1px) scale(1.18);
+  box-shadow:0 0 12px color-mix(in srgb, var(--caColor,#ffd54a) 80%, transparent);
+}
+.dragHandle:active{
+  cursor:grabbing;
+  opacity:1;
+  transform:translateY(-1px) scale(1.28);
+  box-shadow:0 0 16px color-mix(in srgb, var(--caColor,#ffd54a) 90%, transparent);
+}
+.dragHandle.ca1{--caColor:#66ff99}
+.dragHandle.ca2{--caColor:#f59e0b}
+.dragHandle.ca3{--caColor:#c084fc}
+.dragHandle.ca4{--caColor:#38bdf8}
+.dragHandle.ca5{--caColor:#fb7185}
+.dragHandle.ca6{--caColor:#94a3b8}
+.dragGhost{
+  position:fixed;
+  z-index:99999;
+  pointer-events:none;
+  padding:8px 12px;
+  border:1px solid #facc15;
+  border-radius:8px;
+  background:#071426;
+  color:#fff;
+  font-weight:900;
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+  opacity:.92;
+}
+.dropLine{
+  position:fixed;
+  height:3px;
+  background:#facc15;
+  z-index:99998;
+  pointer-events:none;
+  box-shadow:0 0 10px rgba(250,204,21,.9);
+}
+
 </style>
 </head>
 <body>
@@ -1193,6 +1270,8 @@ state.danhSachNhanSu.forEach(ns=>{
 
 // v0.44 - Không tự gán ca khi mở file. Ca kíp sẽ chọn mới theo từng ngày.
 let chuyenDangChon=null;
+let nhanSuDoiCho=null;
+let nhanSuDangKeo=null;
 let yeuCauDangSua=null;
 if(!state.yeuCauBaiDo) state.yeuCauBaiDo=[];
 const YEU_CAU_BAI_DO_MAC_DINH_V053 = [
@@ -2469,7 +2548,10 @@ function veTimelineNhanSu(){
       });
     }
     const daChon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma&&pcDangHieuLuc(pc));
-    el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')"><b>${ns.ten}</b><br><span class="muted">Cấp ${ns.cap}</span><br><span class="${tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":"greenText"}">${tt.text}</span></div><div class="tlLane ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
+    const dangDoiCho=nhanSuDoiCho===ns.ma;
+    const sapXepText=!chuyenDangChon&&dangDoiCho?`<br><span class="sapXepHint">Đang chọn để đổi vị trí</span>`:"";
+    const handle=!chuyenDangChon?`<span class="dragHandle ${caCls}" title="Kéo để chèn vị trí" onpointerdown="batDauKeoNhanSuPointer(event,'${ns.ma}')"></span>`:"";
+    el.innerHTML+=`<div class="tlRow ${dangDoiCho?"reorderSelected":""}" data-ma-nv="${ns.ma}"><div class="tlLabel ${caCls} ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${handle}<b>${ns.ten}</b><br><span class="muted">Cấp ${ns.cap}</span><br><span class="${tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":"greenText"}">${tt.text}</span>${sapXepText}</div><div class="tlLane ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
   });
 }
 function veBangNhanSu(){
@@ -2691,9 +2773,9 @@ function veDanhSachChon(){
 
 function veTatCa(){ veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"Bỏ tìm / tìm mới":"Tìm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
-function chonChuyen(ma){ if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; luu(); veTatCa();
+function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; luu(); veTatCa();
 setTimeout(canhTheoVachHienTai,100); }
-function boChon(){ chuyenDangChon=null; ["flight","eta","std","baiDo"].forEach(id=>$(id).value=""); veTatCa(); }
+function boChon(){ nhanSuDoiCho=null; chuyenDangChon=null; ["flight","eta","std","baiDo"].forEach(id=>$(id).value=""); veTatCa(); }
 
 function xoaChuyenDangChon(){
   if(!chuyenDangChon){
@@ -2796,9 +2878,139 @@ function thoiDiemDieuDong(cb, pcMoi, now){
   return now >= pcMoi.batDauAbs ? now : pcMoi.batDauAbs;
 }
 
+
+function timIndexNhanSu(ma){
+  return state.danhSachNhanSu.findIndex(x=>x.ma===ma);
+}
+function doiChoNhanSu(maA,maB){
+  const ia=timIndexNhanSu(maA), ib=timIndexNhanSu(maB);
+  if(ia<0||ib<0||ia===ib)return;
+  const tmp=state.danhSachNhanSu[ia];
+  state.danhSachNhanSu[ia]=state.danhSachNhanSu[ib];
+  state.danhSachNhanSu[ib]=tmp;
+}
+function chenNhanSuTruoc(maKeo,maDich){
+  const ia=timIndexNhanSu(maKeo), ib=timIndexNhanSu(maDich);
+  if(ia<0||ib<0||ia===ib)return;
+  const [item]=state.danhSachNhanSu.splice(ia,1);
+  let insertAt=timIndexNhanSu(maDich);
+  if(insertAt<0) insertAt=state.danhSachNhanSu.length;
+  state.danhSachNhanSu.splice(insertAt,0,item);
+}
+function xuLySapXepNhanSu(ma){
+  if(chuyenDangChon)return false;
+
+  if(!nhanSuDoiCho){
+    nhanSuDoiCho=ma;
+    veTatCa();
+    return true;
+  }
+
+  if(nhanSuDoiCho===ma){
+    nhanSuDoiCho=null;
+    veTatCa();
+    return true;
+  }
+
+  const tenA=tenNV(nhanSuDoiCho), tenB=tenNV(ma);
+  if(confirm(`Đổi vị trí ${tenA} và ${tenB} có phải không?`)){
+    doiChoNhanSu(nhanSuDoiCho,ma);
+  }
+  nhanSuDoiCho=null;
+  veTatCa();
+  return true;
+}
+
+let dragNhanSuState=null;
+
+function taoDragGhost(ten,x,y){
+  const g=document.createElement("div");
+  g.className="dragGhost";
+  g.textContent=ten;
+  document.body.appendChild(g);
+  g.style.left=(x+12)+"px";
+  g.style.top=(y+12)+"px";
+  return g;
+}
+function taoDropLine(){
+  const l=document.createElement("div");
+  l.className="dropLine";
+  document.body.appendChild(l);
+  return l;
+}
+function timRowNhanSuTuPoint(x,y){
+  let el=document.elementFromPoint(x,y);
+  while(el && el!==document.body){
+    if(el.classList && el.classList.contains("tlRow") && el.dataset && el.dataset.maNv) return el;
+    el=el.parentElement;
+  }
+  return null;
+}
+function capNhatDropLine(row, line){
+  if(!row || !line){ if(line)line.style.display="none"; return; }
+  const r=row.getBoundingClientRect();
+  line.style.display="block";
+  line.style.left=r.left+"px";
+  line.style.top=r.top+"px";
+  line.style.width=r.width+"px";
+}
+function batDauKeoNhanSuPointer(ev,ma){
+  if(chuyenDangChon)return;
+  ev.preventDefault();
+  ev.stopPropagation();
+
+  const ns=state.danhSachNhanSu.find(x=>x.ma===ma);
+  dragNhanSuState={
+    ma,
+    targetMa:null,
+    ghost:taoDragGhost(ns?ns.ten:ma,ev.clientX,ev.clientY),
+    line:taoDropLine()
+  };
+
+  window.addEventListener("pointermove",dangKeoNhanSuPointer,{passive:false});
+  window.addEventListener("pointerup",thaNhanSuPointer,{passive:false});
+}
+function dangKeoNhanSuPointer(ev){
+  if(!dragNhanSuState)return;
+  ev.preventDefault();
+
+  dragNhanSuState.ghost.style.left=(ev.clientX+12)+"px";
+  dragNhanSuState.ghost.style.top=(ev.clientY+12)+"px";
+
+  const row=timRowNhanSuTuPoint(ev.clientX,ev.clientY);
+  const ma=row?row.dataset.maNv:null;
+  dragNhanSuState.targetMa=(ma && ma!==dragNhanSuState.ma)?ma:null;
+  capNhatDropLine(dragNhanSuState.targetMa?row:null,dragNhanSuState.line);
+}
+function thaNhanSuPointer(ev){
+  if(!dragNhanSuState)return;
+  ev.preventDefault();
+
+  const src=dragNhanSuState.ma;
+  const dst=dragNhanSuState.targetMa;
+
+  if(dragNhanSuState.ghost)dragNhanSuState.ghost.remove();
+  if(dragNhanSuState.line)dragNhanSuState.line.remove();
+
+  window.removeEventListener("pointermove",dangKeoNhanSuPointer);
+  window.removeEventListener("pointerup",thaNhanSuPointer);
+
+  dragNhanSuState=null;
+
+  if(src&&dst&&src!==dst){
+    chenNhanSuTruoc(src,dst);
+    nhanSuDoiCho=null;
+    veTatCa();
+  }
+}
+
+
 function ganBoNV(ma){
   const cb=chuyen(chuyenDangChon);
-  if(!cb)return alert("Chưa chọn chuyến bay.");
+  if(!cb){
+    xuLySapXepNhanSu(ma);
+    return;
+  }
 
   const now=hienTaiAbs();
   const co=state.phanCong.find(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ma&&pcDangHieuLuc(pc));
