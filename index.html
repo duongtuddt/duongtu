@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.50</title>
+<title>Dương Tú v0.51</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -650,6 +650,19 @@ input,select,button{
 .flightMonitor.monYellow{color:#facc15}
 .flightMonitor.monRed{color:#ff6b6b}
 
+
+/* v0.51 - tìm chuyến + giờ khai thác qua ngày */
+.searchingHint{
+  display:inline-block;
+  margin-left:8px;
+  padding:3px 8px;
+  border:1px solid #38bdf8;
+  border-radius:999px;
+  color:#7dd3fc;
+  font-weight:900;
+  font-size:12px;
+}
+
 </style>
 </head>
 <body>
@@ -666,6 +679,7 @@ input,select,button{
 <input id="std" placeholder="STD (có thể trống)">
 <input id="baiDo" placeholder="Bãi đỗ">
 <button class="primary" id="nutChuyenBay">Thêm chuyến</button>
+<button class="ghost" id="nutTimChuyen">Tìm chuyến</button>
 <button class="danger" id="nutXoaChuyen">Xóa chuyến</button>
 <button class="ghost" id="nutBoChon">Bỏ chọn / làm mới</button>
 </div>
@@ -736,7 +750,7 @@ input,select,button{
 
 <script>
 const KHO_LUU="duong_tu_rampops_v030";
-const GIO_BAT_DAU=6*60, SO_GIO=25, RONG_GIO=120;
+const GIO_BAT_DAU=4*60+30, SO_GIO=25, RONG_GIO=120;
 
 function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 function duLieuMau(){
@@ -1568,6 +1582,7 @@ const CA_MAU_MAC_DINH={
   "6":{"1":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"}}
 };
 if(!state.caDangLoc) state.caDangLoc="tatca";
+if(!state.timChuyen) state.timChuyen="";
 if(!state.caMau) state.caMau=JSON.parse(JSON.stringify(CA_MAU_MAC_DINH));
 function caCuaNV(ma){return String((state.phanCaHomNay[ma]||{}).ca||"");}
 function nhanhCuaNV(ma){return String((state.phanCaHomNay[ma]||{}).nhanh||"");}
@@ -1750,7 +1765,7 @@ function chiSoNgay(ngay){const [y,m,d]=ngay.split("-").map(Number);return Math.f
 function absNgay(ngay){return chiSoNgay(ngay)*1440;}
 function absNgayGio(ngay,gio){return absNgay(ngay)+phutNgay(gio);}
 function hienTaiAbs(){const d=new Date();return absNgay(homNayLocal())+d.getHours()*60+d.getMinutes();}
-function startAbs(){return absNgayGio(state.ngayKhaiThac,"06:00");}
+function startAbs(){return absNgayGio(state.ngayKhaiThac,"04:30");}
 function viTri(abs){return ((abs-startAbs())/60)*RONG_GIO;}
 function rong(bd,kt){return Math.max(18,((kt-bd)/60)*RONG_GIO);}
 function bdKhung(){return startAbs();}
@@ -1773,10 +1788,62 @@ function addBarNgoaiCa(ma){
   return html;
 }
 function coGio(g){return String(g||"").trim()!=="";}
-function etaAbs(cb){return coGio(cb.eta)?absNgayGio(cb.ngay,cb.eta):null;}
+function absNgayGioKhaiThac(ngay,gio){
+  let a=absNgayGio(ngay,gio);
+  const p=phutNgay(gio);
+  // Khung ngày làm việc: 04:30 hôm nay -> 05:30 hôm sau.
+  // Các giờ sau 00:00 và trước 05:30 tự hiểu là ngày hôm sau.
+  if(p < (5*60+30)) a += 1440;
+  return a;
+}
+function tachTokenChuyen(flight){
+  const s=String(flight||"").toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
+  if(!s)return [];
+  const parts=s.split(/\s+/).filter(Boolean);
+  const out=new Set();
+  let hang="";
+  parts.forEach(p=>{
+    out.add(p);
+    const m=p.match(/^([A-Z]+)(\d+)$/);
+    if(m){
+      hang=m[1];
+      out.add(hang);
+      out.add(m[2]);
+      out.add(hang+m[2]);
+    }else if(/^[A-Z]+$/.test(p)){
+      hang=p;
+      out.add(hang);
+    }else if(/^\d+$/.test(p)){
+      out.add(p);
+      if(hang)out.add(hang+p);
+    }
+  });
+  return [...out];
+}
+function tokenTrungChuyen(flight){
+  return tachTokenChuyen(flight).filter(t=>/\d/.test(t));
+}
+function chuyenKhopTuKhoa(cb,q){
+  q=String(q||"").trim().toUpperCase();
+  if(!q)return true;
+  const qNorm=q.replace(/[^A-Z0-9]+/g,"");
+  const flightNorm=String(cb.flight||"").toUpperCase().replace(/[^A-Z0-9]+/g,"");
+  const toks=tachTokenChuyen(cb.flight);
+  return flightNorm.includes(qNorm) || toks.some(t=>t.includes(qNorm)||qNorm.includes(t));
+}
+function timChuyenTrung(flight, boQuaMa){
+  const can=new Set(tokenTrungChuyen(flight));
+  if(!can.size)return null;
+  return state.danhSachChuyenBay.find(cb=>{
+    if(cb.ma===boQuaMa)return false;
+    if(cb.ngay!==state.ngayKhaiThac)return false;
+    return tokenTrungChuyen(cb.flight).some(t=>can.has(t));
+  })||null;
+}
+function etaAbs(cb){return coGio(cb.eta)?absNgayGioKhaiThac(cb.ngay,cb.eta):null;}
 function stdAbs(cb){
   if(!coGio(cb.std)) return null;
-  let s=absNgayGio(cb.ngay,cb.std);
+  let s=absNgayGioKhaiThac(cb.ngay,cb.std);
   const e=etaAbs(cb);
   if(e!==null && s<=e) s+=1440;
   return s;
@@ -1967,8 +2034,12 @@ function theoDoiChuyen(cb){
 
 function veTimelineChuyen(){
   const el=$("timelineChuyenBay"); veHeader(el);
+  if(state.timChuyen){
+    el.innerHTML+=`<div style="grid-column:1/-1;padding:4px 8px;color:#7dd3fc;font-weight:900">Đang tìm: <span class="searchingHint">${state.timChuyen}</span></div>`;
+  }
   state.danhSachChuyenBay
     .filter(cb=>cb.ngay===state.ngayKhaiThac)
+    .filter(cb=>chuyenKhopTuKhoa(cb,state.timChuyen||""))
     .filter(cb=>{
       if(state.caDangLoc==="tatca") return true;
       const pcsAll=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc));
@@ -2235,7 +2306,7 @@ function veDanhSachChon(){
   }).join("");
 }
 
-function veTatCa(){ veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+function veTatCa(){ veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"Bỏ tìm / tìm mới":"Tìm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
 function chonChuyen(ma){ if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; luu(); veTatCa();
 setTimeout(canhTheoVachHienTai,100); }
@@ -2269,6 +2340,29 @@ function xoaChuyenDangChon(){
   veTatCa();
 }
 
+function timChuyenTheoO(){
+  const q=$("flight").value.trim();
+  if(!q){
+    state.timChuyen="";
+    luu();veTatCa();
+    return;
+  }
+  state.timChuyen=q;
+  const ds=state.danhSachChuyenBay.filter(cb=>cb.ngay===state.ngayKhaiThac&&chuyenKhopTuKhoa(cb,q));
+  if(ds.length===1){
+    chuyenDangChon=ds[0].ma;
+    const cb=ds[0];
+    $("flight").value=cb.flight;$("eta").value=cb.eta;$("std").value=cb.std;$("baiDo").value=cb.baiDo;
+  }else if(ds.length===0){
+    alert("Không tìm thấy chuyến phù hợp.");
+  }
+  luu();veTatCa();
+}
+function boTimChuyen(){
+  state.timChuyen="";
+  luu();veTatCa();
+}
+
 function themSuaChuyen(){
   const flight=$("flight").value.trim();
   const etaRaw=$("eta").value.trim();
@@ -2281,6 +2375,20 @@ function themSuaChuyen(){
   if(etaRaw&&!eta)return alert("ETA sai định dạng. Nhập 2300 hoặc 23:00.");
   if(stdRaw&&!std)return alert("STD sai định dạng. Nhập 0030 hoặc 00:30.");
   if(!eta&&!std)return alert("Phải có ETA hoặc STD.");
+
+  const trung=timChuyenTrung(flight,chuyenDangChon);
+  if(trung){
+    const msg=`Nhập trùng chuyến.\n\nĐã có: ${trung.flight} - Bãi ${trung.baiDo}\nETA ${gioHienThi(trung.eta)} / STD ${gioHienThi(trung.std)}\n\nBạn có muốn mở chuyến này để sửa không?`;
+    if(confirm(msg)){
+      chuyenDangChon=trung.ma;
+      $("flight").value=trung.flight;
+      $("eta").value=trung.eta;
+      $("std").value=trung.std;
+      $("baiDo").value=trung.baiDo;
+      veTatCa();
+    }
+    return;
+  }
 
   if(chuyenDangChon){
     const i=state.danhSachChuyenBay.findIndex(x=>x.ma===chuyenDangChon);
@@ -2435,7 +2543,7 @@ function themSuaNV(){const ma=$("maNV").value.trim(),ten=$("hoTen").value.trim()
 function lamMoiNV(){["maNV","hoTen","cap"].forEach(id=>$(id).value="");}
 function capNhatDongHo(){$("dongHo").textContent=new Date().toLocaleTimeString("vi-VN",{hour12:false,hour:"2-digit",minute:"2-digit"});}
 
-$("ngayKhaiThac").onchange=doiNgay; $("lichChinh").onchange=()=>doiNgayLamViecMoi($("lichChinh").value); $("ngayPhanCa").onchange=()=>{state.ngayPhanCa=$("ngayPhanCa").value;luu();veTatCa();}; $("nutChuyenBay").onclick=themSuaChuyen; $("nutBoChon").onclick=boChon; $("nutXoaChuyen").onclick=xoaChuyenDangChon;
+$("ngayKhaiThac").onchange=doiNgay; $("lichChinh").onchange=()=>doiNgayLamViecMoi($("lichChinh").value); $("ngayPhanCa").onchange=()=>{state.ngayPhanCa=$("ngayPhanCa").value;luu();veTatCa();}; $("nutChuyenBay").onclick=themSuaChuyen; $("nutBoChon").onclick=()=>{boChon();boTimChuyen();}; $("nutTimChuyen").onclick=timChuyenTheoO; $("nutXoaChuyen").onclick=xoaChuyenDangChon;
 $("locCap").onchange=veDanhSachChon; $("sapXep").onchange=veDanhSachChon;
 $("nutAnPhanCa").onclick=()=>{$("khoiPhanCa").classList.toggle("hidden");$("nutAnPhanCa").textContent=$("khoiPhanCa").classList.contains("hidden")?"Hiện":"Ẩn";};
 $("nutAnNhanSu").onclick=()=>{$("khoiNhanSu").classList.toggle("hidden");$("nutAnNhanSu").textContent=$("khoiNhanSu").classList.contains("hidden")?"Hiện":"Ẩn";};
