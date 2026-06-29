@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.41</title>
+<title>Dương Tú v0.43</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -571,15 +571,39 @@ input,select,button{
   font-weight:900!important;
 }
 
+
+/* v0.43 - Ca làm việc, lọc ca, màu nhận diện ca */
+.caFilterBar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.caBtn{border:1px solid var(--line);background:#0a1f36;color:#d8ebff;border-radius:8px;padding:6px 10px;font-weight:900;cursor:pointer}
+.caBtn.active{outline:2px solid #38bdf8;background:#12385c}
+.caDot{display:inline-block;width:10px;height:10px;border-radius:999px;margin-right:5px;vertical-align:-1px}
+.ca1Color{--caColor:#66ff99}.ca2Color{--caColor:#f59e0b}.ca3Color{--caColor:#c084fc}.ca4Color{--caColor:#38bdf8}.ca5Color{--caColor:#fb7185}.ca6Color{--caColor:#94a3b8}.caAllColor{--caColor:#e2e8f0}
+.ca1Color .caDot,.caDot.ca1{background:#66ff99}.ca2Color .caDot,.caDot.ca2{background:#f59e0b}.ca3Color .caDot,.caDot.ca3{background:#c084fc}.ca4Color .caDot,.caDot.ca4{background:#38bdf8}.ca5Color .caDot,.caDot.ca5{background:#fb7185}.ca6Color .caDot,.caDot.ca6{background:#94a3b8}
+.tlLabel.ca1,.staffCard.ca1{border-left:4px solid #66ff99!important}
+.tlLabel.ca2,.staffCard.ca2{border-left:4px solid #f59e0b!important}
+.tlLabel.ca3,.staffCard.ca3{border-left:4px solid #c084fc!important}
+.tlLabel.ca4,.staffCard.ca4{border-left:4px solid #38bdf8!important}
+.tlLabel.ca5,.staffCard.ca5{border-left:4px solid #fb7185!important}
+.tlLabel.ca6,.staffCard.ca6{border-left:4px solid #94a3b8!important}
+.bar.ca1{box-shadow:inset 0 4px #66ff99}
+.bar.ca2{box-shadow:inset 0 4px #f59e0b}
+.bar.ca3{box-shadow:inset 0 4px #c084fc}
+.bar.ca4{box-shadow:inset 0 4px #38bdf8}
+.bar.ca5{box-shadow:inset 0 4px #fb7185}
+.bar.ca6{box-shadow:inset 0 4px #94a3b8}
+.caSelectMini{width:88px!important}.nhanhSelectMini{width:76px!important}
+.templateBox{border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px;background:#081a2b}
+.templateBox .row{gap:7px}
+
 </style>
 </head>
 <body>
-<header><h1>✈ Dương Tú</h1><div class="row" style="padding:0"><label>📅 Ngày làm việc <input type="date" id="lichChinh"></label><div>LIVE <span class="live" id="dongHo">--:--</span></div></div></header>
+<header><h1>✈ Dương Tú</h1><div class="row" style="padding:0"><label>📅 Ngày làm việc <input type="date" id="lichChinh"></label><div class="caFilterBar" id="boLocCaHeader"></div><div>LIVE <span class="live" id="dongHo">--:--</span></div></div></header>
 <div class="wrap">
 <section class="panel">
 <h2>Nhập / sửa chuyến bay</h2>
 <div class="body">
-<div class="hint">Đổi ngày làm việc ở lịch trên cùng: chuyến bay và phân công của ngày đó được tải riêng; nhân sự và phân ca/chấm công đang có được giữ nguyên.</div>
+<div class="hint">Đổi ngày làm việc ở lịch trên cùng: chuyến bay và phân công của ngày đó được tải riêng. Bộ lọc ca sẽ lọc chuyến/nhân sự theo ca đang điều hành.</div>
 <div class="row">
 <label class="hidden">Ngày khai thác <input type="date" id="ngayKhaiThac"></label>
 <input id="flight" placeholder="Chuyến bay VD: RS511/512">
@@ -618,7 +642,24 @@ input,select,button{
 <button class="ghost" id="boTatCa">Bỏ chọn tất cả</button>
 <span class="hint">Giờ nhập được dạng 2200, 22:00, 22h00. Ca 2 để trống hoặc N = không có ca 2.</span>
 </div>
-<div class="scroll" style="margin-top:8px"><table><thead><tr><th>Hôm nay</th><th>Họ tên</th><th>Cấp</th><th>Vào ca 1</th><th>Ra ca 1</th><th>Vào ca 2</th><th>Ra ca 2</th><th>Chấm công vào</th><th>Chấm công ra</th><th>Trạng thái ca</th><th>Nút</th></tr></thead><tbody id="bangPhanCa"></tbody></table></div>
+<div class="templateBox">
+  <div class="row">
+    <b>Gán ca nhanh:</b>
+    <select id="chonCaMau" onchange="capNhatNhanhCa()">
+      <option value="1">Ca 1</option><option value="2">Ca 2</option><option value="3">Ca 3</option>
+      <option value="4">Ca 4</option><option value="5">Ca 5</option><option value="6">Ca 6/OFF</option>
+    </select>
+    <select id="chonNhanhCa" onchange="hienGioCaMau()"></select>
+    <input id="mauVao1" placeholder="Vào ca 1" style="width:90px">
+    <input id="mauRa1" placeholder="Ra ca 1" style="width:90px">
+    <input id="mauVao2" placeholder="Vào ca 2/N" style="width:90px">
+    <input id="mauRa2" placeholder="Ra ca 2/N" style="width:90px">
+    <button class="primary" onclick="apDungCaChoNguoiDaTick()">Áp dụng cho người đang tick</button>
+    <button class="ghost" onclick="luuMauCaTuO()">Lưu giờ mẫu</button>
+  </div>
+  <div class="hint">Cách dùng: chọn Ca/Nhánh → chỉnh giờ nếu cần → tick nhân sự bên dưới → bấm áp dụng. Ô giờ từng người vẫn sửa tay được.</div>
+</div>
+<div class="scroll" style="margin-top:8px"><table><thead><tr><th>Hôm nay</th><th>Ca</th><th>Nhánh</th><th>Họ tên</th><th>Cấp</th><th>Vào ca 1</th><th>Ra ca 1</th><th>Vào ca 2</th><th>Ra ca 2</th><th>Chấm công vào</th><th>Chấm công ra</th><th>Trạng thái ca</th><th>Nút</th></tr></thead><tbody id="bangPhanCa"></tbody></table></div>
 </div>
 </section>
 
@@ -688,6 +729,8 @@ function chuanHoaCa(ca){
   if(!ca) ca={chon:false};
   if(ca.gioVao && !ca.gioVao1) ca.gioVao1=ca.gioVao;
   if(ca.gioRa && !ca.gioRa1) ca.gioRa1=ca.gioRa;
+  ca.ca = ca.ca || "";
+  ca.nhanh = ca.nhanh || "1";
   ca.gioVao1 = ca.gioVao1 || "06:00";
   ca.gioRa1 = ca.gioRa1 || "14:00";
   ca.gioVao2 = ca.gioVao2 || "N";
@@ -701,14 +744,14 @@ state.danhSachNhanSu.forEach(ns=>{
 
 // v0.31 - lưu sẵn phân ca nhóm chiều/đêm để khỏi nhập tay
 const PHAN_CA_LUU_SAN = {
-  "Trà Chanh": {gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
-  "Hoàng Em": {gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
-  "Hùng Google": {gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
-  "Hậu": {gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
-  "Hoàng Anh": {gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
-  "Siêu Nhân": {gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
-  "Hùng Huế": {gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
-  "Quý Ảo": {gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"}
+  "Trà Chanh": {ca:"2",nhanh:"1",gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
+  "Hoàng Em": {ca:"2",nhanh:"1",gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
+  "Hùng Google": {ca:"2",nhanh:"1",gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
+  "Hậu": {ca:"2",nhanh:"1",gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
+  "Hoàng Anh": {ca:"2",nhanh:"2",gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
+  "Siêu Nhân": {ca:"2",nhanh:"2",gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
+  "Hùng Huế": {ca:"2",nhanh:"2",gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
+  "Quý Ảo": {ca:"2",nhanh:"2",gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"}
 };
 state.danhSachNhanSu.forEach(ns=>{
   const caLuu = PHAN_CA_LUU_SAN[ns.ten];
@@ -726,6 +769,85 @@ let chuyenDangChon=null;
 
 function luu(){localStorage.setItem(KHO_LUU,JSON.stringify(state));}
 function $(id){return document.getElementById(id);}
+
+const TEN_CA={tatca:"Tất cả","1":"Ca 1","2":"Ca 2","3":"Ca 3","4":"Ca 4","5":"Ca 5","6":"Ca 6/OFF"};
+const CA_KEYS=["tatca","1","2","3","4","5","6"];
+const CA_MAU_MAC_DINH={
+  "1":{"1":{gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"06:30",gioRa1:"14:30",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"07:00",gioRa1:"15:00",gioVao2:"N",gioRa2:"N"}},
+  "2":{"1":{gioVao1:"14:30",gioRa1:"00:30",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"15:00",gioRa1:"01:00",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"15:30",gioRa1:"01:30",gioVao2:"N",gioRa2:"N"}},
+  "3":{"1":{gioVao1:"06:00",gioRa1:"10:00",gioVao2:"18:00",gioRa2:"22:00"},"2":{gioVao1:"07:00",gioRa1:"11:00",gioVao2:"19:00",gioRa2:"23:00"},"3":{gioVao1:"08:00",gioRa1:"12:00",gioVao2:"20:00",gioRa2:"00:00"}},
+  "4":{"1":{gioVao1:"14:00",gioRa1:"22:00",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"14:30",gioRa1:"22:30",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"15:00",gioRa1:"23:00",gioVao2:"N",gioRa2:"N"}},
+  "5":{"1":{gioVao1:"22:00",gioRa1:"06:00",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"22:30",gioRa1:"06:30",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"23:00",gioRa1:"07:00",gioVao2:"N",gioRa2:"N"}},
+  "6":{"1":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"}}
+};
+if(!state.caDangLoc) state.caDangLoc="tatca";
+if(!state.caMau) state.caMau=JSON.parse(JSON.stringify(CA_MAU_MAC_DINH));
+function caCuaNV(ma){return String((state.phanCaHomNay[ma]||{}).ca||"");}
+function nhanhCuaNV(ma){return String((state.phanCaHomNay[ma]||{}).nhanh||"");}
+function dungBoLocCaNV(ma){return state.caDangLoc==="tatca" || caCuaNV(ma)===state.caDangLoc;}
+function caClass(ca){return ca?`ca${ca}`:"";}
+function mauCaChuyen(maChuyen){
+  const pcs=state.phanCong.filter(pc=>pc.maChuyen===maChuyen&&pcDangHieuLuc(pc));
+  const dem={};
+  pcs.forEach(pc=>{const c=caCuaNV(pc.maNV); if(c) dem[c]=(dem[c]||0)+1;});
+  const ds=Object.entries(dem).sort((a,b)=>b[1]-a[1]);
+  return ds.length?ds[0][0]:"";
+}
+function veBoLocCa(){
+  const el=$("boLocCaHeader"); if(!el)return;
+  el.innerHTML=CA_KEYS.map(k=>{
+    const cls=k==="tatca"?"caAllColor":`ca${k}Color`;
+    return `<button class="caBtn ${cls} ${state.caDangLoc===k?"active":""}" onclick="chonLocCa('${k}')"><span class="caDot ${k==="tatca"?"":("ca"+k)}"></span>${TEN_CA[k]}</button>`;
+  }).join("");
+}
+function chonLocCa(ca){state.caDangLoc=ca;luu();veTatCa();}
+function capNhatNhanhCa(){
+  const ca=$("chonCaMau").value;
+  const sel=$("chonNhanhCa"); if(!sel)return;
+  sel.innerHTML=["1","2","3"].map(n=>`<option value="${n}">Ca ${ca}.${n}</option>`).join("");
+  hienGioCaMau();
+}
+function hienGioCaMau(){
+  const ca=$("chonCaMau").value, n=$("chonNhanhCa").value||"1";
+  const m=(state.caMau?.[ca]?.[n])||CA_MAU_MAC_DINH[ca][n];
+  $("mauVao1").value=m.gioVao1;$("mauRa1").value=m.gioRa1;$("mauVao2").value=m.gioVao2;$("mauRa2").value=m.gioRa2;
+}
+function layGioMauTuO(){
+  const ca=$("chonCaMau").value;
+  if(ca==="6") return {gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"};
+  const n2=x=>String(x||"N").trim().toUpperCase()==="N"?"N":(chuanHoaGio(x)||"N");
+  return {gioVao1:n2($("mauVao1").value),gioRa1:n2($("mauRa1").value),gioVao2:n2($("mauVao2").value),gioRa2:n2($("mauRa2").value)};
+}
+function luuMauCaTuO(){
+  const ca=$("chonCaMau").value, n=$("chonNhanhCa").value||"1";
+  if(!state.caMau)state.caMau=JSON.parse(JSON.stringify(CA_MAU_MAC_DINH));
+  if(!state.caMau[ca])state.caMau[ca]={};
+  state.caMau[ca][n]=layGioMauTuO();
+  luu();alert("Đã lưu giờ mẫu cho Ca "+ca+"."+n);
+}
+function apDungCaChoNguoiDaTick(){
+  const ca=$("chonCaMau").value, n=$("chonNhanhCa").value||"1", gio=layGioMauTuO();
+  state.danhSachNhanSu.forEach(ns=>{
+    const cur=state.phanCaHomNay[ns.ma]||{};
+    if(cur.chon){
+      state.phanCaHomNay[ns.ma]={...cur,chon:ca!=="6",ca,nhanh:n,...gio};
+    }
+  });
+  luu();veTatCa();
+}
+function doiCaNhanSu(ma,ca){
+  const n=(state.phanCaHomNay[ma]||{}).nhanh||"1";
+  const gio=(state.caMau?.[ca]?.[n])||CA_MAU_MAC_DINH[ca]?.[n]||CA_MAU_MAC_DINH["1"]["1"];
+  state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),ca,chon:ca!=="6",...gio};
+  luu();veTatCa();
+}
+function doiNhanhNhanSu(ma,n){
+  const ca=(state.phanCaHomNay[ma]||{}).ca||"1";
+  const gio=(state.caMau?.[ca]?.[n])||CA_MAU_MAC_DINH[ca]?.[n]||CA_MAU_MAC_DINH["1"]["1"];
+  state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),nhanh:n,...gio};
+  luu();veTatCa();
+}
+
 function chuanHoaGio(raw){
   let s=String(raw||"").trim().toLowerCase().replace("h",":");
   if(/^\d{4}$/.test(s))s=s.slice(0,2)+":"+s.slice(2);
@@ -780,21 +902,18 @@ function ketThucAbs(cb){
   return batDauAbs(cb)+30;
 }
 function suaDieuDongCu(){
+  // Từ v0.42 không tự ép giờ điều động nữa.
+  // Giờ điều động có thể là:
+  // - giờ bắt đầu chuyến mới nếu chuyến chưa đáp,
+  // - hoặc thời điểm bấm chọn nếu chuyến mới đã đáp / đã bắt đầu thực tế.
   let coSua=false;
   state.phanCong.forEach(pc=>{
     if(pc.dieuDongTu && !pc.thuHoi){
       const cbMoi=chuyen(pc.maChuyen);
-      if(cbMoi){
-        const bdDung=batDauAbs(cbMoi);
-        const ktDung=ketThucAbs(cbMoi);
-        if(pc.batDauAbs!==bdDung){
-          pc.batDauAbs=bdDung;
-          coSua=true;
-        }
-        if(!pc.ketThucAbs || pc.ketThucAbs<bdDung){
-          pc.ketThucAbs=ktDung;
-          coSua=true;
-        }
+      if(cbMoi && (!pc.batDauAbs || !pc.ketThucAbs)){
+        pc.batDauAbs=pc.batDauAbs || batDauAbs(cbMoi);
+        pc.ketThucAbs=pc.ketThucAbs || ketThucAbs(cbMoi);
+        coSua=true;
       }
     }
   });
@@ -809,7 +928,8 @@ function caSegments(ma){
   const ca=chuanHoaCa(state.phanCaHomNay[ma]);
   if(!ca || !ca.chon) return [];
   const segs=[];
-  let v1=chuanHoaGio(ca.gioVao1), r1=chuanHoaGio(ca.gioRa1);
+  const rawV1=String(ca.gioVao1||"").trim().toUpperCase(), rawR1=String(ca.gioRa1||"").trim().toUpperCase();
+  let v1=rawV1==="N"?null:chuanHoaGio(ca.gioVao1), r1=rawR1==="N"?null:chuanHoaGio(ca.gioRa1);
   if(v1 && r1){
     let vao=absNgayGio(state.ngayPhanCa,v1), ra=absNgayGio(state.ngayPhanCa,r1);
     if(ra<=vao) ra+=1440;
@@ -924,37 +1044,46 @@ function veHeader(el){
 }
 function veTimelineChuyen(){
   const el=$("timelineChuyenBay"); veHeader(el);
-  state.danhSachChuyenBay.filter(cb=>cb.ngay===state.ngayKhaiThac).sort((a,b)=>batDauAbs(a)-batDauAbs(b)).forEach(cb=>{
-    const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)), names=pcs.map(pc=>tenNV(pc.maNV)).join(" | ")||"chưa chọn nhân sự";
-    const mau=mauChuyen(cb.ma), left=viTri(batDauAbs(cb)), width=rong(batDauAbs(cb),ketThucAbs(cb)), sel=cb.ma===chuyenDangChon;
-    el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div><div class="tenSau" style="left:${left+width+6}px">${names}</div></div></div>`;
-  });
+  state.danhSachChuyenBay
+    .filter(cb=>cb.ngay===state.ngayKhaiThac)
+    .filter(cb=>{
+      if(state.caDangLoc==="tatca") return true;
+      return state.phanCong.some(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)&&caCuaNV(pc.maNV)===state.caDangLoc);
+    })
+    .sort((a,b)=>batDauAbs(a)-batDauAbs(b))
+    .forEach(cb=>{
+      const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)&&(state.caDangLoc==="tatca"||caCuaNV(pc.maNV)===state.caDangLoc));
+      const names=pcs.map(pc=>tenNV(pc.maNV)).join(" | ")||"chưa chọn nhân sự";
+      const mau=mauChuyen(cb.ma), left=viTri(batDauAbs(cb)), width=rong(batDauAbs(cb),ketThucAbs(cb)), sel=cb.ma===chuyenDangChon;
+      const ca=mauCaChuyen(cb.ma), caCls=caClass(ca);
+      el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div><div class="tenSau" style="left:${left+width+6}px">${names}</div></div></div>`;
+    });
 }
 function veTimelineNhanSu(){
   const el=$("timelineNhanSu"); veHeader(el); const now=hienTaiAbs();
-  state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon).forEach(ns=>{
-    const tt=trangThaiCa(ns.ma), pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs); let bars=addBarNgoaiCa(ns.ma);
+  state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon).filter(ns=>dungBoLocCaNV(ns.ma)).forEach(ns=>{
+    const tt=trangThaiCa(ns.ma), caCls=caClass(caCuaNV(ns.ma)), pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs); let bars=addBarNgoaiCa(ns.ma);
     const c=caAbs(ns.ma), dang=pcs.some(pc=>pc.batDauAbs<=now&&now<=pc.ketThucAbs);
     if(!dang){
       const next=pcs.find(pc=>pc.batDauAbs>now);
       caSegments(ns.ma).forEach(seg=>{
         const bd=Math.max(now,seg.vao), kt=next?Math.min(next.batDauAbs,seg.ra):seg.ra;
-        if(kt>bd)bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"}" style="left:${viTri(bd)}px;width:${rong(bd,kt)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
+        if(kt>bd)bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"} ${caCls}" style="left:${viTri(bd)}px;width:${rong(bd,kt)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
       });
     }
     pcs.forEach(pc=>{
       const cb=chuyen(pc.maChuyen),cut=biDieuDongDi(pc),kt=cut||pc.ketThucAbs;
       const cls=pc.thuHoi?"withdraw":pc.dieuDongTu?"transfer":cut?"cut":"staff";
-      const txt=pc.thuHoi?`THU HỒI ${cb?cb.flight:pc.maChuyen}`:pc.dieuDongTu?`ĐIỀU ĐỘNG ${cb?cb.flight:pc.maChuyen} từ ${gioTuPhut(pc.batDauAbs)}`:`${cb?cb.flight:pc.maChuyen} - Bãi ${cb?cb.baiDo:""}`;
-      if(kt>pc.batDauAbs)bars+=`<div class="bar staff ${cls}" style="left:${viTri(pc.batDauAbs)}px;width:${rong(pc.batDauAbs,kt)}px">${txt}</div>`;
+      const txt=pc.thuHoi?`THU HỒI ${cb?cb.flight:pc.maChuyen}`:pc.dieuDongTu?`${pc.batDauAbs>now?"DỰ KIẾN ":"ĐIỀU ĐỘNG "}${cb?cb.flight:pc.maChuyen} từ ${gioTuPhut(pc.batDauAbs)}`:`${cb?cb.flight:pc.maChuyen} - Bãi ${cb?cb.baiDo:""}`;
+      if(kt>pc.batDauAbs)bars+=`<div class="bar staff ${cls} ${caCls}" style="left:${viTri(pc.batDauAbs)}px;width:${rong(pc.batDauAbs,kt)}px">${txt}</div>`;
     });
     if(!bars){
       caSegments(ns.ma).forEach(seg=>{
-        bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"}" style="left:${viTri(seg.vao)}px;width:${rong(seg.vao,seg.ra)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
+        bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"} ${caCls}" style="left:${viTri(seg.vao)}px;width:${rong(seg.vao,seg.ra)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
       });
     }
     const daChon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma&&pcDangHieuLuc(pc));
-    el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')"><b>${ns.ten}</b><br><span class="muted">Cấp ${ns.cap}</span><br><span class="${tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":"greenText"}">${tt.text}</span></div><div class="tlLane ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
+    el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')"><b>${ns.ten}</b><br><span class="muted">Cấp ${ns.cap}</span><br><span class="${tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":"greenText"}">${tt.text}</span></div><div class="tlLane ${daChon?"selected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
   });
 }
 function veBangNhanSu(){
@@ -962,12 +1091,16 @@ function veBangNhanSu(){
 }
 function veBangPhanCa(){
   $("bangPhanCa").innerHTML=state.danhSachNhanSu.map(ns=>{
-    if(!state.phanCaHomNay[ns.ma])state.phanCaHomNay[ns.ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};
+    if(!state.phanCaHomNay[ns.ma])state.phanCaHomNay[ns.ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N",ca:"",nhanh:"1"};
     state.phanCaHomNay[ns.ma]=chuanHoaCa(state.phanCaHomNay[ns.ma]);
     if(!state.chamCong[ns.ma])state.chamCong[ns.ma]={vao:null,ra:null};
     const ca=state.phanCaHomNay[ns.ma],cc=state.chamCong[ns.ma],tt=trangThaiCa(ns.ma),cls=tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":tt.loai==="green"?"greenText":"muted";
+    const caOptions=["","1","2","3","4","5","6"].map(c=>`<option value="${c}" ${String(ca.ca||"")===c?"selected":""}>${c?TEN_CA[c]:"Chưa gán"}</option>`).join("");
+    const nhanhOptions=["1","2","3"].map(n=>`<option value="${n}" ${String(ca.nhanh||"1")===n?"selected":""}>${ca.ca?("Ca "+ca.ca+"."+n):n}</option>`).join("");
     return `<tr>
       <td><input type="checkbox" ${ca.chon?"checked":""} onchange="doiChon('${ns.ma}',this.checked)"></td>
+      <td><select class="caSelectMini" onchange="doiCaNhanSu('${ns.ma}',this.value)">${caOptions}</select></td>
+      <td><select class="nhanhSelectMini" onchange="doiNhanhNhanSu('${ns.ma}',this.value)">${nhanhOptions}</select></td>
       <td>${ns.ten}</td><td>${ns.cap}</td>
       <td><input value="${ca.gioVao1}" onchange="doiGioCa('${ns.ma}','gioVao1',this.value)" style="width:90px"></td>
       <td><input value="${ca.gioRa1}" onchange="doiGioCa('${ns.ma}','gioRa1',this.value)" style="width:90px"></td>
@@ -1015,14 +1148,23 @@ function chiTietNhanSu(ma){
       const tenTiep=tenChuyenTuPC(tiep);
       const sau=tiep.batDauAbs-now;
       const giua=tiep.batDauAbs-dang.ketThucAbs;
-      coChuyenTiepNguyCo=true;
-      textChuyenTiepNguyCo=`🚨 TIẾP: ${tenTiep} sau ${fmtPhut(sau)}`;
-      dongTrangThai+=` | ${textChuyenTiepNguyCo}`;
-      dongTiep=`Chuyến tiếp: ${tenTiep} sau ${fmtPhut(sau)}`;
-      dongRanhGiua=giua>0?`Rảnh giữa: ${fmtPhut(giua)}`:"Rảnh giữa: Không";
-      canhBao=`ĐANG BẬN + CÓ CHUYẾN TIẾP`;
-      mauCanhBao="staffWarnRed";
-      mau="red";
+
+      // Chỉ cảnh báo đỏ khi chuyến tiếp thật sự trùng với chuyến đang làm.
+      // Nếu chuyến tiếp bắt đầu sau khi chuyến hiện tại xong thì chỉ là lịch nối tiếp bình thường.
+      if(tiep.batDauAbs < dang.ketThucAbs){
+        coChuyenTiepNguyCo=true;
+        textChuyenTiepNguyCo=`🚨 TIẾP: ${tenTiep} sau ${fmtPhut(sau)}`;
+        dongTrangThai+=` | ${textChuyenTiepNguyCo}`;
+        dongTiep=`Chuyến tiếp: ${tenTiep} sau ${fmtPhut(sau)}`;
+        dongRanhGiua="Rảnh giữa: Không";
+        canhBao=`ĐANG BẬN + CÓ CHUYẾN TIẾP`;
+        mauCanhBao="staffWarnRed";
+        mau="red";
+      }else{
+        dongTrangThai+=` | Tiếp: ${tenTiep} sau ${fmtPhut(sau)}`;
+        dongTiep=`Chuyến tiếp: ${tenTiep} sau ${fmtPhut(sau)}`;
+        dongRanhGiua=giua>0?`Rảnh giữa: ${fmtPhut(giua)}`:"Rảnh giữa: Không";
+      }
     }else{
       dongTiep="Sau đó: Rảnh";
     }
@@ -1098,6 +1240,7 @@ function veDanhSachChon(){
   const loc=$("locCap").value, sx=$("sapXep").value;
   let ds=state.danhSachNhanSu
     .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
+    .filter(ns=>dungBoLocCaNV(ns.ma))
     .filter(ns=>datCap(ns.cap,loc))
     .map(ns=>{
       const ct=chiTietNhanSu(ns.ma);
@@ -1125,7 +1268,7 @@ function veDanhSachChon(){
       ? `<span class="staffNextDanger">${ns.ct.tiep.replace("Chuyến tiếp: ","🚨 TIẾP: ")}</span>`
       : ns.ct.tiep.replace("Sắp làm: ","").replace("Chuyến tiếp: ","").replace("Sau đó: ","Sau đó: ");
     return `
-      <div class="staffCard ${ns.chon?"selected":""} ${ns.ct.coChuyenTiepNguyCo?"coChuyenTiepNguyCo":""}" onclick="ganBoNV('${ns.ma}')">
+      <div class="staffCard ${caClass(caCuaNV(ns.ma))} ${ns.chon?"selected":""} ${ns.ct.coChuyenTiepNguyCo?"coChuyenTiepNguyCo":""}" onclick="ganBoNV('${ns.ma}')">
         <div class="staffTop">
           <span class="dot ${dot}"></span>
           <span class="staffName">${ns.ten}</span>
@@ -1148,7 +1291,7 @@ function veDanhSachChon(){
   }).join("");
 }
 
-function veTatCa(){ if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+function veTatCa(){ veBoLocCa(); if($("chonCaMau")&&!$("chonNhanhCa").options.length)capNhatNhanhCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
 function chonChuyen(ma){ if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; luu(); veTatCa();
 setTimeout(canhTheoVachHienTai,100); }
@@ -1175,69 +1318,139 @@ function themSuaChuyen(){
   }
   luu(); veTatCa();
 }
-function ganBoNV(ma){
-  const cb=chuyen(chuyenDangChon); if(!cb)return alert("Chưa chọn chuyến bay.");
-  const ctCanhBao=chiTietNhanSu(ma);
-  if(ctCanhBao.coChuyenTiepNguyCo){
-    if(!confirm(`${tenNV(ma)} đang bận và còn chuyến tiếp:\n${ctCanhBao.trangThai}\n\nBạn vẫn muốn điều động?`)) return;
-  }
-  const co=state.phanCong.find(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ma&&pcDangHieuLuc(pc));
-  if(co){
-    const now=hienTaiAbs();
+function thoiDiemDieuDong(cb, pcMoi, now){
+  const e = etaAbs(cb);
+  if(e!==null){
+    // Nếu chuyến mới đã đáp rồi, điều động tính từ lúc thao tác.
+    if(now >= e) return now;
 
-    // Chuyến chưa tới giờ làm: bỏ phân công như cũ, vì chưa phát sinh thực tế.
+    // Nếu chuyến mới chưa đáp, điều động có hiệu lực từ ETA + 10'.
+    return e + 10;
+  }
+
+  // Chuyến chỉ có STD: nếu đã tới giờ làm thì tính từ lúc thao tác, chưa tới thì tính từ giờ làm.
+  return now >= pcMoi.batDauAbs ? now : pcMoi.batDauAbs;
+}
+
+function ganBoNV(ma){
+  const cb=chuyen(chuyenDangChon);
+  if(!cb)return alert("Chưa chọn chuyến bay.");
+
+  const now=hienTaiAbs();
+  const co=state.phanCong.find(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ma&&pcDangHieuLuc(pc));
+
+  if(co){
+    // Nếu đây là phân công điều động, bấm lại phải cho chọn: xóa do chọn nhầm hoặc thu hồi.
+    if(co.dieuDongTu){
+      if(now < co.batDauAbs){
+        if(confirm(
+          `${tenNV(ma)} đang được DỰ KIẾN điều động sang chuyến này từ ${gioTuPhut(co.batDauAbs)}.\n\n`+
+          `Bấm OK để BỎ PHÂN CÔNG ĐIỀU ĐỘNG này vì chọn nhầm / đổi ý.`
+        )){
+          state.phanCong=state.phanCong.filter(pc=>pc.id!==co.id);
+          luu(); veTatCa(); return;
+        }
+        return;
+      }
+
+      if(confirm(
+        `${tenNV(ma)} đang được điều động sang chuyến này.\n\n`+
+        `Bấm OK để THU HỒI tại thời điểm hiện tại và vẫn ghi nhận đã làm.\n`+
+        `Bấm HỦY nếu muốn chọn cách khác.`
+      )){
+        co.thuHoi=true;
+        co.thuHoiAbs=now;
+        co.ketThucGocAbs=co.ketThucAbs;
+        co.ketThucAbs=now;
+        co.ghiChuThuHoi=`Thu hồi điều động lúc ${gioTuPhut(now)}`;
+        luu(); veTatCa(); return;
+      }
+
+      if(confirm(
+        `Bạn muốn BỎ PHÂN CÔNG ĐIỀU ĐỘNG này do chọn nhầm / mới chỉ dự tính?\n\n`+
+        `Bấm OK để xóa phân công chuyến này.`
+      )){
+        state.phanCong=state.phanCong.filter(pc=>pc.id!==co.id);
+        luu(); veTatCa(); return;
+      }
+      return;
+    }
+
+    // Chuyến chưa tới giờ làm: bỏ phân công như cũ.
     if(now < co.batDauAbs){
       state.phanCong=state.phanCong.filter(pc=>pc.id!==co.id);
       luu(); veTatCa(); return;
     }
 
-    // Chuyến đã bắt đầu / đã hạ cánh: không xóa trắng, ghi nhận đã làm tới lúc bấm bỏ chọn.
-    const msg=`${tenNV(ma)} đã được phân công cho chuyến này.\n\n`+
-      `Hệ thống sẽ ghi nhận đã làm từ ${gioTuPhut(co.batDauAbs)} đến ${gioTuPhut(now)} và đánh dấu THU HỒI.\n\n`+
-      `Bạn xác nhận thu hồi?`;
-    if(!confirm(msg)) return;
+    // Chuyến đã bắt đầu / đã hạ cánh: không xóa trắng nếu là thao tác thu hồi thật.
+    if(confirm(
+      `${tenNV(ma)} đã được phân công cho chuyến này.\n\n`+
+      `Bấm OK để THU HỒI và ghi nhận đã làm từ ${gioTuPhut(co.batDauAbs)} đến ${gioTuPhut(now)}.\n`+
+      `Bấm HỦY nếu muốn chọn cách khác.`
+    )){
+      co.thuHoi=true;
+      co.thuHoiAbs=now;
+      co.ketThucGocAbs=co.ketThucAbs;
+      co.ketThucAbs=now;
+      co.ghiChuThuHoi=`Thu hồi lúc ${gioTuPhut(now)}`;
+      luu(); veTatCa(); return;
+    }
 
-    co.thuHoi=true;
-    co.thuHoiAbs=now;
-    co.ketThucGocAbs=co.ketThucAbs;
-    co.ketThucAbs=now;
-    co.ghiChuThuHoi=`Thu hồi lúc ${gioTuPhut(now)}`;
-    luu(); veTatCa(); return;
+    if(confirm(
+      `Bạn muốn BỎ PHÂN CÔNG này do chọn nhầm?\n\n`+
+      `Bấm OK để xóa hẳn phân công khỏi chuyến này.`
+    )){
+      state.phanCong=state.phanCong.filter(pc=>pc.id!==co.id);
+      luu(); veTatCa(); return;
+    }
+    return;
   }
+
   const pc={id:"PC"+Date.now(),maChuyen:chuyenDangChon,maNV:ma,batDauAbs:batDauAbs(cb),ketThucAbs:ketThucAbs(cb),dieuDongTu:null};
-  const trungPc=state.phanCong.find(x=>x.maNV===ma&&pcDangHieuLuc(x)&&!(x.ketThucAbs<=pc.batDauAbs||x.batDauAbs>=pc.ketThucAbs));
+
+  // Tìm chuyến đang trùng thật sự với chuyến mới.
+  const trungPc=state.phanCong.find(x=>
+    x.maNV===ma &&
+    pcDangHieuLuc(x) &&
+    !(x.ketThucAbs<=pc.batDauAbs || x.batDauAbs>=pc.ketThucAbs)
+  );
+
   if(trungPc){
     const cbCu=chuyen(trungPc.maChuyen);
-    const batDauMoiGoc=pc.batDauAbs;
-    const now=hienTaiAbs();
+    const bdDieuDong=thoiDiemDieuDong(cb,pc,now);
 
-    if(!confirm(
-      `${tenNV(ma)} đang có lịch ${cbCu?cbCu.flight:trungPc.maChuyen}.\n\n`+
-      `Nếu điều động, người này vẫn làm chuyến cũ tới ${gioTuPhut(batDauMoiGoc)} `+
-      `và chỉ chuyển sang chuyến mới khi chuyến mới bắt đầu.\n\n`+
-      `Bạn vẫn muốn điều động?`
-    ))return;
+    // Nếu chuyến cũ đã xong trước thời điểm điều động thì chỉ là phân công nối tiếp, không phải điều động.
+    if(trungPc.ketThucAbs <= bdDieuDong){
+      state.phanCong.push(pc);
+      luu(); veTatCa(); return;
+    }
+
+    const daDap = etaAbs(cb)!==null && now>=etaAbs(cb);
+    const cauHoi =
+      `${tenNV(ma)} đang làm ${cbCu?cbCu.flight:trungPc.maChuyen} đến ${gioTuPhut(trungPc.ketThucAbs)}.\n\n`+
+      `Chuyến ${cb.flight} ${daDap?"đã đáp / đã bắt đầu thực tế":"bắt đầu trước khi chuyến cũ xong"}.\n`+
+      `Nếu đồng ý điều động, hệ thống sẽ vẽ vàng từ ${gioTuPhut(bdDieuDong)}.\n\n`+
+      `Bạn muốn điều động nhân sự này sang chuyến ${cb.flight} không?`;
+
+    if(!confirm(cauHoi)) return;
 
     pc.dieuDongTu=trungPc.maChuyen;
-
-    // Điều động chỉ có hiệu lực từ giờ bắt đầu làm việc của chuyến mới.
-    // Không lấy thời điểm bấm chọn nữa.
-    pc.batDauAbs = batDauMoiGoc;
+    pc.batDauAbs=bdDieuDong;
+    if(pc.ketThucAbs<=pc.batDauAbs) pc.ketThucAbs=ketThucAbs(cb);
   }
-  state.phanCong.push(pc); luu(); veTatCa();
+
+  state.phanCong.push(pc);
+  luu(); veTatCa();
 }
+
 function doiNgay(){state.ngayKhaiThac=$("ngayKhaiThac").value;boChon();luu();veTatCa();}
 function doiChon(ma,val){state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),chon:val};luu();veTatCa();}
 function doiGioCa(ma,field,val){
   let raw=String(val||"").trim();
   let g;
-  if(field==="gioVao2" || field==="gioRa2"){
-    if(raw==="" || raw.toUpperCase()==="N") g="N";
-    else g=chuanHoaGio(raw);
-  }else{
-    g=chuanHoaGio(raw);
-  }
-  if(!g)return alert("Nhập giờ dạng 2200 hoặc 22:00. Ca 2 có thể để N.");
+  if(raw==="" || raw.toUpperCase()==="N") g="N";
+  else g=chuanHoaGio(raw);
+  if(!g)return alert("Nhập giờ dạng 2200 hoặc 22:00, hoặc N nếu nghỉ/off.");
   state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),[field]:g};
   luu();veTatCa();
 }
