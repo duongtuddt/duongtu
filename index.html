@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.51</title>
+<title>Dương Tú v0.52</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -663,6 +663,32 @@ input,select,button{
   font-size:12px;
 }
 
+
+/* v0.52 - yêu cầu đặc biệt bãi đỗ */
+.standWarnText{
+  position:absolute;
+  top:16px;
+  height:20px;
+  min-width:86px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+  font-size:12px;
+  color:#ff6b6b;
+  z-index:4;
+  white-space:nowrap;
+}
+.reqBadge{
+  display:inline-block;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:2px 8px;
+  font-weight:900;
+}
+.reqOk{color:#66ff99}
+.reqBad{color:#ff6b6b}
+
 </style>
 </head>
 <body>
@@ -744,6 +770,31 @@ input,select,button{
 <div class="body hidden" id="khoiNhanSu">
 <div class="row"><input id="maNV" placeholder="Mã NV"><input id="hoTen" placeholder="Họ tên"><input id="cap" placeholder="Cấp: 1.1/1.2"><button class="primary" id="themSuaNhanSu">Thêm / Sửa</button><button class="ghost" id="lamMoiNhanSu">Làm mới</button><button class="danger" id="xoaHet">Xóa dữ liệu đã lưu</button></div>
 <div class="scroll" style="margin-top:8px"><table><thead><tr><th>Mã NV</th><th>Họ tên</th><th>Cấp</th><th>Trạng thái</th></tr></thead><tbody id="bangNhanSu"></tbody></table></div>
+</div>
+</section>
+
+<section class="panel"><h2><span>Yêu cầu đặc biệt</span><button class="small ghost" id="nutAnYeuCau">Hiện</button></h2>
+<div class="body hidden" id="khoiYeuCau">
+  <div class="hint">Cấu hình bãi đỗ. Nếu bãi không có thang ống lồng thì chuyến tại bãi đó cần ít nhất 1 nhân sự cấp 2 trở lên.</div>
+  <div class="row" style="margin-top:8px">
+    <input id="ycBaiDo" placeholder="Bãi đỗ VD: 05 hoặc 23" style="width:160px">
+    <label><input type="checkbox" id="ycCoThang"> Có thang ống lồng</label>
+    <label>Cấp tối thiểu
+      <select id="ycCapToiThieu">
+        <option value="1">Cấp 1</option>
+        <option value="2" selected>Cấp 2</option>
+        <option value="3">Cấp 3</option>
+      </select>
+    </label>
+    <button class="primary" id="nutThemSuaYeuCau">Thêm / Sửa</button>
+    <button class="ghost" id="nutLamMoiYeuCau">Làm mới</button>
+  </div>
+  <div class="scroll" style="margin-top:8px">
+    <table>
+      <thead><tr><th>Bãi đỗ</th><th>Có thang ống lồng</th><th>Cấp tối thiểu</th><th>Trạng thái</th></tr></thead>
+      <tbody id="bangYeuCauBaiDo"></tbody>
+    </table>
+  </div>
 </div>
 </section>
 </div>
@@ -1142,6 +1193,8 @@ state.danhSachNhanSu.forEach(ns=>{
 
 // v0.44 - Không tự gán ca khi mở file. Ca kíp sẽ chọn mới theo từng ngày.
 let chuyenDangChon=null;
+let yeuCauDangSua=null;
+if(!state.yeuCauBaiDo) state.yeuCauBaiDo=[];
 
 // Xóa dữ liệu nhân sự mẫu cũ nếu còn trong localStorage
 (function xoaNhanSuMauCu(){
@@ -1883,6 +1936,41 @@ function tenNV(ma){return (state.danhSachNhanSu.find(x=>x.ma===ma)||{}).ten||ma;
 function chuyen(ma){return state.danhSachChuyenBay.find(x=>x.ma===ma);}
 function capLonNhat(cap){const a=String(cap).split("/").map(Number).filter(x=>!isNaN(x));return a.length?Math.max(...a):0;}
 function datCap(cap,can){return can==="tatca"||capLonNhat(cap)>=Number(can);}
+
+function normBaiDo(bai){
+  let s=String(bai||"").trim().toUpperCase();
+  s=s.replace(/^BÃI\s*/i,"").replace(/^BAI\s*/i,"").replace(/\s+/g,"");
+  if(/^\d+$/.test(s)) s=String(Number(s));
+  return s;
+}
+function ycBaiDo(cb){
+  const key=normBaiDo(cb?.baiDo);
+  return (state.yeuCauBaiDo||[]).find(x=>normBaiDo(x.baiDo)===key)||null;
+}
+function capToiThieuChoBai(cb){
+  const yc=ycBaiDo(cb);
+  if(!yc) return 1;
+  return yc.coThang?1:Number(yc.capToiThieu||2);
+}
+function canhBaoCapToiThieu(cb, pcsThem=[]){
+  const min=capToiThieuChoBai(cb);
+  if(min<=1) return null;
+  const pcs=state.phanCong
+    .filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc))
+    .concat(pcsThem||[]);
+  if(pcs.length<2) return null;
+  const coCap=pcs.some(pc=>{
+    const ns=state.danhSachNhanSu.find(x=>x.ma===pc.maNV);
+    return ns && capLonNhat(ns.cap)>=min;
+  });
+  if(coCap) return null;
+  return {min, bai:cb.baiDo, text:`TÀU RA BÃI - THIẾU CẤP ${min}`};
+}
+function shortCanhBaoCap(cb){
+  const w=canhBaoCapToiThieu(cb);
+  return w?`THIẾU CẤP ${w.min}`:"";
+}
+
 function caSegments(ma){
   const ca=chuanHoaCa(state.phanCaHomNay[ma]);
   if(!ca || !ca.chon) return [];
@@ -2057,9 +2145,13 @@ function veTimelineChuyen(){
       const mau=mauChuyen(cb.ma), left=viTri(batDauAbs(cb)), width=rong(batDauAbs(cb),ketThucAbs(cb)), sel=cb.ma===chuyenDangChon;
       const ca=mauCaChuyen(cb.ma), caCls=caClass(ca);
       const mon=theoDoiChuyen(cb);
+      const cbWarn=shortCanhBaoCap(cb);
       const monLeft=left+width+6;
-      const tenLeft=left+width+6+mon.rong;
-      el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
+      const warnLeft=left+width+6+mon.rong;
+      const warnRong=cbWarn?96:0;
+      const tenLeft=left+width+6+mon.rong+warnRong;
+      const warnHtml=cbWarn?`<div class="standWarnText" style="left:${warnLeft}px">${cbWarn}</div>`:"";
+      el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
     });
 }
 function veTimelineNhanSu(){
@@ -2306,7 +2398,7 @@ function veDanhSachChon(){
   }).join("");
 }
 
-function veTatCa(){ veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"Bỏ tìm / tìm mới":"Tìm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+function veTatCa(){ veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"Bỏ tìm / tìm mới":"Tìm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
 function chonChuyen(ma){ if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; luu(); veTatCa();
 setTimeout(canhTheoVachHienTai,100); }
@@ -2520,6 +2612,15 @@ function ganBoNV(ma){
     if(pc.ketThucAbs<=pc.batDauAbs) pc.ketThucAbs=ketThucAbs(cb);
   }
 
+  const cbWarn=canhBaoCapToiThieu(cb,[pc]);
+  if(cbWarn){
+    const msg=`Bãi ${cbWarn.bai} không được trang bị thang ống lồng.\n\n`+
+      `Chuyến này cần tối thiểu 01 nhân sự cấp ${cbWarn.min} trở lên.\n`+
+      `Hiện tại nếu chọn thêm ${tenNV(ma)} thì vẫn chưa có nhân sự cấp ${cbWarn.min}.\n\n`+
+      `Bấm OK để VẪN PHÂN CÔNG.\nBấm HỦY để chọn lại.`;
+    if(!confirm(msg)) return;
+  }
+
   state.phanCong.push(pc);
   luu(); veTatCa();
 }
@@ -2539,6 +2640,67 @@ function vaoCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),vao:gioTuPhut
 function raCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),ra:gioTuPhut(hienTaiAbs())};luuPhanCaNgayHienTai();luu();veTatCa();}
 function suaNV(ma){const ns=state.danhSachNhanSu.find(x=>x.ma===ma);$("maNV").value=ns.ma;$("hoTen").value=ns.ten;$("cap").value=ns.cap;}
 function xoaNV(ma){if(!confirm("Xóa nhân sự này?"))return;state.danhSachNhanSu=state.danhSachNhanSu.filter(x=>x.ma!==ma);delete state.phanCaHomNay[ma];delete state.chamCong[ma];state.phanCong=state.phanCong.filter(x=>x.maNV!==ma);luu();veTatCa();}
+
+function veBangYeuCau(){
+  const ds=state.yeuCauBaiDo||[];
+  const el=$("bangYeuCauBaiDo");
+  if(!el)return;
+  el.innerHTML=ds.map(yc=>{
+    const st=yc.coThang
+      ? `<span class="reqBadge reqOk">Có thang - không bắt buộc cấp 2</span>`
+      : `<span class="reqBadge reqBad">Không thang - cần cấp ${yc.capToiThieu||2}</span>`;
+    return `<tr>
+      <td><b>Bãi ${yc.baiDo}</b></td>
+      <td>${yc.coThang?"☑ Có":"☐ Không"}</td>
+      <td>${yc.coThang?"Cấp 1":("Cấp "+(yc.capToiThieu||2))}</td>
+      <td><button class="small" onclick="suaYeuCauBai('${yc.id}')">Sửa</button> <button class="small danger" onclick="xoaYeuCauBai('${yc.id}')">Xóa</button></td>
+    </tr>`;
+  }).join("");
+}
+function lamMoiYeuCau(){
+  yeuCauDangSua=null;
+  ["ycBaiDo"].forEach(id=>$(id).value="");
+  $("ycCoThang").checked=false;
+  $("ycCapToiThieu").value="2";
+  $("nutThemSuaYeuCau").textContent="Thêm / Sửa";
+}
+function themSuaYeuCau(){
+  const bai=$("ycBaiDo").value.trim();
+  if(!bai)return alert("Nhập bãi đỗ.");
+  const key=normBaiDo(bai);
+  const coThang=$("ycCoThang").checked;
+  const capToiThieu=coThang?1:Number($("ycCapToiThieu").value||2);
+  const existed=(state.yeuCauBaiDo||[]).find(x=>normBaiDo(x.baiDo)===key && x.id!==yeuCauDangSua);
+  if(existed)return alert(`Bãi ${bai} đã có trong danh sách.`);
+  if(yeuCauDangSua){
+    const i=state.yeuCauBaiDo.findIndex(x=>x.id===yeuCauDangSua);
+    if(i>=0)state.yeuCauBaiDo[i]={id:yeuCauDangSua,baiDo:bai,coThang,capToiThieu};
+  }else{
+    state.yeuCauBaiDo.push({id:"YC"+Date.now(),baiDo:bai,coThang,capToiThieu});
+  }
+  lamMoiYeuCau();
+  luu();veTatCa();
+}
+function suaYeuCauBai(id){
+  const yc=(state.yeuCauBaiDo||[]).find(x=>x.id===id);
+  if(!yc)return;
+  yeuCauDangSua=id;
+  $("ycBaiDo").value=yc.baiDo;
+  $("ycCoThang").checked=!!yc.coThang;
+  $("ycCapToiThieu").value=String(yc.capToiThieu||2);
+  $("nutThemSuaYeuCau").textContent="Lưu thay đổi";
+  $("khoiYeuCau").classList.remove("hidden");
+  $("nutAnYeuCau").textContent="Ẩn";
+}
+function xoaYeuCauBai(id){
+  const yc=(state.yeuCauBaiDo||[]).find(x=>x.id===id);
+  if(!yc)return;
+  if(!confirm(`Xóa cấu hình bãi ${yc.baiDo}?`))return;
+  state.yeuCauBaiDo=state.yeuCauBaiDo.filter(x=>x.id!==id);
+  if(yeuCauDangSua===id)lamMoiYeuCau();
+  luu();veTatCa();
+}
+
 function themSuaNV(){const ma=$("maNV").value.trim(),ten=$("hoTen").value.trim(),cap=$("cap").value.trim();if(!ma||!ten||!cap)return alert("Nhập đủ Mã NV / Họ tên / Cấp.");const i=state.danhSachNhanSu.findIndex(x=>x.ma===ma);if(i>=0)state.danhSachNhanSu[i]={ma,ten,cap};else{state.danhSachNhanSu.push({ma,ten,cap});state.phanCaHomNay[ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};state.chamCong[ma]={vao:null,ra:null};}lamMoiNV();luu();veTatCa();}
 function lamMoiNV(){["maNV","hoTen","cap"].forEach(id=>$(id).value="");}
 function capNhatDongHo(){$("dongHo").textContent=new Date().toLocaleTimeString("vi-VN",{hour12:false,hour:"2-digit",minute:"2-digit"});}
@@ -2547,6 +2709,10 @@ $("ngayKhaiThac").onchange=doiNgay; $("lichChinh").onchange=()=>doiNgayLamViecMo
 $("locCap").onchange=veDanhSachChon; $("sapXep").onchange=veDanhSachChon;
 $("nutAnPhanCa").onclick=()=>{$("khoiPhanCa").classList.toggle("hidden");$("nutAnPhanCa").textContent=$("khoiPhanCa").classList.contains("hidden")?"Hiện":"Ẩn";};
 $("nutAnNhanSu").onclick=()=>{$("khoiNhanSu").classList.toggle("hidden");$("nutAnNhanSu").textContent=$("khoiNhanSu").classList.contains("hidden")?"Hiện":"Ẩn";};
+$("nutAnYeuCau").onclick=()=>{$("khoiYeuCau").classList.toggle("hidden");$("nutAnYeuCau").textContent=$("khoiYeuCau").classList.contains("hidden")?"Hiện":"Ẩn";};
+$("nutThemSuaYeuCau").onclick=themSuaYeuCau;
+$("nutLamMoiYeuCau").onclick=lamMoiYeuCau;
+$("ycCoThang").onchange=()=>{$("ycCapToiThieu").disabled=$("ycCoThang").checked; if($("ycCoThang").checked)$("ycCapToiThieu").value="1"; else $("ycCapToiThieu").value="2";};
 $("chonTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:true,gioVao1:state.phanCaHomNay[ns.ma]?.gioVao1||"06:00",gioRa1:state.phanCaHomNay[ns.ma]?.gioRa1||"14:00",gioVao2:state.phanCaHomNay[ns.ma]?.gioVao2||"N",gioRa2:state.phanCaHomNay[ns.ma]?.gioRa2||"N"});luu();veTatCa();};
 $("boTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:false,ca:"",nhanh:"1"});luuPhanCaNgayHienTai();luu();veTatCa();};
 $("themSuaNhanSu").onclick=themSuaNV; $("lamMoiNhanSu").onclick=lamMoiNV; $("xoaHet").onclick=()=>{if(confirm("Xóa toàn bộ dữ liệu đã lưu?")){localStorage.removeItem(KHO_LUU);location.reload();}};
