@@ -2538,7 +2538,7 @@ function canhBaoYeuCauChuyen(cb, pcsThem=[]){
   return {
     thieu,
     text:`CẦN ${thieu.map(x=>x.label).join(" | ")}`,
-    detail:thieu.map(x=>`- ${moTaReq(x)}`).join("\\n")
+    detail:thieu.map(x=>`- ${moTaReq(x)}`).join("\n")
   };
 }
 function canhBaoCapToiThieu(cb, pcsThem=[]){
