@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.43</title>
+<title>Dương Tú v0.46</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -543,18 +543,30 @@ input,select,button{
   bottom:0!important;
   height:auto!important;
   border-radius:0!important;
-  opacity:.42!important;
+  opacity:.55!important;
   background:repeating-linear-gradient(
     135deg,
-    rgba(220,38,38,.42) 0px,
-    rgba(220,38,38,.42) 3px,
-    transparent 3px,
-    transparent 13px
+    rgba(255,225,80,.48) 0px,
+    rgba(255,225,80,.48) 4px,
+    transparent 4px,
+    transparent 14px
   )!important;
-  border-left:1px solid rgba(239,68,68,.28)!important;
-  border-right:1px solid rgba(239,68,68,.28)!important;
+  border-left:1px solid rgba(255,225,80,.30)!important;
+  border-right:1px solid rgba(255,225,80,.30)!important;
   z-index:1!important;
   pointer-events:none!important;
+}
+.outsideShift.offShift::after{
+  content:"CA 6 / OFF";
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  color:rgba(255,255,255,.16);
+  font-weight:900;
+  font-size:18px;
+  letter-spacing:2px;
+  white-space:nowrap;
 }
 .bar.staff,
 .bar.free,
@@ -594,6 +606,21 @@ input,select,button{
 .caSelectMini{width:88px!important}.nhanhSelectMini{width:76px!important}
 .templateBox{border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px;background:#081a2b}
 .templateBox .row{gap:7px}
+
+
+/* v0.44 - chọn ca nhanh bằng nút, bảng phân ca gọn */
+.caAssignBtn{border:1px solid var(--line);background:#0a1f36;color:#d8ebff;border-radius:8px;padding:6px 9px;font-weight:900;cursor:pointer}
+.caAssignBtn.active{outline:2px solid #38bdf8;background:#12385c}
+.caNowBadge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-weight:900}
+.caNowBadge.ca1{color:#66ff99}.caNowBadge.ca2{color:#f59e0b}.caNowBadge.ca3{color:#c084fc}.caNowBadge.ca4{color:#38bdf8}.caNowBadge.ca5{color:#fb7185}.caNowBadge.ca6{color:#94a3b8}
+
+
+/* v0.45 - Chọn ca gọn: Ca chính -> nhánh -> giờ */
+.mainCaBtn,.subCaBtn{
+  border:1px solid var(--line);background:#0a1f36;color:#d8ebff;border-radius:8px;
+  padding:6px 11px;font-weight:900;cursor:pointer
+}
+.mainCaBtn.active,.subCaBtn.active{outline:2px solid #38bdf8;background:#12385c}
 
 </style>
 </head>
@@ -644,22 +671,29 @@ input,select,button{
 </div>
 <div class="templateBox">
   <div class="row">
-    <b>Gán ca nhanh:</b>
-    <select id="chonCaMau" onchange="capNhatNhanhCa()">
-      <option value="1">Ca 1</option><option value="2">Ca 2</option><option value="3">Ca 3</option>
-      <option value="4">Ca 4</option><option value="5">Ca 5</option><option value="6">Ca 6/OFF</option>
-    </select>
-    <select id="chonNhanhCa" onchange="hienGioCaMau()"></select>
-    <input id="mauVao1" placeholder="Vào ca 1" style="width:90px">
-    <input id="mauRa1" placeholder="Ra ca 1" style="width:90px">
-    <input id="mauVao2" placeholder="Vào ca 2/N" style="width:90px">
-    <input id="mauRa2" placeholder="Ra ca 2/N" style="width:90px">
-    <button class="primary" onclick="apDungCaChoNguoiDaTick()">Áp dụng cho người đang tick</button>
-    <button class="ghost" onclick="luuMauCaTuO()">Lưu giờ mẫu</button>
+    <b>Chọn ca:</b>
+    <div id="boNutCaChinh" class="caFilterBar"></div>
+    <input id="timNhanSuCa" placeholder="Tìm nhân sự / mã NV" oninput="veBangPhanCa()" style="width:190px">
   </div>
-  <div class="hint">Cách dùng: chọn Ca/Nhánh → chỉnh giờ nếu cần → tick nhân sự bên dưới → bấm áp dụng. Ô giờ từng người vẫn sửa tay được.</div>
+  <div class="row" style="margin-top:6px">
+    <b>Nhánh:</b>
+    <div id="boNutNhanhCa" class="caFilterBar"></div>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <span class="hint" id="caDangGanText">Chưa chọn ca gán.</span>
+    <button class="ghost" onclick="boChonCaGan()">Bỏ chọn ca gán</button>
+  </div>
+  <div class="row" id="khungGioCaGan" style="margin-top:6px;display:none">
+    <b>Giờ ca đang chọn:</b>
+    <input id="gioGanVao1" placeholder="Vào" style="width:90px">
+    <input id="gioGanRa1" placeholder="Ra" style="width:90px">
+    <input id="gioGanVao2" placeholder="Vào 2/N" style="width:90px">
+    <input id="gioGanRa2" placeholder="Ra 2/N" style="width:90px">
+    <button class="primary" onclick="luuGioCaDangChon()">Lưu giờ ca</button>
+  </div>
+  <div class="hint">Cách dùng: chọn Ca → chọn nhánh 1/2/3 → nhập/lưu giờ nếu cần → tick nhân sự bên dưới. Nút Tất cả dùng để hiện toàn đội và chỉnh tay từng người.</div>
 </div>
-<div class="scroll" style="margin-top:8px"><table><thead><tr><th>Hôm nay</th><th>Ca</th><th>Nhánh</th><th>Họ tên</th><th>Cấp</th><th>Vào ca 1</th><th>Ra ca 1</th><th>Vào ca 2</th><th>Ra ca 2</th><th>Chấm công vào</th><th>Chấm công ra</th><th>Trạng thái ca</th><th>Nút</th></tr></thead><tbody id="bangPhanCa"></tbody></table></div>
+<div class="scroll" style="margin-top:8px"><table><thead><tr><th>Chọn</th><th>Họ tên</th><th>Cấp</th><th>Ca hiện tại</th><th>Vào ca 1</th><th>Ra ca 1</th><th>Vào ca 2</th><th>Ra ca 2</th><th>Chấm công vào</th><th>Chấm công ra</th><th>Trạng thái ca</th><th>Nút</th></tr></thead><tbody id="bangPhanCa"></tbody></table></div>
 </div>
 </section>
 
@@ -705,12 +739,13 @@ function duLieuMau(){
     {ma:"016",ten:"Hùng Huế",cap:"1.1/1.2"},
     {ma:"017",ten:"Quý Ảo",cap:"1.1/1.2"}
   ];
+  const dsNhanSu = ns.filter(x=>!/^NV00[1-8]$/.test(x.ma));
   const phanCa={}, chamCong={};
-  ns.forEach(x=>{phanCa[x.ma]={chon:true,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};chamCong[x.ma]={vao:null,ra:null};});
+  dsNhanSu.forEach(x=>{phanCa[x.ma]={chon:false,ca:"",nhanh:"1",gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};chamCong[x.ma]={vao:null,ra:null};});
   return {
     ngayKhaiThac:ngay,
     ngayPhanCa:ngay,
-    danhSachNhanSu:ns,
+    danhSachNhanSu:dsNhanSu,
     phanCaHomNay:phanCa,
     chamCong,
     danhSachChuyenBay:[
@@ -742,30 +777,61 @@ state.danhSachNhanSu.forEach(ns=>{
   if(!state.chamCong[ns.ma]) state.chamCong[ns.ma]={vao:null,ra:null};
 });
 
-// v0.31 - lưu sẵn phân ca nhóm chiều/đêm để khỏi nhập tay
-const PHAN_CA_LUU_SAN = {
-  "Trà Chanh": {ca:"2",nhanh:"1",gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
-  "Hoàng Em": {ca:"2",nhanh:"1",gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
-  "Hùng Google": {ca:"2",nhanh:"1",gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
-  "Hậu": {ca:"2",nhanh:"1",gioVao1:"14:30", gioRa1:"00:30", gioVao2:"N", gioRa2:"N"},
-  "Hoàng Anh": {ca:"2",nhanh:"2",gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
-  "Siêu Nhân": {ca:"2",nhanh:"2",gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
-  "Hùng Huế": {ca:"2",nhanh:"2",gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"},
-  "Quý Ảo": {ca:"2",nhanh:"2",gioVao1:"15:00", gioRa1:"01:00", gioVao2:"N", gioRa2:"N"}
-};
-state.danhSachNhanSu.forEach(ns=>{
-  const caLuu = PHAN_CA_LUU_SAN[ns.ten];
-  if(caLuu){
-    state.phanCaHomNay[ns.ma] = {
-      ...(state.phanCaHomNay[ns.ma] || {}),
-      chon:true,
-      ...caLuu
-    };
-    if(!state.chamCong[ns.ma]) state.chamCong[ns.ma]={vao:null,ra:null};
-  }
-});
-luu();
+// v0.44 - Không tự gán ca khi mở file. Ca kíp sẽ chọn mới theo từng ngày.
 let chuyenDangChon=null;
+
+// Xóa dữ liệu nhân sự mẫu cũ nếu còn trong localStorage
+(function xoaNhanSuMauCu(){
+  const xoa=new Set(["NV001","NV002","NV003","NV004","NV005","NV006","NV007","NV008"]);
+  let changed=false;
+  state.danhSachNhanSu=state.danhSachNhanSu.filter(ns=>{
+    if(xoa.has(ns.ma)){changed=true;return false;}
+    return true;
+  });
+  xoa.forEach(ma=>{delete state.phanCaHomNay[ma];delete state.chamCong[ma];});
+  state.phanCong=state.phanCong.filter(pc=>!xoa.has(pc.maNV));
+  if(changed) luu();
+})();
+
+if(!state.phanCaTheoNgay) state.phanCaTheoNgay={};
+if(!state.chamCongTheoNgay) state.chamCongTheoNgay={};
+
+function phanCaTrong(){
+  const pc={}, cc={};
+  state.danhSachNhanSu.forEach(ns=>{
+    pc[ns.ma]={chon:false,ca:"",nhanh:"1",gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};
+    cc[ns.ma]={vao:null,ra:null};
+  });
+  return {pc,cc};
+}
+function luuPhanCaNgayHienTai(){
+  if(!state.ngayPhanCa) state.ngayPhanCa=state.ngayKhaiThac||homNayLocal();
+  state.phanCaTheoNgay[state.ngayPhanCa]=JSON.parse(JSON.stringify(state.phanCaHomNay||{}));
+  state.chamCongTheoNgay[state.ngayPhanCa]=JSON.parse(JSON.stringify(state.chamCong||{}));
+}
+function taiPhanCaNgay(ngay){
+  state.ngayPhanCa=ngay;
+  if(state.phanCaTheoNgay[ngay]){
+    state.phanCaHomNay=JSON.parse(JSON.stringify(state.phanCaTheoNgay[ngay]));
+    state.chamCong=JSON.parse(JSON.stringify(state.chamCongTheoNgay[ngay]||{}));
+  }else{
+    const t=phanCaTrong();
+    state.phanCaHomNay=t.pc;
+    state.chamCong=t.cc;
+    state.phanCaTheoNgay[ngay]=JSON.parse(JSON.stringify(t.pc));
+    state.chamCongTheoNgay[ngay]=JSON.parse(JSON.stringify(t.cc));
+  }
+  state.danhSachNhanSu.forEach(ns=>{
+    state.phanCaHomNay[ns.ma]=chuanHoaCa(state.phanCaHomNay[ns.ma]);
+    if(!state.chamCong[ns.ma]) state.chamCong[ns.ma]={vao:null,ra:null};
+  });
+}
+if(!state.phanCaTheoNgay[state.ngayKhaiThac]){
+  // Không tự gán ca ngày mới. Nếu dữ liệu cũ đang có ca, chỉ giữ lại cho ngày hiện tại lần đầu.
+  state.phanCaTheoNgay[state.ngayKhaiThac]=JSON.parse(JSON.stringify(state.phanCaHomNay||{}));
+  state.chamCongTheoNgay[state.ngayKhaiThac]=JSON.parse(JSON.stringify(state.chamCong||{}));
+}
+taiPhanCaNgay(state.ngayKhaiThac);
 
 function luu(){localStorage.setItem(KHO_LUU,JSON.stringify(state));}
 function $(id){return document.getElementById(id);}
@@ -848,6 +914,109 @@ function doiNhanhNhanSu(ma,n){
   luu();veTatCa();
 }
 
+
+if(!state.caGan) state.caGan={ca:"",nhanh:"1"};
+
+function caGanKey(){return state.caGan?.ca ? `${state.caGan.ca}.${state.caGan.nhanh||"1"}` : "";}
+function gioMauCa(ca,n){
+  return (state.caMau?.[ca]?.[n])||CA_MAU_MAC_DINH[ca]?.[n]||CA_MAU_MAC_DINH["1"]["1"];
+}
+function veBoNutGanCa(){
+  const elMain=$("boNutCaChinh"), elSub=$("boNutNhanhCa");
+  if(!elMain||!elSub)return;
+
+  const caHien=state.caGan?.ca||"";
+  elMain.innerHTML=["tatca","1","2","3","4","5","6"].map(c=>{
+    if(c==="tatca") return `<button class="mainCaBtn caAllColor ${caHien==="tatca"?"active":""}" onclick="chonCaGan('tatca','1')"><span class="caDot"></span>Tất cả</button>`;
+    return `<button class="mainCaBtn ca${c}Color ${caHien===c?"active":""}" onclick="chonCaGan('${c}','1')"><span class="caDot ca${c}"></span>${TEN_CA[c]}</button>`;
+  }).join("");
+
+  if(!caHien || caHien==="tatca"){
+    elSub.innerHTML=`<span class="hint">Chọn một ca để hiện 1.1 / 1.2 / 1.3, hoặc để Tất cả để chỉnh tay toàn đội.</span>`;
+  }else if(caHien==="6"){
+    elSub.innerHTML=`<button class="subCaBtn ca6Color active" onclick="chonCaGan('6','1')"><span class="caDot ca6"></span>OFF</button>`;
+  }else{
+    elSub.innerHTML=["1","2","3"].map(n=>{
+      const active=String(state.caGan?.nhanh||"1")===n;
+      return `<button class="subCaBtn ca${caHien}Color ${active?"active":""}" onclick="chonCaGan('${caHien}','${n}')"><span class="caDot ca${caHien}"></span>${caHien}.${n}</button>`;
+    }).join("");
+  }
+
+  hienGioCaDangChon();
+  const txt=$("caDangGanText");
+  if(txt){
+    if(!caHien) txt.textContent="Chưa chọn ca gán.";
+    else if(caHien==="tatca") txt.textContent="Đang xem: Tất cả. Có thể chỉnh tay từng nhân sự.";
+    else txt.textContent=`Đang gán: ${caHien==="6"?"Ca 6/OFF":("Ca "+caHien+"."+state.caGan.nhanh)}. Tick nhân sự bên dưới để đưa vào ca này.`;
+  }
+}
+function chonCaGan(ca,nhanh){
+  state.caGan={ca,nhanh:nhanh||"1"};
+  luu();veTatCa();
+}
+function hienGioCaDangChon(){
+  const kh=$("khungGioCaGan"); if(!kh)return;
+  const ca=state.caGan?.ca, n=state.caGan?.nhanh||"1";
+  if(!ca || ca==="tatca"){kh.style.display="none";return;}
+  kh.style.display="flex";
+  const gio=gioMauCa(ca,n);
+  $("gioGanVao1").value=gio.gioVao1;
+  $("gioGanRa1").value=gio.gioRa1;
+  $("gioGanVao2").value=gio.gioVao2;
+  $("gioGanRa2").value=gio.gioRa2;
+}
+function luuGioCaDangChon(){
+  const ca=state.caGan?.ca, n=state.caGan?.nhanh||"1";
+  if(!ca || ca==="tatca")return alert("Chọn ca cụ thể trước.");
+  const n2=x=>String(x||"N").trim().toUpperCase()==="N"?"N":(chuanHoaGio(x)||"N");
+  const gio=ca==="6"
+    ? {gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"}
+    : {gioVao1:n2($("gioGanVao1").value),gioRa1:n2($("gioGanRa1").value),gioVao2:n2($("gioGanVao2").value),gioRa2:n2($("gioGanRa2").value)};
+  if(!state.caMau)state.caMau=JSON.parse(JSON.stringify(CA_MAU_MAC_DINH));
+  if(!state.caMau[ca])state.caMau[ca]={};
+  state.caMau[ca][n]=gio;
+  luu();
+  alert(`Đã lưu giờ cho ${ca==="6"?"Ca 6/OFF":("Ca "+ca+"."+n)}`);
+  veTatCa();
+}
+function boChonCaGan(){state.caGan={ca:"",nhanh:"1"};luu();veTatCa();}
+function ganCaChoNhanSu(ma){
+  const ns=state.danhSachNhanSu.find(x=>x.ma===ma);
+  if(!ns)return;
+  const ca=state.caGan?.ca, nhanh=state.caGan?.nhanh||"1";
+  if(!ca || ca==="tatca"){alert("Chọn ca cụ thể trước, ví dụ 1.1 hoặc 2.2."); return;}
+  const hien=state.phanCaHomNay[ma]||{};
+  const tenCa=ca==="6"?"Ca 6/OFF":`Ca ${ca}.${nhanh}`;
+  if(hien.ca && (hien.ca!==ca || String(hien.nhanh||"1")!==String(nhanh))){
+    if(!confirm(`${ns.ten} đang thuộc Ca ${hien.ca}.${hien.nhanh||"1"}.\n\nChuyển sang ${tenCa} có phải không?`))return;
+  }else{
+    if(!confirm(`Phân công ${ns.ten} vào ${tenCa} có phải không?`))return;
+  }
+  const gio=gioMauCa(ca,nhanh);
+  state.phanCaHomNay[ma]={...hien,chon:ca!=="6",ca,nhanh,...gio};
+  if(ca==="6") state.phanCaHomNay[ma].chon=false;
+  luuPhanCaNgayHienTai();luu();veTatCa();
+}
+function boCaNhanSu(ma){
+  const ns=state.danhSachNhanSu.find(x=>x.ma===ma);
+  const hien=state.phanCaHomNay[ma]||{};
+  if(!hien.ca){state.phanCaHomNay[ma]={...hien,chon:false};luuPhanCaNgayHienTai();luu();veTatCa();return;}
+  if(!confirm(`Bỏ ${ns?ns.ten:ma} khỏi Ca ${hien.ca}.${hien.nhanh||"1"} có phải không?`))return;
+  state.phanCaHomNay[ma]={...hien,chon:false,ca:"",nhanh:"1"};
+  luuPhanCaNgayHienTai();luu();veTatCa();
+}
+function suaCaNhanSuBangPrompt(ma){
+  const ns=state.danhSachNhanSu.find(x=>x.ma===ma), hien=state.phanCaHomNay[ma]||{};
+  const nhap=prompt(`Nhập ca cho ${ns?ns.ten:ma} (ví dụ 1.1, 2.3, 6 hoặc để trống để bỏ ca):`, hien.ca?`${hien.ca}.${hien.nhanh||"1"}`:"");
+  if(nhap===null)return;
+  const s=String(nhap).trim();
+  if(!s){boCaNhanSu(ma);return;}
+  const m=s.match(/^([1-6])(?:[\\.\\-]([1-3]))?$/);
+  if(!m)return alert("Nhập dạng 1.1, 2.3 hoặc 6.");
+  const ca=m[1], nhanh=m[2]||"1";
+  state.caGan={ca,nhanh}; ganCaChoNhanSu(ma);
+}
+
 function chuanHoaGio(raw){
   let s=String(raw||"").trim().toLowerCase().replace("h",":");
   if(/^\d{4}$/.test(s))s=s.slice(0,2)+":"+s.slice(2);
@@ -867,17 +1036,19 @@ function bdKhung(){return startAbs();}
 function ktKhung(){return startAbs()+SO_GIO*60;}
 function addBarNgoaiCa(ma){
   const bd=bdKhung(), kt=ktKhung();
+  const caNV=caCuaNV(ma);
+  const offCls=caNV==="6"?" offShift":"";
   const segs=caSegments(ma).slice().sort((a,b)=>a.vao-b.vao);
   let html="", cur=bd;
   if(!segs.length){
-    return `<div class="outsideShift" style="left:${viTri(bd)}px;width:${Math.max(1,viTri(kt)-viTri(bd))}px"></div>`;
+    return `<div class="outsideShift${offCls}" style="left:${viTri(bd)}px;width:${Math.max(1,viTri(kt)-viTri(bd))}px"></div>`;
   }
   segs.forEach(seg=>{
     const s=Math.max(bd,seg.vao), e=Math.min(kt,seg.ra);
-    if(s>cur) html+=`<div class="outsideShift" style="left:${viTri(cur)}px;width:${Math.max(1,viTri(s)-viTri(cur))}px"></div>`;
+    if(s>cur) html+=`<div class="outsideShift${offCls}" style="left:${viTri(cur)}px;width:${Math.max(1,viTri(s)-viTri(cur))}px"></div>`;
     if(e>cur) cur=e;
   });
-  if(cur<kt) html+=`<div class="outsideShift" style="left:${viTri(cur)}px;width:${Math.max(1,viTri(kt)-viTri(cur))}px"></div>`;
+  if(cur<kt) html+=`<div class="outsideShift${offCls}" style="left:${viTri(cur)}px;width:${Math.max(1,viTri(kt)-viTri(cur))}px"></div>`;
   return html;
 }
 function coGio(g){return String(g||"").trim()!=="";}
@@ -1090,18 +1261,30 @@ function veBangNhanSu(){
   $("bangNhanSu").innerHTML=state.danhSachNhanSu.map(ns=>`<tr><td>${ns.ma}</td><td>${ns.ten}</td><td>${ns.cap}</td><td><button class="small" onclick="suaNV('${ns.ma}')">Sửa</button> <button class="small danger" onclick="xoaNV('${ns.ma}')">Xóa</button></td></tr>`).join("");
 }
 function veBangPhanCa(){
-  $("bangPhanCa").innerHTML=state.danhSachNhanSu.map(ns=>{
+  const term=String(($("timNhanSuCa")||{}).value||"").trim().toLowerCase();
+  const caGan=state.caGan?.ca||"", nhanhGan=String(state.caGan?.nhanh||"1");
+  const ds=state.danhSachNhanSu.filter(ns=>{
+    const ca=state.phanCaHomNay[ns.ma]||{};
+    if(term){
+      return ns.ten.toLowerCase().includes(term)||ns.ma.toLowerCase().includes(term)||String(ca.ca||"").includes(term);
+    }
+    if(caGan && caGan!=="tatca"){
+      // Khi đang chọn 1.1, chỉ hiện người chưa có ca hoặc đang đúng 1.1.
+      return !ca.ca || (String(ca.ca)===String(caGan)&&String(ca.nhanh||"1")===String(nhanhGan));
+    }
+    return true;
+  });
+  $("bangPhanCa").innerHTML=ds.map(ns=>{
     if(!state.phanCaHomNay[ns.ma])state.phanCaHomNay[ns.ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N",ca:"",nhanh:"1"};
     state.phanCaHomNay[ns.ma]=chuanHoaCa(state.phanCaHomNay[ns.ma]);
     if(!state.chamCong[ns.ma])state.chamCong[ns.ma]={vao:null,ra:null};
     const ca=state.phanCaHomNay[ns.ma],cc=state.chamCong[ns.ma],tt=trangThaiCa(ns.ma),cls=tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":tt.loai==="green"?"greenText":"muted";
-    const caOptions=["","1","2","3","4","5","6"].map(c=>`<option value="${c}" ${String(ca.ca||"")===c?"selected":""}>${c?TEN_CA[c]:"Chưa gán"}</option>`).join("");
-    const nhanhOptions=["1","2","3"].map(n=>`<option value="${n}" ${String(ca.nhanh||"1")===n?"selected":""}>${ca.ca?("Ca "+ca.ca+"."+n):n}</option>`).join("");
+    const checked=(caGan && caGan!=="tatca") ? (String(ca.ca)===String(caGan)&&String(ca.nhanh||"1")===String(nhanhGan)) : !!ca.chon;
+    const caText=ca.ca ? (ca.ca==="6"?"Ca 6/OFF":`Ca ${ca.ca}.${ca.nhanh||"1"}`) : "Chưa gán";
+    const caBadge=ca.ca?`<span class="caNowBadge ca${ca.ca}">${caText}</span>`:`<span class="muted">Chưa gán</span>`;
     return `<tr>
-      <td><input type="checkbox" ${ca.chon?"checked":""} onchange="doiChon('${ns.ma}',this.checked)"></td>
-      <td><select class="caSelectMini" onchange="doiCaNhanSu('${ns.ma}',this.value)">${caOptions}</select></td>
-      <td><select class="nhanhSelectMini" onchange="doiNhanhNhanSu('${ns.ma}',this.value)">${nhanhOptions}</select></td>
-      <td>${ns.ten}</td><td>${ns.cap}</td>
+      <td><input type="checkbox" ${checked?"checked":""} onchange="${(caGan&&caGan!=="tatca")?`(this.checked?ganCaChoNhanSu('${ns.ma}'):boCaNhanSu('${ns.ma}'))`:`doiChon('${ns.ma}',this.checked)`}"></td>
+      <td>${ns.ten}</td><td>${ns.cap}</td><td>${caBadge} <button class="small ghost" onclick="suaCaNhanSuBangPrompt('${ns.ma}')">Sửa</button></td>
       <td><input value="${ca.gioVao1}" onchange="doiGioCa('${ns.ma}','gioVao1',this.value)" style="width:90px"></td>
       <td><input value="${ca.gioRa1}" onchange="doiGioCa('${ns.ma}','gioRa1',this.value)" style="width:90px"></td>
       <td><input value="${ca.gioVao2}" onchange="doiGioCa('${ns.ma}','gioVao2',this.value)" style="width:90px"></td>
@@ -1291,7 +1474,7 @@ function veDanhSachChon(){
   }).join("");
 }
 
-function veTatCa(){ veBoLocCa(); if($("chonCaMau")&&!$("chonNhanhCa").options.length)capNhatNhanhCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+function veTatCa(){ veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
 function chonChuyen(ma){ if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; luu(); veTatCa();
 setTimeout(canhTheoVachHienTai,100); }
@@ -1443,8 +1626,8 @@ function ganBoNV(ma){
   luu(); veTatCa();
 }
 
-function doiNgay(){state.ngayKhaiThac=$("ngayKhaiThac").value;boChon();luu();veTatCa();}
-function doiChon(ma,val){state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),chon:val};luu();veTatCa();}
+function doiNgay(){doiNgayLamViecMoi($("ngayKhaiThac").value);boChon();}
+function doiChon(ma,val){state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),chon:val};luuPhanCaNgayHienTai();luu();veTatCa();}
 function doiGioCa(ma,field,val){
   let raw=String(val||"").trim();
   let g;
@@ -1452,10 +1635,10 @@ function doiGioCa(ma,field,val){
   else g=chuanHoaGio(raw);
   if(!g)return alert("Nhập giờ dạng 2200 hoặc 22:00, hoặc N nếu nghỉ/off.");
   state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),[field]:g};
-  luu();veTatCa();
+  luuPhanCaNgayHienTai();luu();veTatCa();
 }
-function vaoCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),vao:gioTuPhut(hienTaiAbs())};luu();veTatCa();}
-function raCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),ra:gioTuPhut(hienTaiAbs())};luu();veTatCa();}
+function vaoCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),vao:gioTuPhut(hienTaiAbs())};luuPhanCaNgayHienTai();luu();veTatCa();}
+function raCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),ra:gioTuPhut(hienTaiAbs())};luuPhanCaNgayHienTai();luu();veTatCa();}
 function suaNV(ma){const ns=state.danhSachNhanSu.find(x=>x.ma===ma);$("maNV").value=ns.ma;$("hoTen").value=ns.ten;$("cap").value=ns.cap;}
 function xoaNV(ma){if(!confirm("Xóa nhân sự này?"))return;state.danhSachNhanSu=state.danhSachNhanSu.filter(x=>x.ma!==ma);delete state.phanCaHomNay[ma];delete state.chamCong[ma];state.phanCong=state.phanCong.filter(x=>x.maNV!==ma);luu();veTatCa();}
 function themSuaNV(){const ma=$("maNV").value.trim(),ten=$("hoTen").value.trim(),cap=$("cap").value.trim();if(!ma||!ten||!cap)return alert("Nhập đủ Mã NV / Họ tên / Cấp.");const i=state.danhSachNhanSu.findIndex(x=>x.ma===ma);if(i>=0)state.danhSachNhanSu[i]={ma,ten,cap};else{state.danhSachNhanSu.push({ma,ten,cap});state.phanCaHomNay[ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};state.chamCong[ma]={vao:null,ra:null};}lamMoiNV();luu();veTatCa();}
@@ -1467,7 +1650,7 @@ $("locCap").onchange=veDanhSachChon; $("sapXep").onchange=veDanhSachChon;
 $("nutAnPhanCa").onclick=()=>{$("khoiPhanCa").classList.toggle("hidden");$("nutAnPhanCa").textContent=$("khoiPhanCa").classList.contains("hidden")?"Hiện":"Ẩn";};
 $("nutAnNhanSu").onclick=()=>{$("khoiNhanSu").classList.toggle("hidden");$("nutAnNhanSu").textContent=$("khoiNhanSu").classList.contains("hidden")?"Hiện":"Ẩn";};
 $("chonTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:true,gioVao1:state.phanCaHomNay[ns.ma]?.gioVao1||"06:00",gioRa1:state.phanCaHomNay[ns.ma]?.gioRa1||"14:00",gioVao2:state.phanCaHomNay[ns.ma]?.gioVao2||"N",gioRa2:state.phanCaHomNay[ns.ma]?.gioRa2||"N"});luu();veTatCa();};
-$("boTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:false});luu();veTatCa();};
+$("boTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:false,ca:"",nhanh:"1"});luuPhanCaNgayHienTai();luu();veTatCa();};
 $("themSuaNhanSu").onclick=themSuaNV; $("lamMoiNhanSu").onclick=lamMoiNV; $("xoaHet").onclick=()=>{if(confirm("Xóa toàn bộ dữ liệu đã lưu?")){localStorage.removeItem(KHO_LUU);location.reload();}};
 function dangNhapLieu(){
   const el=document.activeElement;
@@ -1476,10 +1659,12 @@ function dangNhapLieu(){
 
 function doiNgayLamViecMoi(val){
   if(!val)return;
-  // Ngày làm việc là ngày chính: chuyến bay + phân ca cùng một ngày.
-  // Nhân sự và phân ca/chấm công hiện tại được giữ nguyên; chuyến/phân công của ngày khác vẫn lưu riêng theo ngày.
+  luuPhanCaNgayHienTai();
+
   state.ngayKhaiThac = val;
   state.ngayPhanCa = val;
+  taiPhanCaNgay(val);
+
   if(typeof chuyenDangChon !== "undefined") chuyenDangChon = null;
   if(typeof nhanSuDangChon !== "undefined") nhanSuDangChon = null;
   if(document.getElementById("flight")){
@@ -1488,8 +1673,7 @@ function doiNgayLamViecMoi(val){
   if(document.getElementById("maNV")){
     ["maNV","hoTen","cap"].forEach(id=>{const el=document.getElementById(id); if(el)el.value="";});
   }
-  if(typeof luuDuLieu === "function") luuDuLieu();
-  if(typeof luu === "function") luu();
+  luu();
   veTatCa();
 }
 
