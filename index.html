@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.48</title>
+<title>Dương Tú v0.49</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -638,6 +638,7 @@ input,select,button{
 <input id="std" placeholder="STD (có thể trống)">
 <input id="baiDo" placeholder="Bãi đỗ">
 <button class="primary" id="nutChuyenBay">Thêm chuyến</button>
+<button class="danger" id="nutXoaChuyen">Xóa chuyến</button>
 <button class="ghost" id="nutBoChon">Bỏ chọn / làm mới</button>
 </div>
 </div>
@@ -2172,11 +2173,40 @@ function veDanhSachChon(){
   }).join("");
 }
 
-function veTatCa(){ veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+function veTatCa(){ veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
 function chonChuyen(ma){ if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; luu(); veTatCa();
 setTimeout(canhTheoVachHienTai,100); }
 function boChon(){ chuyenDangChon=null; ["flight","eta","std","baiDo"].forEach(id=>$(id).value=""); veTatCa(); }
+
+function xoaChuyenDangChon(){
+  if(!chuyenDangChon){
+    alert("Chọn chuyến cần xóa trên realtime trước.");
+    return;
+  }
+
+  const cb=chuyen(chuyenDangChon);
+  if(!cb){
+    alert("Không tìm thấy chuyến đang chọn.");
+    return;
+  }
+
+  const soNguoi=state.phanCong.filter(pc=>pc.maChuyen===chuyenDangChon&&pcDangHieuLuc(pc)).length;
+  const msg=`Xóa chuyến ${cb.flight} - Bãi ${cb.baiDo}?\n\n`+
+    `ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}\n`+
+    (soNguoi?`Chuyến này đang có ${soNguoi} nhân sự được phân công. Xóa chuyến sẽ xóa luôn phân công liên quan.\n\n`:"")+
+    `Bạn chắc chắn muốn xóa?`;
+
+  if(!confirm(msg)) return;
+
+  state.danhSachChuyenBay=state.danhSachChuyenBay.filter(x=>x.ma!==chuyenDangChon);
+  state.phanCong=state.phanCong.filter(pc=>pc.maChuyen!==chuyenDangChon && pc.dieuDongTu!==chuyenDangChon);
+  chuyenDangChon=null;
+  ["flight","eta","std","baiDo"].forEach(id=>$(id).value="");
+  luu();
+  veTatCa();
+}
+
 function themSuaChuyen(){
   const flight=$("flight").value.trim();
   const etaRaw=$("eta").value.trim();
@@ -2343,7 +2373,7 @@ function themSuaNV(){const ma=$("maNV").value.trim(),ten=$("hoTen").value.trim()
 function lamMoiNV(){["maNV","hoTen","cap"].forEach(id=>$(id).value="");}
 function capNhatDongHo(){$("dongHo").textContent=new Date().toLocaleTimeString("vi-VN",{hour12:false,hour:"2-digit",minute:"2-digit"});}
 
-$("ngayKhaiThac").onchange=doiNgay; $("lichChinh").onchange=()=>doiNgayLamViecMoi($("lichChinh").value); $("ngayPhanCa").onchange=()=>{state.ngayPhanCa=$("ngayPhanCa").value;luu();veTatCa();}; $("nutChuyenBay").onclick=themSuaChuyen; $("nutBoChon").onclick=boChon;
+$("ngayKhaiThac").onchange=doiNgay; $("lichChinh").onchange=()=>doiNgayLamViecMoi($("lichChinh").value); $("ngayPhanCa").onchange=()=>{state.ngayPhanCa=$("ngayPhanCa").value;luu();veTatCa();}; $("nutChuyenBay").onclick=themSuaChuyen; $("nutBoChon").onclick=boChon; $("nutXoaChuyen").onclick=xoaChuyenDangChon;
 $("locCap").onchange=veDanhSachChon; $("sapXep").onchange=veDanhSachChon;
 $("nutAnPhanCa").onclick=()=>{$("khoiPhanCa").classList.toggle("hidden");$("nutAnPhanCa").textContent=$("khoiPhanCa").classList.contains("hidden")?"Hiện":"Ẩn";};
 $("nutAnNhanSu").onclick=()=>{$("khoiNhanSu").classList.toggle("hidden");$("nutAnNhanSu").textContent=$("khoiNhanSu").classList.contains("hidden")?"Hiện":"Ẩn";};
