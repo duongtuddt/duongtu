@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.75 Permission Fix</title>
+<title>Dương Tú v0.76 Shift Scope Permissions</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1180,6 +1180,21 @@ body.taskOnly #khoiYeuCau .scroll{
   position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;padding:0 5px;
   border-radius:999px;background:#ef4444;color:#fff;font-size:11px;line-height:17px;
   text-align:center;font-weight:900;border:1px solid #fecaca;
+}
+
+
+/* v0.76 - giới hạn dashboard/phân ca theo ca đăng nhập */
+.caLocked{
+  opacity:.35!important;
+  filter:grayscale(.4);
+  cursor:not-allowed!important;
+}
+.shiftScopeNote{
+  display:inline-block;
+  margin-left:6px;
+  color:#facc15;
+  font-weight:900;
+  font-size:12px;
 }
 
 </style>
@@ -2765,6 +2780,53 @@ function enforcedDashboardForAccount(){
   if(!acc || isAdmin())return;
   if(!canPerm("dashboard"))setVisible(DASHBOARD_IDS,false);
 }
+
+function sessionShiftRaw(){
+  const s=getSession();
+  return String(s?.todayShift||"").trim().toUpperCase();
+}
+function caQuanLyTheoDangNhap(){
+  if(isAdmin())return "tatca";
+  const raw=sessionShiftRaw();
+  if(!raw)return "";
+  if(raw.startsWith("TRUC") || raw.includes("CÁN") || raw.includes("CAN"))return "TRUC";
+  if(raw.startsWith("KD") || raw.includes("KÉO") || raw.includes("KEO"))return "KD";
+  const m=raw.match(/^([1-6])(?:[\.\-\s]?([A-Z0-9]+))?/);
+  return m?m[1]:"";
+}
+function nhanhDangNhap(){
+  const raw=sessionShiftRaw();
+  const m=raw.match(/^[1-6][\.\-\s]?([1-9])/);
+  return m?m[1]:"";
+}
+function duocQuanLyCa(ca){
+  if(isAdmin())return true;
+  const ql=caQuanLyTheoDangNhap();
+  if(!ql)return false;
+  return String(ca)===String(ql);
+}
+function moTaCaQuanLy(){
+  const ca=caQuanLyTheoDangNhap();
+  if(!ca)return "chưa khai báo";
+  if(ca==="TRUC")return "Cán bộ";
+  if(ca==="KD")return "Kéo đẩy";
+  return "Ca "+ca;
+}
+function requireCaScope(ca,label="ca này"){
+  if(duocQuanLyCa(ca))return true;
+  alert(`Tài khoản của bạn chỉ được quản lý ${moTaCaQuanLy()} trong ngày đăng nhập.\nKhông được thao tác ${label}.`);
+  return false;
+}
+function apDungGioiHanCaTheoDangNhap(){
+  if(isAdmin())return;
+  const ca=caQuanLyTheoDangNhap();
+  if(!ca)return;
+  if(state.caDangLoc!==ca)state.caDangLoc=ca;
+  if(!state.caGan || !duocQuanLyCa(state.caGan.ca)){
+    state.caGan={ca,nhanh:nhanhDangNhap()||"1"};
+  }
+}
+
 function loginMessage(msg,cls="muted"){const el=$("loginMessage"); if(el){el.className="status "+cls+(msg?"":" hidden");el.textContent=msg||"";}}
 function showLoginTab(mode){$("loginForm").classList.toggle("hidden",mode!=="login");$("registerForm").classList.toggle("hidden",mode!=="register");}
 function updateAccountUI(){
@@ -2959,7 +3021,10 @@ if(!state.timChuyen) state.timChuyen="";
 if(!state.caMau) state.caMau=JSON.parse(JSON.stringify(CA_MAU_MAC_DINH));
 function caCuaNV(ma){return String((state.phanCaHomNay[ma]||{}).ca||"");}
 function nhanhCuaNV(ma){return String((state.phanCaHomNay[ma]||{}).nhanh||"");}
-function dungBoLocCaNV(ma){return state.caDangLoc==="tatca" || caCuaNV(ma)===state.caDangLoc;}
+function dungBoLocCaNV(ma){
+  const loc=isAdmin()?state.caDangLoc:caQuanLyTheoDangNhap();
+  return loc==="tatca" || caCuaNV(ma)===loc;
+}
 function caClass(ca){
   if(ca==="TRUC")return "caTRUC";
   if(ca==="KD")return "caKD";
@@ -2975,12 +3040,17 @@ function mauCaChuyen(maChuyen){
 function veBoLocCa(){
   const el=$("boLocCaHeader"); if(!el)return;
   el.innerHTML=CA_KEYS.map(k=>{
+    if(!isAdmin() && k==="tatca")return "";
     const cls=k==="tatca"?"caAllColor":(k==="TRUC"?"caTRUCColor":(k==="KD"?"caKDColor":`ca${k}Color`));
     const dot=k==="tatca"?"":(k==="TRUC"?"caTRUC":(k==="KD"?"caKD":("ca"+k)));
-    return `<button class="caBtn ${cls} ${state.caDangLoc===k?"active":""}" onclick="chonLocCa('${k}')"><span class="caDot ${dot}"></span>${TEN_CA[k]}</button>`;
-  }).join("");
+    const locked=!duocQuanLyCa(k);
+    return `<button class="caBtn ${cls} ${state.caDangLoc===k?"active":""} ${locked?"caLocked":""}" onclick="chonLocCa('${k}')"><span class="caDot ${dot}"></span>${TEN_CA[k]}</button>`;
+  }).join("") + (!isAdmin()?`<span class="shiftScopeNote">Quyền: ${moTaCaQuanLy()}</span>`:"");
 }
-function chonLocCa(ca){state.caDangLoc=ca;luu();veTatCa();}
+function chonLocCa(ca){
+  if(!requireCaScope(ca,TEN_CA[ca]||ca))return;
+  state.caDangLoc=ca;luu();veTatCa();
+}
 function capNhatNhanhCa(){
   const ca=$("chonCaMau").value;
   const sel=$("chonNhanhCa"); if(!sel)return;
@@ -3053,8 +3123,10 @@ function veBoNutGanCa(){
     ["5","Ca 5","ca5Color","ca5"],
     ["6","Ca 6/OFF","ca6Color","ca6"]
   ].map(([c,label,cls,dot])=>{
+    if(!isAdmin() && c==="tatca")return "";
+    const locked=!duocQuanLyCa(c);
     if(c==="tatca") return `<button class="mainCaBtn ${cls} ${caHien==="tatca"?"active":""}" onclick="chonCaGan('tatca','1')"><span class="caDot"></span>${label}</button>`;
-    return `<button class="mainCaBtn ${cls} ${caHien===c?"active":""}" onclick="chonCaGan('${c}','1')"><span class="caDot ${dot}"></span>${label}</button>`;
+    return `<button class="mainCaBtn ${cls} ${caHien===c?"active":""} ${locked?"caLocked":""}" onclick="chonCaGan('${c}','1')"><span class="caDot ${dot}"></span>${label}</button>`;
   }).join("");
 
   if(!caHien || caHien==="tatca"){
@@ -3091,6 +3163,8 @@ function veBoNutGanCa(){
   }
 }
 function chonCaGan(ca,nhanh){
+  if(ca==="tatca" && !isAdmin())return alert("Tài khoản thường không được chọn Tất cả.");
+  if(!requireCaScope(ca,TEN_CA[ca]||ca))return;
   state.caGan={ca,nhanh:nhanh||(ca==="TRUC"?"DT":"1")};
   luu();veTatCa();
 }
@@ -3159,6 +3233,7 @@ function ganCaChoNhanSu(ma){
   if(!requirePerm("phanCa","phân ca/chấm công"))return;
   const ca=state.caGan?.ca, nhanh=state.caGan?.nhanh||"1";
   if(!ca || ca==="tatca"){alert("Chọn nhóm/ca cụ thể trước."); return;}
+  if(!requireCaScope(ca,TEN_CA[ca]||ca))return;
   if(datCaDuyNhatChoNhanSu(ma,ca,nhanh,true)){
     logAction("PHÂN CA",`${tenNV(ma)} → ${tenNhomCa(ca,nhanh)}`);
     luuPhanCaNgayHienTai();luu();veTatCa();
@@ -3906,6 +3981,7 @@ function chonCaNhanSuTuSelect(ma,val){
     newCa=c; newNhanh=n||"1";
   }
 
+  if(!requireCaScope(newCa,tenNhomCa(newCa,newNhanh))){veBangPhanCa();return;}
   if(datCaDuyNhatChoNhanSu(ma,newCa,newNhanh,true)){
     luuPhanCaNgayHienTai();luu();veTatCa();
   }else{
@@ -3917,12 +3993,14 @@ function veBangPhanCa(){
   const caGan=state.caGan?.ca||"", nhanhGan=String(state.caGan?.nhanh||"1");
   let ds=state.danhSachNhanSu.filter(ns=>{
     const ca=state.phanCaHomNay[ns.ma]||{};
+    const scopeCa=isAdmin()?caGan:caQuanLyTheoDangNhap();
     if(term){
-      return ns.ten.toLowerCase().includes(term)||ns.ma.toLowerCase().includes(term)||String(ca.ca||"").includes(term);
+      const match=ns.ten.toLowerCase().includes(term)||ns.ma.toLowerCase().includes(term)||String(ca.ca||"").includes(term);
+      return match && (isAdmin() || !ca.ca || String(ca.ca)===String(scopeCa));
     }
-    if(caGan && caGan!=="tatca"){
-      // Khi đang chọn 1.1, chỉ hiện người chưa có ca hoặc đang đúng 1.1.
-      return !ca.ca || (String(ca.ca)===String(caGan)&&String(ca.nhanh||"1")===String(nhanhGan));
+    if(scopeCa && scopeCa!=="tatca"){
+      // Khi đang chọn 1.1, chỉ hiện người chưa có ca hoặc đang đúng ca được quản lý.
+      return !ca.ca || String(ca.ca)===String(scopeCa);
     }
     return true;
   });
@@ -4133,7 +4211,7 @@ function veDanhSachChon(){
   }).join("");
 }
 
-function veTatCa(){ updateAccountUI(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"Bỏ tìm / tìm mới":"Tìm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"Bỏ tìm / tìm mới":"Tìm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
 function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa();
 setTimeout(canhTheoVachHienTai,100); }
@@ -4376,6 +4454,7 @@ function thaNhanSuPointer(ev){
 
 function ganBoNV(ma){
   if(!requirePerm("dashboard","phân công nhân sự"))return;
+  if(!isAdmin() && caCuaNV(ma)!==caQuanLyTheoDangNhap())return alert("Bạn chỉ được phân công nhân sự thuộc "+moTaCaQuanLy()+".");
   const cb=chuyen(chuyenDangChon);
   if(!cb){
     xuLySapXepNhanSu(ma);
