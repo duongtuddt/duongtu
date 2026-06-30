@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.80 Timeline Scale Fix</title>
+<title>Dương Tú v0.81 Live Vertical Fix</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1334,6 +1334,22 @@ body.taskOnly #khoiYeuCau .scroll{
     width:var(--timelineTotalWidth)!important;
     grid-template-columns:var(--timelineLabelWidth) repeat(25,var(--timelineHourWidth))!important;
   }
+}
+
+
+/* v0.81 - LIVE cuộn dọc tới chuyến đang làm cuối cùng */
+.tlLabel.activeNow{
+  box-shadow:inset 3px 0 #38bdf8, 2px 0 0 rgba(56,189,248,.25)!important;
+}
+.tlLane.activeNowLane{
+  background-color:rgba(56,189,248,.035)!important;
+}
+#panelTimelineChuyen .timeline{
+  scroll-behavior:smooth;
+}
+.head .gioHead span{
+  position:relative;
+  z-index:72!important;
 }
 
 </style>
@@ -3918,6 +3934,7 @@ function theoDoiChuyen(cb){
 
 function veTimelineChuyen(){
   const el=$("timelineChuyenBay"); veHeader(el);
+  const nowLive=hienTaiAbs();
   if(state.timChuyen){
     el.innerHTML+=`<div style="grid-column:1/-1;padding:4px 8px;color:#7dd3fc;font-weight:900">Đang tìm: <span class="searchingHint">${state.timChuyen}</span></div>`;
   }
@@ -3940,7 +3957,9 @@ function veTimelineChuyen(){
       const names=pcs.length
         ? pcs.map(pc=>`<span class="staffChip ${caClass(caCuaNV(pc.maNV))}">${tenNV(pc.maNV)}</span>`).join("")
         : `<span class="muted">chưa chọn nhân sự</span>`;
-      const mau=mauChuyen(cb.ma), left=viTri(batDauAbs(cb)), width=rong(batDauAbs(cb),ketThucAbs(cb)), sel=cb.ma===chuyenDangChon;
+      const bdCB=batDauAbs(cb), ktCB=ketThucAbs(cb);
+      const dangLive=bdCB<=nowLive && nowLive<=ktCB;
+      const mau=mauChuyen(cb.ma), left=viTri(bdCB), width=rong(bdCB,ktCB), sel=cb.ma===chuyenDangChon;
       const ca=mauCaChuyen(cb.ma), caCls=caClass(ca);
       const mon=theoDoiChuyen(cb);
       const cbWarn=shortCanhBaoCap(cb);
@@ -3953,7 +3972,7 @@ function veTimelineChuyen(){
       const tenLeft=left+width+6+mon.rong+noteRong+warnRong;
       const noteHtml=noteText?`<div class="flightNote" style="left:${noteLeft}px;max-width:250px" title="${noteText.replace(/"/g,'&quot;')}">${noteText}</div>`:"";
       const warnHtml=cbWarn?`<div class="requireWarn" style="left:${warnLeft}px;min-width:${warnRong}px">${cbWarn}</div>`:"";
-      el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
+      el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""} ${dangLive?"activeNow":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
     });
 }
 
@@ -5092,11 +5111,24 @@ function canhTheoVachHienTai(){
   const labelWidth=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--timelineLabelWidth"))||185;
   const x=parseFloat(nowLine.style.left||"0");
   const viTriLive=Math.max(0,x-labelWidth);
+
+  // LIVE đúng logic: mép trái cửa sổ = LIVE - 30 phút.
   const mucTieu=Math.max(0,viTriLive-(RONG_GIO*0.5));
 
   timelineScrollLeftMemory=mucTieu;
   a.scrollLeft=mucTieu;
   b.scrollLeft=mucTieu;
+
+  // Đồng thời cuộn dọc xuống chuyến đang làm cuối cùng trong khung chuyến bay.
+  // Nếu không có chuyến đang làm thì giữ nguyên vị trí dọc.
+  requestAnimationFrame(()=>{
+    const active=[...a.querySelectorAll(".tlLabel.activeNow")];
+    if(active.length){
+      const last=active[active.length-1];
+      const top=Math.max(0,last.offsetTop - 34 - (a.clientHeight-last.offsetHeight-18));
+      a.scrollTop=top;
+    }
+  });
 }
 
 suaDieuDongCu();
