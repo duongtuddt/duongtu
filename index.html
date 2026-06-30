@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.66</title>
+<title>Dương Tú v0.67</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -3133,9 +3133,48 @@ function veTimelineChuyen(){
       el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
     });
 }
+
+function thuTuNhomCaNV(ma){
+  const ca=caCuaNV(ma), n=nhanhCuaNV(ma);
+  if(ca==="TRUC"){
+    const order={DT:10,DP1:11,DP2:12,DP3:13,CB1:14,CB2:15,CB3:16,DP:11,CB:14};
+    return order[n] ?? 19;
+  }
+  if(ca==="KD"){
+    const k=parseInt(n||"1",10);
+    return 20+(isNaN(k)?9:k);
+  }
+  if(ca==="1")return 100+(parseInt(n||"1",10)||9);
+  if(ca==="2")return 110+(parseInt(n||"1",10)||9);
+  if(ca==="3")return 120+(parseInt(n||"1",10)||9);
+  if(ca==="4")return 130+(parseInt(n||"1",10)||9);
+  if(ca==="5")return 140+(parseInt(n||"1",10)||9);
+  if(ca==="6")return 990;
+  return 900;
+}
+function uuTienTrangThaiTheoDoi(ma){
+  const tt=trangThaiCa(ma);
+  // Đang trong ca / sắp hết ca / OT đưa lên trước. Chưa vào ca, hết ca, không trong ca đưa xuống dưới.
+  if(tt.loai==="green" || tt.loai==="orange" || tt.loai==="red") return 0;
+  if(tt.loai==="blue") return 1;
+  return 2;
+}
+function sapXepNhanSuTimeline(ds){
+  return ds.slice().sort((a,b)=>{
+    if(state.caDangLoc==="tatca"){
+      const ua=uuTienTrangThaiTheoDoi(a.ma), ub=uuTienTrangThaiTheoDoi(b.ma);
+      if(ua!==ub)return ua-ub;
+    }
+    const ga=thuTuNhomCaNV(a.ma), gb=thuTuNhomCaNV(b.ma);
+    if(ga!==gb)return ga-gb;
+    const na=nhanhCuaNV(a.ma), nb=nhanhCuaNV(b.ma);
+    if(na!==nb)return String(na).localeCompare(String(nb),"vi",{numeric:true});
+    return String(a.ten||"").localeCompare(String(b.ten||""),"vi");
+  });
+}
 function veTimelineNhanSu(){
   const el=$("timelineNhanSu"); veHeader(el); const now=hienTaiAbs();
-  state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon).filter(ns=>dungBoLocCaNV(ns.ma)).forEach(ns=>{
+  sapXepNhanSuTimeline(state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon).filter(ns=>dungBoLocCaNV(ns.ma))).forEach(ns=>{
     const tt=trangThaiCa(ns.ma), caCls=caClass(caCuaNV(ns.ma)), pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs); let bars=addBarNgoaiCa(ns.ma);
     const c=caAbs(ns.ma), dang=pcs.some(pc=>pc.batDauAbs<=now&&now<=pc.ketThucAbs);
     if(!dang){
