@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.64</title>
+<title>Dương Tú v0.65</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1075,6 +1075,25 @@ body.taskOnly #khoiYeuCau .scroll{
 }
 #nutAnPhanCa,#nutAnNhanSu,#nutAnYeuCau,#nutAnYeuCauHang{display:none!important}
 .rowSelectedTop{background:#102844!important}
+
+
+/* v0.65 - bộ lọc Cán bộ ca + Kéo đẩy */
+.caTRUCColor{--caColor:#ffffff}
+.caKDColor{--caColor:#1e3a8a}
+.caDot.caTRUC{background:#ffffff;border:1px solid #94a3b8}
+.caDot.caKD{background:#1e3a8a;border:1px solid #60a5fa}
+.tlLabel.caTRUC,.staffCard.caTRUC{border-left:4px solid #ffffff!important}
+.tlLabel.caKD,.staffCard.caKD{border-left:4px solid #1e3a8a!important}
+.bar.caTRUC{box-shadow:inset 0 4px #ffffff}
+.bar.caKD{box-shadow:inset 0 4px #1e3a8a}
+.staffChip.caTRUC{border-left-color:#ffffff}
+.staffChip.caKD{border-left-color:#1e3a8a}
+.dragHandle.caTRUC{--caColor:#ffffff}
+.dragHandle.caKD{--caColor:#1e3a8a}
+.mainCaBtn.trucColor,.subCaBtn.trucColor{--caColor:#ffffff}
+.mainCaBtn.kdColor,.subCaBtn.kdColor{--caColor:#1e3a8a}
+.caDot.truc{background:#ffffff;border:1px solid #94a3b8}
+.caDot.kd{background:#1e3a8a;border:1px solid #60a5fa}
 
 </style>
 </head>
@@ -2381,14 +2400,30 @@ thayNhanSuChuanV047();
 function luu(){localStorage.setItem(KHO_LUU,JSON.stringify(state));}
 function $(id){return document.getElementById(id);}
 
-const TEN_CA={tatca:"Tất cả","1":"Ca 1","2":"Ca 2","3":"Ca 3","4":"Ca 4","5":"Ca 5","6":"Ca 6/OFF"};
-const CA_KEYS=["tatca","1","2","3","4","5","6"];
+const TEN_CA={tatca:"Tất cả",TRUC:"Cán bộ ca",KD:"Kéo đẩy","1":"Ca 1","2":"Ca 2","3":"Ca 3","4":"Ca 4","5":"Ca 5","6":"Ca 6/OFF"};
+const CA_KEYS=["tatca","TRUC","KD","1","2","3","4","5","6"];
 const CA_MAU_MAC_DINH={
   "1":{"1":{gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"06:30",gioRa1:"14:30",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"07:00",gioRa1:"15:00",gioVao2:"N",gioRa2:"N"}},
   "2":{"1":{gioVao1:"14:30",gioRa1:"00:30",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"15:00",gioRa1:"01:00",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"15:30",gioRa1:"01:30",gioVao2:"N",gioRa2:"N"}},
   "3":{"1":{gioVao1:"06:00",gioRa1:"10:00",gioVao2:"18:00",gioRa2:"22:00"},"2":{gioVao1:"07:00",gioRa1:"11:00",gioVao2:"19:00",gioRa2:"23:00"},"3":{gioVao1:"08:00",gioRa1:"12:00",gioVao2:"20:00",gioRa2:"00:00"}},
   "4":{"1":{gioVao1:"14:00",gioRa1:"22:00",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"14:30",gioRa1:"22:30",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"15:00",gioRa1:"23:00",gioVao2:"N",gioRa2:"N"}},
   "5":{"1":{gioVao1:"22:00",gioRa1:"06:00",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"22:30",gioRa1:"06:30",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"23:00",gioRa1:"07:00",gioVao2:"N",gioRa2:"N"}},
+  "TRUC":{
+    "DT":{gioVao1:"08:00",gioRa1:"17:00",gioVao2:"N",gioRa2:"N"},
+    "DP1":{gioVao1:"06:00",gioRa1:"17:00",gioVao2:"N",gioRa2:"N"},
+    "DP2":{gioVao1:"17:00",gioRa1:"03:00",gioVao2:"N",gioRa2:"N"},
+    "DP3":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"},
+    "CB1":{gioVao1:"05:00",gioRa1:"15:00",gioVao2:"N",gioRa2:"N"},
+    "CB2":{gioVao1:"19:30",gioRa1:"05:30",gioVao2:"N",gioRa2:"N"},
+    "CB3":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"}
+  },
+  "KD":{
+    "1":{gioVao1:"05:00",gioRa1:"15:00",gioVao2:"N",gioRa2:"N"},
+    "2":{gioVao1:"06:00",gioRa1:"16:00",gioVao2:"N",gioRa2:"N"},
+    "3":{gioVao1:"11:30",gioRa1:"17:30",gioVao2:"21:00",gioRa2:"01:30"},
+    "4":{gioVao1:"15:00",gioRa1:"01:00",gioVao2:"N",gioRa2:"N"},
+    "5":{gioVao1:"16:00",gioRa1:"02:00",gioVao2:"N",gioRa2:"N"}
+  },
   "6":{"1":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"N",gioRa1:"N",gioVao2:"N",gioRa2:"N"}}
 };
 if(!state.caDangLoc) state.caDangLoc="tatca";
@@ -2397,7 +2432,11 @@ if(!state.caMau) state.caMau=JSON.parse(JSON.stringify(CA_MAU_MAC_DINH));
 function caCuaNV(ma){return String((state.phanCaHomNay[ma]||{}).ca||"");}
 function nhanhCuaNV(ma){return String((state.phanCaHomNay[ma]||{}).nhanh||"");}
 function dungBoLocCaNV(ma){return state.caDangLoc==="tatca" || caCuaNV(ma)===state.caDangLoc;}
-function caClass(ca){return ca?`ca${ca}`:"";}
+function caClass(ca){
+  if(ca==="TRUC")return "caTRUC";
+  if(ca==="KD")return "caKD";
+  return ca?`ca${ca}`:"";
+}
 function mauCaChuyen(maChuyen){
   const pcs=state.phanCong.filter(pc=>pc.maChuyen===maChuyen&&pcDangHieuLuc(pc));
   const dem={};
@@ -2408,8 +2447,9 @@ function mauCaChuyen(maChuyen){
 function veBoLocCa(){
   const el=$("boLocCaHeader"); if(!el)return;
   el.innerHTML=CA_KEYS.map(k=>{
-    const cls=k==="tatca"?"caAllColor":`ca${k}Color`;
-    return `<button class="caBtn ${cls} ${state.caDangLoc===k?"active":""}" onclick="chonLocCa('${k}')"><span class="caDot ${k==="tatca"?"":("ca"+k)}"></span>${TEN_CA[k]}</button>`;
+    const cls=k==="tatca"?"caAllColor":(k==="TRUC"?"caTRUCColor":(k==="KD"?"caKDColor":`ca${k}Color`));
+    const dot=k==="tatca"?"":(k==="TRUC"?"caTRUC":(k==="KD"?"caKD":("ca"+k)));
+    return `<button class="caBtn ${cls} ${state.caDangLoc===k?"active":""}" onclick="chonLocCa('${k}')"><span class="caDot ${dot}"></span>${TEN_CA[k]}</button>`;
   }).join("");
 }
 function chonLocCa(ca){state.caDangLoc=ca;luu();veTatCa();}
@@ -2494,13 +2534,16 @@ function veBoNutGanCa(){
   }else if(caHien==="6"){
     elSub.innerHTML=`<button class="subCaBtn ca6Color active" onclick="chonCaGan('6','1')"><span class="caDot ca6"></span>OFF</button>`;
   }else if(caHien==="TRUC"){
-    const opts=[["DT","Đội Trưởng"],["DP","Đội Phó"],["CB","Cán bộ Ca"]];
+    const opts=[["DT","Đội Trưởng"],["DP1","Đội Phó 1"],["DP2","Đội Phó 2"],["DP3","Đội Phó 3"],["CB1","Cán bộ Ca 1"],["CB2","Cán bộ Ca 2"],["CB3","Cán bộ Ca 3"]];
     elSub.innerHTML=opts.map(([n,label])=>{
       const active=String(state.caGan?.nhanh||"DT")===n;
       return `<button class="subCaBtn trucColor ${active?"active":""}" onclick="chonCaGan('TRUC','${n}')"><span class="caDot truc"></span>${label}</button>`;
     }).join("");
   }else if(caHien==="KD"){
-    elSub.innerHTML=`<button class="subCaBtn kdColor active" onclick="chonCaGan('KD','1')"><span class="caDot kd"></span>Kéo đẩy / PVĐB</button>`;
+    elSub.innerHTML=["1","2","3","4","5"].map(n=>{
+      const active=String(state.caGan?.nhanh||"1")===n;
+      return `<button class="subCaBtn kdColor ${active?"active":""}" onclick="chonCaGan('KD','${n}')"><span class="caDot kd"></span>Kéo đẩy ${n}</button>`;
+    }).join("");
   }else{
     elSub.innerHTML=["1","2","3"].map(n=>{
       const active=String(state.caGan?.nhanh||"1")===n;
@@ -2514,7 +2557,7 @@ function veBoNutGanCa(){
     if(!caHien) txt.textContent="Chưa chọn ca gán.";
     else if(caHien==="tatca") txt.textContent="Đang xem: Tất cả. Có thể chỉnh tay từng nhân sự.";
     else{
-      const label = caHien==="6"?"Ca 6/OFF":caHien==="TRUC"?({"DT":"Đội Trưởng","DP":"Đội Phó","CB":"Cán bộ Ca"}[state.caGan.nhanh]||"Cán bộ ca"):caHien==="KD"?"Kéo đẩy / PVĐB":("Ca "+caHien+"."+state.caGan.nhanh);
+      const label = caHien==="6"?"Ca 6/OFF":caHien==="TRUC"?({"DT":"Đội Trưởng","DP1":"Đội Phó 1","DP2":"Đội Phó 2","DP3":"Đội Phó 3","CB1":"Cán bộ Ca 1","CB2":"Cán bộ Ca 2","CB3":"Cán bộ Ca 3"}[state.caGan.nhanh]||"Cán bộ ca"):caHien==="KD"?("Kéo đẩy "+state.caGan.nhanh):("Ca "+caHien+"."+state.caGan.nhanh);
       txt.textContent=`Đang gán: ${label}. Tick nhân sự bên dưới để đưa vào nhóm này.`;
     }
   }
@@ -2555,7 +2598,7 @@ function ganCaChoNhanSu(ma){
   const ca=state.caGan?.ca, nhanh=state.caGan?.nhanh||"1";
   if(!ca || ca==="tatca"){alert("Chọn nhóm/ca cụ thể trước."); return;}
   const hien=state.phanCaHomNay[ma]||{};
-  const tenCa=ca==="6"?"Ca 6/OFF":ca==="TRUC"?({"DT":"Đội Trưởng","DP":"Đội Phó","CB":"Cán bộ Ca"}[nhanh]||"Cán bộ ca"):ca==="KD"?"Kéo đẩy / PVĐB":`Ca ${ca}.${nhanh}`;
+  const tenCa=ca==="6"?"Ca 6/OFF":ca==="TRUC"?({"DT":"Đội Trưởng","DP1":"Đội Phó 1","DP2":"Đội Phó 2","DP3":"Đội Phó 3","CB1":"Cán bộ Ca 1","CB2":"Cán bộ Ca 2","CB3":"Cán bộ Ca 3"}[nhanh]||"Cán bộ ca"):ca==="KD"?("Kéo đẩy "+nhanh):`Ca ${ca}.${nhanh}`;
   if(hien.ca && (hien.ca!==ca || String(hien.nhanh||"1")!==String(nhanh))){
     if(!confirm(`${ns.ten} đang thuộc Ca ${hien.ca}.${hien.nhanh||"1"}.\n\nChuyển sang ${tenCa} có phải không?`))return;
   }else{
@@ -3184,7 +3227,7 @@ function caNhanSuValue(ma){
 }
 function caNhanSuOptions(selected){
   const opts=[
-    ["","Chưa gán"],["TRUC_DT","Đội Trưởng"],["TRUC_DP","Đội Phó"],["TRUC_CB","Cán bộ Ca"],
+    ["","Chưa gán"],["TRUC_DT","Đội Trưởng"],["TRUC_DP1","Đội Phó 1"],["TRUC_DP2","Đội Phó 2"],["TRUC_DP3","Đội Phó 3"],["TRUC_CB1","Cán bộ Ca 1"],["TRUC_CB2","Cán bộ Ca 2"],["TRUC_CB3","Cán bộ Ca 3"],
     ["KD","Kéo đẩy"],["1.1","Ca 1.1"],["1.2","Ca 1.2"],["1.3","Ca 1.3"],
     ["2.1","Ca 2.1"],["2.2","Ca 2.2"],["2.3","Ca 2.3"],
     ["3.1","Ca 3.1"],["3.2","Ca 3.2"],["3.3","Ca 3.3"],
