@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.81 Live Vertical Fix</title>
+<title>Dương Tú v0.82 Timeline Hour Align</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1352,6 +1352,45 @@ body.taskOnly #khoiYeuCau .scroll{
   z-index:72!important;
 }
 
+
+/* v0.82 - thước thời gian theo giờ tròn + 26 giờ, tránh lệch cảm giác 30 phút */
+:root{
+  --timelineLabelWidth:185px;
+  --timelineHourWidth:250px;
+  --timelineHourCount:26;
+  --timelineTotalWidth:6685px; /* 185 + 26*250 */
+}
+.timeGrid{
+  min-width:var(--timelineTotalWidth)!important;
+  width:var(--timelineTotalWidth)!important;
+  grid-template-columns:var(--timelineLabelWidth) repeat(26,var(--timelineHourWidth))!important;
+}
+.tlLane{
+  grid-column:2 / span 26!important;
+  background:
+    repeating-linear-gradient(to right,transparent 0,transparent 40px,rgba(23,49,80,.55) 41.5px),
+    repeating-linear-gradient(to right,transparent 0,transparent 124px,rgba(56,189,248,.22) 125px),
+    repeating-linear-gradient(to right,transparent 0,transparent 249px,#173150 250px)!important;
+}
+.head .gioHead{
+  min-width:var(--timelineHourWidth)!important;
+}
+@media(max-width:900px){
+  .timeGrid{
+    min-width:var(--timelineTotalWidth)!important;
+    width:var(--timelineTotalWidth)!important;
+    grid-template-columns:var(--timelineLabelWidth) repeat(26,var(--timelineHourWidth))!important;
+  }
+}
+
+
+/* v0.82 - khung nhân sự có giới hạn chiều cao để người hết ca nằm trong vùng cuộn */
+#khungTimelineNhanSu{
+  max-height:620px!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+}
+
 </style>
 </head>
 <body>
@@ -1620,7 +1659,7 @@ body.taskOnly #khoiYeuCau .scroll{
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script>
 const KHO_LUU="duong_tu_rampops_v030";
-const GIO_BAT_DAU=4*60+30, SO_GIO=25, RONG_GIO=250;
+const GIO_BAT_DAU=4*60, SO_GIO=26, RONG_GIO=250;
 
 function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 function duLieuMau(){
@@ -3891,9 +3930,11 @@ function biDieuDongDi(pc){
 
 function veHeader(el){
   let html='<div class="head"><div class="labelHead"></div>';
+  const ngayGoc=absNgay(state.ngayKhaiThac);
   for(let i=0;i<SO_GIO;i++){
     const abs=startAbs()+i*60;
-    html+=`<div class="gioHead"><span>${gioTuPhut(abs)}${i===24?" +1":""}</span><small>10</small><small>20</small><small>30</small><small>40</small><small>50</small></div>`;
+    const plus=abs>=ngayGoc+1440?" +1":"";
+    html+=`<div class="gioHead"><span>${gioTuPhut(abs)}${plus}</span><small>10</small><small>20</small><small>30</small><small>40</small><small>50</small></div>`;
   }
   html+='</div>';
   let now=hienTaiAbs(); if(now<startAbs())now=startAbs(); if(now>startAbs()+24*60)now=startAbs()+24*60;
@@ -4003,10 +4044,11 @@ function uuTienTrangThaiTheoDoi(ma){
 }
 function sapXepNhanSuTimeline(ds){
   return ds.slice().sort((a,b)=>{
-    if(state.caDangLoc==="tatca"){
-      const ua=uuTienTrangThaiTheoDoi(a.ma), ub=uuTienTrangThaiTheoDoi(b.ma);
-      if(ua!==ub)return ua-ub;
-    }
+    // Luôn ưu tiên trạng thái để người còn liên quan hiện phía trên.
+    // Người hết ca / chưa vào quá xa sẽ tự trôi xuống dưới, muốn xem thì cuộn dọc.
+    const ua=uuTienTrangThaiTheoDoi(a.ma), ub=uuTienTrangThaiTheoDoi(b.ma);
+    if(ua!==ub)return ua-ub;
+
     const ga=thuTuNhomCaNV(a.ma), gb=thuTuNhomCaNV(b.ma);
     if(ga!==gb)return ga-gb;
     const na=nhanhCuaNV(a.ma), nb=nhanhCuaNV(b.ma);
