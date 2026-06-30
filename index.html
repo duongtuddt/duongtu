@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.74 Flight Duplicate Fix</title>
+<title>Dương Tú v0.75 Permission Fix</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1173,6 +1173,15 @@ body.taskOnly #khoiYeuCau .scroll{
 .loginActions button{height:40px}
 #loginMessage.hidden{display:none!important}
 
+
+/* v0.75 - phân quyền thật + thông báo tác vụ */
+.menuBtn{position:relative}
+.menuBadge{
+  position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;padding:0 5px;
+  border-radius:999px;background:#ef4444;color:#fff;font-size:11px;line-height:17px;
+  text-align:center;font-weight:900;border:1px solid #fecaca;
+}
+
 </style>
 </head>
 <body>
@@ -1213,7 +1222,7 @@ body.taskOnly #khoiYeuCau .scroll{
   </div>
 </div>
 
-<header><h1><button class="menuBtn" id="nutMenuTacVu" title="Mở tác vụ">☰</button>✈ Dương Tú</h1><div class="row" style="padding:0"><label>📅 Ngày làm việc <input type="date" id="lichChinh"></label><div class="caFilterBar" id="boLocCaHeader"></div><div>LIVE <span class="live" id="dongHo">--:--</span></div><div id="fbStatus" class="fbStatus">Firebase: chờ</div><div id="accountBadge" class="accountBadge hidden"></div><button class="small ghost" id="btnLogout">Đăng xuất</button></div></header>
+<header><h1><button class="menuBtn" id="nutMenuTacVu" title="Mở tác vụ">☰<span id="menuBadge" class="menuBadge hidden">0</span></button>✈ Dương Tú</h1><div class="row" style="padding:0"><label>📅 Ngày làm việc <input type="date" id="lichChinh"></label><div class="caFilterBar" id="boLocCaHeader"></div><div>LIVE <span class="live" id="dongHo">--:--</span></div><div id="fbStatus" class="fbStatus">Firebase: chờ</div><div id="accountBadge" class="accountBadge hidden"></div><button class="small ghost" id="btnLogout">Đăng xuất</button></div></header>
 <div class="taskMenu hidden" id="menuTacVu">
   <div class="taskMenuHead"><span>☰ Tác vụ</span><button class="small ghost" id="dongMenuTacVu">Đóng</button></div>
   <div class="taskTree">
@@ -2722,14 +2731,57 @@ function setSession(acc,shift=""){
 }
 function currentAccount(){const s=getSession(); return s?(state.accounts?.[s.id]||null):null;}
 function isAdmin(){const acc=currentAccount();return !!(acc&&(acc.role==="admin"||acc.permissions?.admin));}
+function canPerm(key){
+  const acc=currentAccount();
+  if(!acc)return false;
+  if(acc.role==="admin" || acc.permissions?.admin)return true;
+  return !!acc.permissions?.[key];
+}
+function requirePerm(key,label){
+  if(canPerm(key))return true;
+  alert(`Tài khoản của bạn chưa được cấp quyền: ${label}.`);
+  return false;
+}
+function soYeuCauChoDuyet(){
+  return Object.values(state.accounts||{}).filter(a=>a.status==="pending").length;
+}
+function capNhatThongBaoTacVu(){
+  const badge=$("menuBadge"); if(!badge)return;
+  const pending=soYeuCauChoDuyet();
+  if(isAdmin()&&pending>0){badge.classList.remove("hidden");badge.textContent=String(pending);}
+  else{badge.classList.add("hidden");badge.textContent="0";}
+}
+function capNhatMenuTheoQuyen(){
+  document.querySelectorAll(".taskItem").forEach(btn=>{
+    const key=btn.dataset.openPanel;
+    const permMap={nhanSu:"nhanSu",phanCa:"phanCa",ycHang:"ycHang",ycVanHanh:"ycVanHanh",log:"log"};
+    if(key==="quanLy"){btn.style.display=isAdmin()?"block":"none";return;}
+    if(permMap[key])btn.style.display=canPerm(permMap[key])?"block":"none";
+  });
+  const ql=$("menuQuanLyGroup"); if(ql)ql.style.display=isAdmin()?"block":"none";
+}
+function enforcedDashboardForAccount(){
+  const acc=currentAccount();
+  if(!acc || isAdmin())return;
+  if(!canPerm("dashboard"))setVisible(DASHBOARD_IDS,false);
+}
 function loginMessage(msg,cls="muted"){const el=$("loginMessage"); if(el){el.className="status "+cls+(msg?"":" hidden");el.textContent=msg||"";}}
 function showLoginTab(mode){$("loginForm").classList.toggle("hidden",mode!=="login");$("registerForm").classList.toggle("hidden",mode!=="register");}
 function updateAccountUI(){
   const gate=$("loginGate"), badge=$("accountBadge"), menu=$("menuQuanLyGroup");
   const s=getSession(), acc=s?state.accounts?.[s.id]:null;
-  if(acc&&acc.status==="approved"){gate.style.display="none";badge.classList.remove("hidden");badge.textContent=`${acc.fullName||acc.id}${acc.role==="admin"?" · ADMIN":""}`;}
-  else{gate.style.display="flex";badge.classList.add("hidden");}
+  if(acc&&acc.status==="approved"){
+    gate.style.display="none";
+    badge.classList.remove("hidden");
+    badge.textContent=`${acc.fullName||acc.id}${acc.role==="admin"?" · ADMIN":""}`;
+  }else{
+    gate.style.display="flex";
+    badge.classList.add("hidden");
+  }
   if(menu)menu.style.display=isAdmin()?"block":"none";
+  if(!isAdmin() && $("panelQuanLy") && !$("panelQuanLy").classList.contains("hidden"))showDashboard();
+  capNhatMenuTheoQuyen();
+  capNhatThongBaoTacVu();
 }
 function dangNhap(){
   const id=$("loginId").value.trim(), pass=$("loginPass").value;
@@ -3104,6 +3156,7 @@ function datCaDuyNhatChoNhanSu(ma,ca,nhanh,hoiXacNhan=true){
   return true;
 }
 function ganCaChoNhanSu(ma){
+  if(!requirePerm("phanCa","phân ca/chấm công"))return;
   const ca=state.caGan?.ca, nhanh=state.caGan?.nhanh||"1";
   if(!ca || ca==="tatca"){alert("Chọn nhóm/ca cụ thể trước."); return;}
   if(datCaDuyNhatChoNhanSu(ma,ca,nhanh,true)){
@@ -3833,6 +3886,7 @@ function caNhanSuOptions(selected){
   return opts.map(([v,t])=>`<option value="${v}" ${v===selected?"selected":""}>${t}</option>`).join("");
 }
 function chonCaNhanSuTuSelect(ma,val){
+  if(!requirePerm("phanCa","phân ca/chấm công"))return;
   if(!state.phanCaHomNay[ma])state.phanCaHomNay[ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};
   const ca=state.phanCaHomNay[ma]=chuanHoaCa(state.phanCaHomNay[ma]);
   if(!val){
@@ -4086,6 +4140,7 @@ setTimeout(canhTheoVachHienTai,100); }
 function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); veTatCa(); }
 
 function xoaChuyenDangChon(){
+  if(!requirePerm("dashboard","xóa chuyến bay"))return;
   if(!chuyenDangChon){
     alert("Chọn chuyến cần xóa trên realtime trước.");
     return;
@@ -4138,6 +4193,7 @@ function boTimChuyen(){
 }
 
 function themSuaChuyen(){
+  if(!requirePerm("dashboard","thêm/sửa chuyến bay"))return;
   const flight=$("flight").value.trim();
   const etaRaw=$("eta").value.trim();
   const stdRaw=$("std").value.trim();
@@ -4319,6 +4375,7 @@ function thaNhanSuPointer(ev){
 
 
 function ganBoNV(ma){
+  if(!requirePerm("dashboard","phân công nhân sự"))return;
   const cb=chuyen(chuyenDangChon);
   if(!cb){
     xuLySapXepNhanSu(ma);
@@ -4469,7 +4526,7 @@ function doiGioCa(ma,field,val){
 function vaoCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),vao:gioTuPhut(hienTaiAbs())};luuPhanCaNgayHienTai();luu();veTatCa();}
 function raCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),ra:gioTuPhut(hienTaiAbs())};luuPhanCaNgayHienTai();luu();veTatCa();}
 function suaNV(ma){const ns=state.danhSachNhanSu.find(x=>x.ma===ma);$("maNV").value=ns.ma;$("hoTen").value=ns.ten;$("cap").value=ns.cap;}
-function xoaNV(ma){if(!confirm("Xóa nhân sự này?"))return;state.danhSachNhanSu=state.danhSachNhanSu.filter(x=>x.ma!==ma);delete state.phanCaHomNay[ma];delete state.chamCong[ma];state.phanCong=state.phanCong.filter(x=>x.maNV!==ma);luu();veTatCa();}
+function xoaNV(ma){if(!requirePerm("nhanSu","xóa nhân sự"))return;if(!confirm("Xóa nhân sự này?"))return;state.danhSachNhanSu=state.danhSachNhanSu.filter(x=>x.ma!==ma);delete state.phanCaHomNay[ma];delete state.chamCong[ma];state.phanCong=state.phanCong.filter(x=>x.maNV!==ma);luu();veTatCa();}
 
 function veBangYeuCau(){
   sapXepYeuCauBaiDo();
@@ -4507,6 +4564,7 @@ function lamMoiYeuCau(){
   $("nutThemSuaYeuCau").textContent="Thêm / Sửa";
 }
 function themSuaYeuCau(){
+  if(!requirePerm("ycVanHanh","yêu cầu vận hành"))return;
   const bai=$("ycBaiDo").value.trim();
   if(!bai)return alert("Nhập bãi đỗ.");
   const key=normBaiDo(bai);
@@ -4557,6 +4615,7 @@ function lamMoiYeuCauGhiChu(){
   if($("nutThemSuaGhiChu"))$("nutThemSuaGhiChu").textContent="Thêm / Sửa";
 }
 function themSuaYeuCauGhiChu(){
+  if(!requirePerm("ycVanHanh","từ khóa dịch vụ"))return;
   const tuKhoa=$("ycTuKhoaGhiChu").value.trim();
   const yeuCau=$("ycYeuCauGhiChu").value;
   if(!tuKhoa)return alert("Nhập từ khóa dịch vụ / ghi chú.");
@@ -4595,7 +4654,7 @@ function xoaYeuCauGhiChu(id){
   luu();veTatCa();
 }
 
-function themSuaNV(){const ma=$("maNV").value.trim(),ten=$("hoTen").value.trim(),cap=$("cap").value.trim();if(!ma||!ten||!cap)return alert("Nhập đủ Mã NV / Họ tên / Cấp.");const i=state.danhSachNhanSu.findIndex(x=>x.ma===ma);if(i>=0)state.danhSachNhanSu[i]={ma,ten,cap};else{state.danhSachNhanSu.push({ma,ten,cap});state.phanCaHomNay[ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};state.chamCong[ma]={vao:null,ra:null};}lamMoiNV();luu();veTatCa();}
+function themSuaNV(){if(!requirePerm("nhanSu","nhân sự và chứng chỉ"))return;const ma=$("maNV").value.trim(),ten=$("hoTen").value.trim(),cap=$("cap").value.trim();if(!ma||!ten||!cap)return alert("Nhập đủ Mã NV / Họ tên / Cấp.");const i=state.danhSachNhanSu.findIndex(x=>x.ma===ma);if(i>=0)state.danhSachNhanSu[i]={ma,ten,cap};else{state.danhSachNhanSu.push({ma,ten,cap});state.phanCaHomNay[ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};state.chamCong[ma]={vao:null,ra:null};}lamMoiNV();luu();veTatCa();}
 function lamMoiNV(){["maNV","hoTen","cap"].forEach(id=>$(id).value="");}
 function capNhatDongHo(){$("dongHo").textContent=new Date().toLocaleTimeString("vi-VN",{hour12:false,hour:"2-digit",minute:"2-digit"});}
 
@@ -4619,6 +4678,7 @@ function showDashboard(){
   clearActiveTask();
   setVisible(DASHBOARD_IDS,true);
   setVisible(TASK_IDS,false);
+  enforcedDashboardForAccount();
   $("menuTacVu").classList.add("hidden");
   window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -4637,11 +4697,11 @@ function openTask(panelId){
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function moTacVu(key){
-  if(key==="nhanSu") openTask("panelNhanSu");
-  if(key==="phanCa") openTask("panelPhanCa");
-  if(key==="ycHang") openTask("panelYeuCauHang");
-  if(key==="ycVanHanh") openTask("panelYeuCauVanHanh");
-  if(key==="log") openTask("panelLog");
+  if(key==="nhanSu"){ if(!requirePerm("nhanSu","Nhân sự và chứng chỉ"))return; openTask("panelNhanSu"); }
+  if(key==="phanCa"){ if(!requirePerm("phanCa","Phân ca hôm nay + chấm công"))return; openTask("panelPhanCa"); }
+  if(key==="ycHang"){ if(!requirePerm("ycHang","Yêu cầu hãng"))return; openTask("panelYeuCauHang"); }
+  if(key==="ycVanHanh"){ if(!requirePerm("ycVanHanh","Yêu cầu vận hành"))return; openTask("panelYeuCauVanHanh"); }
+  if(key==="log"){ if(!requirePerm("log","Log / Nhật ký thao tác"))return; openTask("panelLog"); }
   if(key==="quanLy"){ if(!isAdmin())return alert("Chỉ Admin được vào Quản lý."); openTask("panelQuanLy"); }
 }
 $("nutMenuTacVu").onclick=()=>{$("menuTacVu").classList.toggle("hidden");};
