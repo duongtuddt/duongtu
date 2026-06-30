@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.69 Firebase Core</title>
+<title>Dương Tú v0.70 Firebase Single Shift</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1649,6 +1649,7 @@ function chuanHoaCa(ca){
   if(ca.gioRa && !ca.gioRa1) ca.gioRa1=ca.gioRa;
   ca.ca = ca.ca || "";
   ca.nhanh = ca.nhanh || "1";
+  if(!ca.ca) ca.chon=false;
   ca.gioVao1 = ca.gioVao1 || "06:00";
   ca.gioRa1 = ca.gioRa1 || "14:00";
   ca.gioVao2 = ca.gioVao2 || "N";
@@ -2709,28 +2710,53 @@ function luuGioCaDangChon(){
   veTatCa();
 }
 function boChonCaGan(){state.caGan={ca:"",nhanh:"1"};luu();veTatCa();}
-function ganCaChoNhanSu(ma){
+
+function tenNhomCa(ca,nhanh){
+  if(!ca)return "Chưa gán";
+  if(ca==="6")return "Ca 6/OFF";
+  if(ca==="TRUC"){
+    return {"DT":"Đội Trưởng","DP1":"Đội Phó 1","DP2":"Đội Phó 2","DP3":"Đội Phó 3","CB1":"Cán bộ Ca 1","CB2":"Cán bộ Ca 2","CB3":"Cán bộ Ca 3"}[nhanh] || "Cán bộ";
+  }
+  if(ca==="KD")return "Kéo đẩy "+(nhanh||"1");
+  return "Ca "+ca+"."+(nhanh||"1");
+}
+function datCaDuyNhatChoNhanSu(ma,ca,nhanh,hoiXacNhan=true){
   const ns=state.danhSachNhanSu.find(x=>x.ma===ma);
-  if(!ns)return;
+  if(!ns)return false;
+  const hien=state.phanCaHomNay[ma] || {};
+  const oldCa=hien.ca||"", oldNhanh=String(hien.nhanh||"1");
+  const newNhanh=String(nhanh||"1");
+  const tenMoi=tenNhomCa(ca,newNhanh);
+
+  if(oldCa && (String(oldCa)!==String(ca) || String(oldNhanh)!==String(newNhanh))){
+    if(hoiXacNhan && !confirm(`${ns.ten} đang thuộc ${tenNhomCa(oldCa,oldNhanh)}.\n\nChuyển sang ${tenMoi} có phải không?\n\nHệ thống sẽ xóa ghi nhận ca cũ và chỉ giữ 01 ca mới cho nhân sự này.`))return false;
+  }else if(!oldCa){
+    if(hoiXacNhan && !confirm(`Phân công ${ns.ten} vào ${tenMoi} có phải không?`))return false;
+  }
+
+  const gio=gioMauCa(ca,newNhanh);
+  state.phanCaHomNay[ma]={
+    ...hien,
+    chon: ca!=="6",
+    ca,
+    nhanh:newNhanh,
+    ...gio
+  };
+  if(ca==="6") state.phanCaHomNay[ma].chon=false;
+  return true;
+}
+function ganCaChoNhanSu(ma){
   const ca=state.caGan?.ca, nhanh=state.caGan?.nhanh||"1";
   if(!ca || ca==="tatca"){alert("Chọn nhóm/ca cụ thể trước."); return;}
-  const hien=state.phanCaHomNay[ma]||{};
-  const tenCa=ca==="6"?"Ca 6/OFF":ca==="TRUC"?({"DT":"Đội Trưởng","DP1":"Đội Phó 1","DP2":"Đội Phó 2","DP3":"Đội Phó 3","CB1":"Cán bộ Ca 1","CB2":"Cán bộ Ca 2","CB3":"Cán bộ Ca 3"}[nhanh]||"Cán bộ"):ca==="KD"?("Kéo đẩy "+nhanh):`Ca ${ca}.${nhanh}`;
-  if(hien.ca && (hien.ca!==ca || String(hien.nhanh||"1")!==String(nhanh))){
-    if(!confirm(`${ns.ten} đang thuộc Ca ${hien.ca}.${hien.nhanh||"1"}.\n\nChuyển sang ${tenCa} có phải không?`))return;
-  }else{
-    if(!confirm(`Phân công ${ns.ten} vào ${tenCa} có phải không?`))return;
+  if(datCaDuyNhatChoNhanSu(ma,ca,nhanh,true)){
+    luuPhanCaNgayHienTai();luu();veTatCa();
   }
-  const gio=gioMauCa(ca,nhanh);
-  state.phanCaHomNay[ma]={...hien,chon:ca!=="6",ca,nhanh,...gio};
-  if(ca==="6") state.phanCaHomNay[ma].chon=false;
-  luuPhanCaNgayHienTai();luu();veTatCa();
 }
 function boCaNhanSu(ma){
   const ns=state.danhSachNhanSu.find(x=>x.ma===ma);
   const hien=state.phanCaHomNay[ma]||{};
   if(!hien.ca){state.phanCaHomNay[ma]={...hien,chon:false};luuPhanCaNgayHienTai();luu();veTatCa();return;}
-  if(!confirm(`Bỏ ${ns?ns.ten:ma} khỏi Ca ${hien.ca}.${hien.nhanh||"1"} có phải không?`))return;
+  if(!confirm(`Bỏ ${ns?ns.ten:ma} khỏi ${tenNhomCa(hien.ca,hien.nhanh||"1")} có phải không?`))return;
   state.phanCaHomNay[ma]={...hien,chon:false,ca:"",nhanh:"1"};
   luuPhanCaNgayHienTai();luu();veTatCa();
 }
@@ -3397,18 +3423,27 @@ function chonCaNhanSuTuSelect(ma,val){
   if(!state.phanCaHomNay[ma])state.phanCaHomNay[ma]={chon:false,gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"};
   const ca=state.phanCaHomNay[ma]=chuanHoaCa(state.phanCaHomNay[ma]);
   if(!val){
-    ca.chon=false; ca.ca=""; ca.nhanh="1";
-  }else if(val==="6"){
-    ca.chon=true; ca.ca="6"; ca.nhanh="1"; ca.gioVao1="N"; ca.gioRa1="N"; ca.gioVao2="N"; ca.gioRa2="N";
+    boCaNhanSu(ma);
+    return;
+  }
+
+  let newCa="", newNhanh="1";
+  if(val==="6"){
+    newCa="6"; newNhanh="1";
   }else if(val==="KD"){
-    ca.chon=true; ca.ca="KD"; ca.nhanh="1";
+    newCa="KD"; newNhanh="1";
   }else if(val.startsWith("TRUC_")){
-    ca.chon=true; ca.ca="TRUC"; ca.nhanh=val.replace("TRUC_","")||"DT";
+    newCa="TRUC"; newNhanh=val.replace("TRUC_","")||"DT";
   }else{
     const [c,n]=val.split(".");
-    ca.chon=true; ca.ca=c; ca.nhanh=n||"1";
+    newCa=c; newNhanh=n||"1";
   }
-  luuPhanCaNgayHienTai();luu();veTatCa();
+
+  if(datCaDuyNhatChoNhanSu(ma,newCa,newNhanh,true)){
+    luuPhanCaNgayHienTai();luu();veTatCa();
+  }else{
+    veBangPhanCa();
+  }
 }
 function veBangPhanCa(){
   const term=String(($("timNhanSuCa")||{}).value||"").trim().toLowerCase();
@@ -3989,7 +4024,20 @@ function ganBoNV(ma){
 }
 
 function doiNgay(){doiNgayLamViecMoi($("ngayKhaiThac").value);boChon();}
-function doiChon(ma,val){state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),chon:val};luuPhanCaNgayHienTai();luu();veTatCa();}
+function doiChon(ma,val){
+  const ca=state.phanCaHomNay[ma]||{};
+  if(val && !ca.ca){
+    alert("Nhân sự này chưa có ca.\n\nHãy chọn một ca cụ thể bằng ô 'Ca hiện tại' hoặc chọn nhóm/ca ở phía trên rồi tick nhân sự.");
+    veBangPhanCa();
+    return;
+  }
+  if(!val){
+    boCaNhanSu(ma);
+    return;
+  }
+  state.phanCaHomNay[ma]={...ca,chon:true};
+  luuPhanCaNgayHienTai();luu();veTatCa();
+}
 function doiGioCa(ma,field,val){
   let raw=String(val||"").trim();
   let g;
