@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.70 Firebase Single Shift</title>
+<title>Dương Tú v0.71 Editable Service Rules</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1111,6 +1111,16 @@ body.taskOnly #khoiYeuCau .scroll{
 .fbStatus.err{color:#ff6b6b;border-color:#7f1d1d}
 .fbStatus.sync{color:#38bdf8;border-color:#075985}
 
+
+.serviceRuleBadge{
+  display:inline-block;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:2px 8px;
+  font-weight:900;
+  color:#facc15;
+}
+
 </style>
 </head>
 <body>
@@ -1255,10 +1265,32 @@ body.taskOnly #khoiYeuCau .scroll{
       <tbody id="bangYeuCauBaiDo"></tbody>
     </table>
   </div>
-  <div class="hint" style="margin-top:10px">Từ khóa trong ghi chú chuyến bay:</div>
+  <div class="hint" style="margin-top:10px">Từ khóa trong dịch vụ / ghi chú chuyến bay:</div>
+  <div class="row" style="margin-top:8px">
+    <input id="ycTuKhoaGhiChu" placeholder="Từ khóa VD: gpu, vs, vip..." style="width:220px">
+    <label>Yêu cầu nhân sự
+      <select id="ycYeuCauGhiChu">
+        <option value="2.1">Cấp 2.1</option>
+        <option value="2.2">Cấp 2.2</option>
+        <option value="3.1">Cấp 3.1</option>
+        <option value="3.2">Cấp 3.2</option>
+        <option value="THANG">Chứng chỉ THANG</option>
+        <option value="gpu">Cấp điện tàu bay</option>
+        <option value="acu">Cấp khí điều hòa tàu bay</option>
+        <option value="asu">Cấp khí khởi động tàu bay</option>
+        <option value="vesinh">Vệ sinh</option>
+        <option value="nuocsach">Nước sạch</option>
+        <option value="pvdb">PVĐB</option>
+        <option value="highloader">High Loader</option>
+        <option value="pushback">Pushback</option>
+      </select>
+    </label>
+    <button class="primary" id="nutThemSuaGhiChu">Thêm / Sửa</button>
+    <button class="ghost" id="nutLamMoiGhiChu">Làm mới</button>
+  </div>
   <div class="scroll" style="margin-top:6px">
     <table>
-      <thead><tr><th>Từ khóa</th><th>Yêu cầu nhân sự</th></tr></thead>
+      <thead><tr><th>Từ khóa</th><th>Yêu cầu nhân sự</th><th>Trạng thái</th></tr></thead>
       <tbody id="bangYeuCauGhiChu"></tbody>
     </table>
   </div>
@@ -1666,6 +1698,7 @@ let chuyenDangChon=null;
 let nhanSuDoiCho=null;
 let nhanSuDangKeo=null;
 let yeuCauDangSua=null;
+let yeuCauGhiChuDangSua=null;
 if(!state.yeuCauBaiDo) state.yeuCauBaiDo=[];
 
 const YEU_CAU_GHI_CHU_MAC_DINH_V058=[
@@ -2984,9 +3017,44 @@ function chungChiTheoTuKhoa(rule){
   return null;
 }
 function nhanYeuCauTuRule(rule){
+  if(rule.chungChiId){
+    return {id:rule.chungChiId,label:nhanYeuCauLabel(rule.yeuCau||rule.chungChiId)};
+  }
+  const yc=String(rule.yeuCau||"").trim();
+  const map={
+    THANG:{id:"thang",label:"THANG"},
+    gpu:{id:"gpu",label:"CẤP ĐIỆN TÀU BAY"},
+    acu:{id:"acu",label:"CẤP KHÍ ĐIỀU HÒA TÀU BAY"},
+    asu:{id:"asu",label:"CẤP KHÍ KHỞI ĐỘNG TÀU BAY"},
+    vesinh:{id:"vesinh",label:"VỆ SINH"},
+    nuocsach:{id:"nuocsach",label:"NƯỚC SẠCH"},
+    pvdb:{id:"pvdb",label:"PVĐB"},
+    highloader:{id:"highloader",label:"HIGH LOADER"},
+    pushback:{id:"pushback",label:"PUSHBACK"}
+  };
+  if(map[yc])return map[yc];
+
   const cc=chungChiTheoTuKhoa(rule);
   if(cc)return cc;
-  return {id:null,label:rule.yeuCau};
+  return {id:null,label:yc};
+}
+function nhanYeuCauLabel(yc){
+  const map={
+    "2.1":"Cấp 2.1",
+    "2.2":"Cấp 2.2",
+    "3.1":"Cấp 3.1",
+    "3.2":"Cấp 3.2",
+    THANG:"Chứng chỉ THANG",
+    gpu:"Cấp điện tàu bay",
+    acu:"Cấp khí điều hòa tàu bay",
+    asu:"Cấp khí khởi động tàu bay",
+    vesinh:"Vệ sinh",
+    nuocsach:"Nước sạch",
+    pvdb:"PVĐB",
+    highloader:"High Loader",
+    pushback:"Pushback"
+  };
+  return map[String(yc)]||String(yc||"");
 }
 function yeuCauCuaChuyen(cb){
   const reqs=[];
@@ -4070,7 +4138,14 @@ function veBangYeuCau(){
   }).join("");
   const el2=$("bangYeuCauGhiChu");
   if(el2){
-    el2.innerHTML=(state.yeuCauGhiChu||YEU_CAU_GHI_CHU_MAC_DINH_V058).map(r=>`<tr><td><b>${r.tuKhoa}</b></td><td><span class="noteRuleBadge">Cần ${r.yeuCau}</span></td></tr>`).join("");
+    el2.innerHTML=(state.yeuCauGhiChu||YEU_CAU_GHI_CHU_MAC_DINH_V058).map(r=>{
+      const yc=nhanYeuCauTuRule(r);
+      return `<tr>
+        <td><b>${r.tuKhoa}</b></td>
+        <td><span class="serviceRuleBadge">Cần ${yc.label}</span></td>
+        <td><button class="small" onclick="suaYeuCauGhiChu('${r.id}')">Sửa</button> <button class="small danger" onclick="xoaYeuCauGhiChu('${r.id}')">Xóa</button></td>
+      </tr>`;
+    }).join("");
   }
 }
 function lamMoiYeuCau(){
@@ -4118,6 +4193,49 @@ function xoaYeuCauBai(id){
   state.yeuCauBaiDoUserEdited=true;
   sapXepYeuCauBaiDo();
   if(yeuCauDangSua===id)lamMoiYeuCau();
+  luu();veTatCa();
+}
+
+function lamMoiYeuCauGhiChu(){
+  yeuCauGhiChuDangSua=null;
+  if($("ycTuKhoaGhiChu"))$("ycTuKhoaGhiChu").value="";
+  if($("ycYeuCauGhiChu"))$("ycYeuCauGhiChu").value="2.1";
+  if($("nutThemSuaGhiChu"))$("nutThemSuaGhiChu").textContent="Thêm / Sửa";
+}
+function themSuaYeuCauGhiChu(){
+  const tuKhoa=$("ycTuKhoaGhiChu").value.trim();
+  const yeuCau=$("ycYeuCauGhiChu").value;
+  if(!tuKhoa)return alert("Nhập từ khóa dịch vụ / ghi chú.");
+  if(!state.yeuCauGhiChu)state.yeuCauGhiChu=[];
+  const key=normTextSearch(tuKhoa);
+  const existed=state.yeuCauGhiChu.find(x=>normTextSearch(x.tuKhoa)===key && x.id!==yeuCauGhiChuDangSua);
+  if(existed)return alert(`Từ khóa "${tuKhoa}" đã có trong danh sách.`);
+  const data={id:yeuCauGhiChuDangSua||("GC_USER_"+Date.now()),tuKhoa,yeuCau};
+  const yc=nhanYeuCauTuRule(data);
+  if(yc.id)data.chungChiId=yc.id;
+  if(yeuCauGhiChuDangSua){
+    const i=state.yeuCauGhiChu.findIndex(x=>x.id===yeuCauGhiChuDangSua);
+    if(i>=0)state.yeuCauGhiChu[i]=data;
+  }else{
+    state.yeuCauGhiChu.push(data);
+  }
+  lamMoiYeuCauGhiChu();
+  luu();veTatCa();
+}
+function suaYeuCauGhiChu(id){
+  const r=(state.yeuCauGhiChu||[]).find(x=>x.id===id);
+  if(!r)return;
+  yeuCauGhiChuDangSua=id;
+  $("ycTuKhoaGhiChu").value=r.tuKhoa||"";
+  $("ycYeuCauGhiChu").value=r.yeuCau||"2.1";
+  $("nutThemSuaGhiChu").textContent="Lưu thay đổi";
+}
+function xoaYeuCauGhiChu(id){
+  const r=(state.yeuCauGhiChu||[]).find(x=>x.id===id);
+  if(!r)return;
+  if(!confirm(`Xóa từ khóa "${r.tuKhoa}"?`))return;
+  state.yeuCauGhiChu=state.yeuCauGhiChu.filter(x=>x.id!==id);
+  if(yeuCauGhiChuDangSua===id)lamMoiYeuCauGhiChu();
   luu();veTatCa();
 }
 
@@ -4183,6 +4301,8 @@ $("nutAnNhanSu").onclick=()=>{showDashboard();};
 $("nutAnYeuCau").onclick=()=>{showDashboard();};
 $("nutThemSuaYeuCau").onclick=themSuaYeuCau;
 $("nutLamMoiYeuCau").onclick=lamMoiYeuCau;
+$("nutThemSuaGhiChu").onclick=themSuaYeuCauGhiChu;
+$("nutLamMoiGhiChu").onclick=lamMoiYeuCauGhiChu;
 $("ycCoThang").onchange=()=>{$("ycCapToiThieu").disabled=$("ycCoThang").checked; if($("ycCoThang").checked)$("ycCapToiThieu").value="1"; else $("ycCapToiThieu").value="2";};
 $("chonTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:true,gioVao1:state.phanCaHomNay[ns.ma]?.gioVao1||"06:00",gioRa1:state.phanCaHomNay[ns.ma]?.gioRa1||"14:00",gioVao2:state.phanCaHomNay[ns.ma]?.gioVao2||"N",gioRa2:state.phanCaHomNay[ns.ma]?.gioRa2||"N"});luu();veTatCa();};
 $("boTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:false,ca:"",nhanh:"1"});luuPhanCaNgayHienTai();luu();veTatCa();};
