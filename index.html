@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.73 Login & Accounts</title>
+<title>Dương Tú v0.74 Flight Duplicate Fix</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1163,6 +1163,16 @@ body.taskOnly #khoiYeuCau .scroll{
 .pendingBadge,.approvedBadge,.lockedBadge{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:900}
 .pendingBadge{border:1px solid #f59e0b;color:#facc15}.approvedBadge{border:1px solid #166534;color:#66ff99}.lockedBadge{border:1px solid #7f1d1d;color:#ff6b6b}
 
+
+/* v0.74 - Login gọn đẹp */
+.loginCard{width:min(420px,calc(100vw - 24px))}
+.loginBody{gap:12px}
+.loginLabel{display:grid;gap:5px;color:#b7d5ff;font-weight:900;font-size:12px;letter-spacing:.4px;margin-bottom:9px}
+.loginLabel input{width:100%;font-size:15px;padding:11px 12px}
+.loginActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.loginActions button{height:40px}
+#loginMessage.hidden{display:none!important}
+
 </style>
 </head>
 <body>
@@ -1171,24 +1181,34 @@ body.taskOnly #khoiYeuCau .scroll{
   <div class="loginCard">
     <h1>✈ Ramp Scheduler - Đăng nhập</h1>
     <div class="loginBody">
-      <div class="loginTabs">
-        <button class="primary" id="tabLogin">Đăng nhập</button>
-        <button class="ghost" id="tabRegister">Đăng ký</button>
-      </div>
       <div id="loginForm">
-        <input id="loginId" placeholder="ID">
-        <input id="loginPass" type="password" placeholder="Password">
-        <button class="primary" id="btnLogin">Đăng nhập</button>
-        <div class="hint">Admin mặc định: tudd / Abc123@@</div>
+        <label class="loginLabel">ID
+          <input id="loginId" placeholder="Nhập ID">
+        </label>
+        <label class="loginLabel">PASS
+          <input id="loginPass" type="password" placeholder="Nhập password">
+        </label>
+        <div class="loginActions">
+          <button class="primary" id="btnLogin">Đăng nhập</button>
+          <button class="ghost" id="tabRegister">Đăng ký</button>
+        </div>
       </div>
       <div id="registerForm" class="hidden">
-        <input id="regId" placeholder="ID đăng nhập">
-        <input id="regFullName" placeholder="Họ và tên đúng như danh sách nhân sự">
-        <input id="regPass" type="password" placeholder="Password">
-        <button class="primary" id="btnRegister">Gửi đăng ký</button>
-        <div class="hint">Tài khoản đăng ký sẽ chờ Admin duyệt.</div>
+        <label class="loginLabel">ID
+          <input id="regId" placeholder="ID đăng nhập">
+        </label>
+        <label class="loginLabel">Họ và tên
+          <input id="regFullName" placeholder="Đúng như danh sách nhân sự">
+        </label>
+        <label class="loginLabel">PASS
+          <input id="regPass" type="password" placeholder="Password">
+        </label>
+        <div class="loginActions">
+          <button class="primary" id="btnRegister">Gửi đăng ký</button>
+          <button class="ghost" id="tabLogin">Quay lại đăng nhập</button>
+        </div>
       </div>
-      <div id="loginMessage" class="status muted">Chưa đăng nhập.</div>
+      <div id="loginMessage" class="status muted hidden"></div>
     </div>
   </div>
 </div>
@@ -2702,7 +2722,7 @@ function setSession(acc,shift=""){
 }
 function currentAccount(){const s=getSession(); return s?(state.accounts?.[s.id]||null):null;}
 function isAdmin(){const acc=currentAccount();return !!(acc&&(acc.role==="admin"||acc.permissions?.admin));}
-function loginMessage(msg,cls="muted"){const el=$("loginMessage"); if(el){el.className="status "+cls;el.textContent=msg;}}
+function loginMessage(msg,cls="muted"){const el=$("loginMessage"); if(el){el.className="status "+cls+(msg?"":" hidden");el.textContent=msg||"";}}
 function showLoginTab(mode){$("loginForm").classList.toggle("hidden",mode!=="login");$("registerForm").classList.toggle("hidden",mode!=="register");}
 function updateAccountUI(){
   const gate=$("loginGate"), badge=$("accountBadge"), menu=$("menuQuanLyGroup");
@@ -3180,7 +3200,25 @@ function tachTokenChuyen(flight){
   return [...out];
 }
 function tokenTrungChuyen(flight){
-  return tachTokenChuyen(flight).filter(t=>/\d/.test(t));
+  // Chống trùng theo HÃNG + SỐ CHUYẾN.
+  // VJ638/639 trùng VJ638 hoặc VJ639, nhưng KHÔNG trùng FD638/639.
+  const s=String(flight||"").toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
+  if(!s)return [];
+  const parts=s.split(/\s+/).filter(Boolean);
+  const out=new Set();
+  let hang="";
+  parts.forEach(p=>{
+    const m=p.match(/^([A-Z]+)(\d+)$/);
+    if(m){
+      hang=m[1];
+      out.add(hang+m[2]);
+    }else if(/^[A-Z]+$/.test(p)){
+      hang=p;
+    }else if(/^\d+$/.test(p)){
+      if(hang) out.add(hang+p);
+    }
+  });
+  return [...out];
 }
 function chuyenKhopTuKhoa(cb,q){
   q=String(q||"").trim().toUpperCase();
@@ -4115,7 +4153,7 @@ function themSuaChuyen(){
 
   const trung=timChuyenTrung(flight,chuyenDangChon);
   if(trung){
-    const msg=`Nhập trùng chuyến.\n\nĐã có: ${trung.flight} - Bãi ${trung.baiDo}\nETA ${gioHienThi(trung.eta)} / STD ${gioHienThi(trung.std)}\n\nBạn có muốn mở chuyến này để sửa không?`;
+    const msg=`Đã tồn tại chuyến:\n\n${trung.flight}\nBãi ${trung.baiDo}\nETA ${gioHienThi(trung.eta)} / STD ${gioHienThi(trung.std)}\n\nBạn có muốn mở chuyến này để sửa không?`;
     if(confirm(msg)){
       chuyenDangChon=trung.ma;
       $("flight").value=trung.flight;
