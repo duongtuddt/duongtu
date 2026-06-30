@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.71 Editable Service Rules</title>
+<title>Dương Tú v0.73 Login & Accounts</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1121,10 +1121,79 @@ body.taskOnly #khoiYeuCau .scroll{
   color:#facc15;
 }
 
+
+/* v0.72 - Log + người đang chỉnh */
+.editNotice{
+  border:1px solid #f59e0b;
+  background:#1f1706;
+  color:#facc15;
+  border-radius:8px;
+  padding:8px 10px;
+  font-weight:900;
+}
+.logToolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.logLine{
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#081a2f;
+  padding:8px 10px;
+  margin-bottom:6px;
+}
+.logLine b{color:#eaf3ff}
+.logTime{color:#8fb0d4;font-size:12px}
+.logAction{color:#facc15;font-weight:900}
+.logUser{color:#66ff99;font-weight:900}
+.logDetail{margin-top:4px;color:#d8ebff}
+.passwordBox{
+  border:1px dashed var(--line);
+  border-radius:10px;
+  padding:12px;
+  background:#081a2f;
+}
+
+
+/* v0.73 - Login / Register / Account Management */
+#loginGate{position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#061120,#081a2f);display:flex;align-items:center;justify-content:center;padding:14px}
+.loginCard{width:min(460px,calc(100vw - 24px));background:#0b1b31;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.45);overflow:hidden}
+.loginCard h1{margin:0;padding:14px 16px;background:#071426;border-bottom:1px solid var(--line);font-size:18px}
+.loginBody{padding:14px;display:grid;gap:10px}
+.loginTabs{display:flex;gap:8px}.loginTabs button{flex:1}
+.accountBadge{border:1px solid var(--line);border-radius:999px;padding:4px 9px;background:#081a2f;font-weight:900;color:#66ff99;white-space:nowrap;font-size:12px}
+.permGrid{min-width:980px}.permGrid input[type=checkbox]{width:18px;height:18px}
+.pendingBadge,.approvedBadge,.lockedBadge{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:900}
+.pendingBadge{border:1px solid #f59e0b;color:#facc15}.approvedBadge{border:1px solid #166534;color:#66ff99}.lockedBadge{border:1px solid #7f1d1d;color:#ff6b6b}
+
 </style>
 </head>
 <body>
-<header><h1><button class="menuBtn" id="nutMenuTacVu" title="Mở tác vụ">☰</button>✈ Dương Tú</h1><div class="row" style="padding:0"><label>📅 Ngày làm việc <input type="date" id="lichChinh"></label><div class="caFilterBar" id="boLocCaHeader"></div><div>LIVE <span class="live" id="dongHo">--:--</span></div><div id="fbStatus" class="fbStatus">Firebase: chờ</div></div></header>
+
+<div id="loginGate">
+  <div class="loginCard">
+    <h1>✈ Ramp Scheduler - Đăng nhập</h1>
+    <div class="loginBody">
+      <div class="loginTabs">
+        <button class="primary" id="tabLogin">Đăng nhập</button>
+        <button class="ghost" id="tabRegister">Đăng ký</button>
+      </div>
+      <div id="loginForm">
+        <input id="loginId" placeholder="ID">
+        <input id="loginPass" type="password" placeholder="Password">
+        <button class="primary" id="btnLogin">Đăng nhập</button>
+        <div class="hint">Admin mặc định: tudd / Abc123@@</div>
+      </div>
+      <div id="registerForm" class="hidden">
+        <input id="regId" placeholder="ID đăng nhập">
+        <input id="regFullName" placeholder="Họ và tên đúng như danh sách nhân sự">
+        <input id="regPass" type="password" placeholder="Password">
+        <button class="primary" id="btnRegister">Gửi đăng ký</button>
+        <div class="hint">Tài khoản đăng ký sẽ chờ Admin duyệt.</div>
+      </div>
+      <div id="loginMessage" class="status muted">Chưa đăng nhập.</div>
+    </div>
+  </div>
+</div>
+
+<header><h1><button class="menuBtn" id="nutMenuTacVu" title="Mở tác vụ">☰</button>✈ Dương Tú</h1><div class="row" style="padding:0"><label>📅 Ngày làm việc <input type="date" id="lichChinh"></label><div class="caFilterBar" id="boLocCaHeader"></div><div>LIVE <span class="live" id="dongHo">--:--</span></div><div id="fbStatus" class="fbStatus">Firebase: chờ</div><div id="accountBadge" class="accountBadge hidden"></div><button class="small ghost" id="btnLogout">Đăng xuất</button></div></header>
 <div class="taskMenu hidden" id="menuTacVu">
   <div class="taskMenuHead"><span>☰ Tác vụ</span><button class="small ghost" id="dongMenuTacVu">Đóng</button></div>
   <div class="taskTree">
@@ -1138,12 +1207,21 @@ body.taskOnly #khoiYeuCau .scroll{
       <button class="taskItem" data-open-panel="ycHang">Yêu cầu hãng</button>
       <button class="taskItem" data-open-panel="ycVanHanh">Yêu cầu vận hành</button>
     </div>
+    <div class="taskGroup" id="menuQuanLyGroup">
+      <div class="taskGroupTitle">QUẢN LÝ</div>
+      <button class="taskItem" data-open-panel="quanLy">Tài khoản / Phân quyền</button>
+    </div>
+    <div class="taskGroup">
+      <div class="taskGroupTitle">QUẢN TRỊ</div>
+      <button class="taskItem" data-open-panel="log">Log / Nhật ký thao tác</button>
+    </div>
   </div>
 </div>
 <div class="wrap">
 <section class="panel" id="panelNhapChuyen">
 <h2>Nhập / sửa chuyến bay</h2>
 <div class="body">
+<div id="editNotice" class="editNotice hidden"></div>
 <div class="hint">Đổi ngày làm việc ở lịch trên cùng: chuyến bay và phân công của ngày đó được tải riêng. Bộ lọc ca sẽ lọc chuyến/nhân sự theo ca đang điều hành.</div>
 <div class="row">
 <label class="hidden">Ngày khai thác <input type="date" id="ngayKhaiThac"></label>
@@ -1293,6 +1371,47 @@ body.taskOnly #khoiYeuCau .scroll{
       <thead><tr><th>Từ khóa</th><th>Yêu cầu nhân sự</th><th>Trạng thái</th></tr></thead>
       <tbody id="bangYeuCauGhiChu"></tbody>
     </table>
+  </div>
+</div>
+</section>
+
+
+<section class="panel hidden" id="panelQuanLy"><h2><span><button class="small ghost screenBack" onclick="showDashboard()">← Dashboard</button>Quản lý tài khoản / Phân quyền</span></h2>
+<div class="body" id="khoiQuanLy">
+  <div class="hint">Chỉ ADMIN nhìn thấy mục này. Tài khoản mới đăng ký phải được duyệt ở đây.</div>
+  <div class="scroll" style="margin-top:8px">
+    <table class="permGrid">
+      <thead>
+        <tr>
+          <th>ID</th><th>Họ tên</th><th>Trạng thái</th><th>Admin</th>
+          <th>Dashboard</th><th>Phân ca</th><th>Nhân sự</th><th>Yêu cầu hãng</th><th>Yêu cầu vận hành</th><th>Log</th><th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="bangTaiKhoan"></tbody>
+    </table>
+  </div>
+</div>
+</section>
+
+<section class="panel hidden" id="panelLog"><h2><span><button class="small ghost screenBack" onclick="showDashboard()">← Dashboard</button>Log / Nhật ký thao tác</span></h2>
+<div class="body" id="khoiLog">
+  <div id="logLock" class="passwordBox">
+    <b>Nhập mật khẩu để xem log</b>
+    <div class="row" style="margin-top:8px">
+      <input id="logPassword" type="password" placeholder="Mật khẩu log">
+      <button class="primary" id="nutMoLog">Mở log</button>
+    </div>
+    <div class="hint">Mật khẩu mặc định: SAGS2026. Có thể đổi trong code tại biến LOG_PASSWORD.</div>
+  </div>
+  <div id="logContent" class="hidden">
+    <div class="logToolbar">
+      <input id="tenNguoiDung" placeholder="Tên người dùng VD: Dương Tú" style="width:260px">
+      <button class="primary" id="nutLuuTenNguoiDung">Lưu tên</button>
+      <button class="ghost" id="nutLamMoiLog">Làm mới log</button>
+      <button class="danger" id="nutXoaLog">Xóa log hiển thị</button>
+    </div>
+    <div class="hint">Log dùng để kiểm tra ai đã thêm/sửa/xóa/phân công. Dữ liệu log cũng đồng bộ Firebase.</div>
+    <div id="bangLog" style="margin-top:8px"></div>
   </div>
 </div>
 </section>
@@ -1675,6 +1794,18 @@ let state;
 try{state=JSON.parse(localStorage.getItem(KHO_LUU)||"null");}catch(e){state=null;}
 if(!state || !Array.isArray(state.danhSachNhanSu) || !Array.isArray(state.danhSachChuyenBay)){state=duLieuMau();}
 if(!state.ngayPhanCa) state.ngayPhanCa = state.ngayKhaiThac || homNayLocal();
+
+if(!Array.isArray(state.auditLogs)) state.auditLogs=[];
+if(!state.activeEditors) state.activeEditors={};
+if(!state.accounts) state.accounts={};
+function seedAdminAccount(){
+  if(!state.accounts["tudd"]){
+    state.accounts["tudd"]={id:"tudd",pass:"Abc123@@",fullName:"Đặng Dương Tú",status:"approved",role:"admin",
+      permissions:{admin:true,dashboard:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true}};
+  }
+}
+seedAdminAccount();
+
 function chuanHoaCa(ca){
   if(!ca) ca={chon:false};
   if(ca.gioVao && !ca.gioVao1) ca.gioVao1=ca.gioVao;
@@ -2511,6 +2642,7 @@ async function khoiDongFirebase(){
     if(snap.exists && snap.data() && snap.data().data){
       dangNhanFirebase=true;
       state=snap.data().data;
+      if(!state.accounts)state.accounts={}; seedAdminAccount();
       localStorage.setItem(KHO_LUU,JSON.stringify(state));
       lastRemoteJson=JSON.stringify(state);
       dangNhanFirebase=false;
@@ -2533,6 +2665,7 @@ async function khoiDongFirebase(){
       if(json===JSON.stringify(state))return;
       dangNhanFirebase=true;
       state=incoming;
+      if(!state.accounts)state.accounts={}; seedAdminAccount();
       localStorage.setItem(KHO_LUU,JSON.stringify(state));
       lastRemoteJson=json;
       dangNhanFirebase=false;
@@ -2550,6 +2683,178 @@ async function khoiDongFirebase(){
 }
 
 function $(id){return document.getElementById(id);}
+
+
+const ACCOUNT_ADMIN_ID="tudd";
+const ACCOUNT_ADMIN_PASSWORD="Abc123@@";
+
+function normNameForAccount(s){
+  return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase().replace(/\s+/g," ").trim();
+}
+function timNhanSuTheoTen(fullName){
+  const n=normNameForAccount(fullName);
+  return (state.danhSachNhanSu||[]).find(ns=>normNameForAccount(ns.ten)===n);
+}
+function getSession(){try{return JSON.parse(localStorage.getItem("ramp_session")||"null");}catch(e){return null;}}
+function setSession(acc,shift=""){
+  localStorage.setItem("ramp_session",JSON.stringify({id:acc.id,fullName:acc.fullName,role:acc.role||"",permissions:acc.permissions||{},todayShift:shift,date:homNayLocal()}));
+  localStorage.setItem("ramp_current_user",acc.fullName||acc.id);
+}
+function currentAccount(){const s=getSession(); return s?(state.accounts?.[s.id]||null):null;}
+function isAdmin(){const acc=currentAccount();return !!(acc&&(acc.role==="admin"||acc.permissions?.admin));}
+function loginMessage(msg,cls="muted"){const el=$("loginMessage"); if(el){el.className="status "+cls;el.textContent=msg;}}
+function showLoginTab(mode){$("loginForm").classList.toggle("hidden",mode!=="login");$("registerForm").classList.toggle("hidden",mode!=="register");}
+function updateAccountUI(){
+  const gate=$("loginGate"), badge=$("accountBadge"), menu=$("menuQuanLyGroup");
+  const s=getSession(), acc=s?state.accounts?.[s.id]:null;
+  if(acc&&acc.status==="approved"){gate.style.display="none";badge.classList.remove("hidden");badge.textContent=`${acc.fullName||acc.id}${acc.role==="admin"?" · ADMIN":""}`;}
+  else{gate.style.display="flex";badge.classList.add("hidden");}
+  if(menu)menu.style.display=isAdmin()?"block":"none";
+}
+function dangNhap(){
+  const id=$("loginId").value.trim(), pass=$("loginPass").value;
+  const acc=state.accounts?.[id];
+  if(!acc||acc.pass!==pass){loginMessage("Sai ID hoặc Password.","bad");return;}
+  if(acc.status!=="approved"){loginMessage("Tài khoản chưa được Admin duyệt hoặc đã bị khóa.","wait");return;}
+  const ns=timNhanSuTheoTen(acc.fullName);
+  if(acc.role!=="admin"&&!ns){loginMessage("Họ tên tài khoản không trùng danh sách nhân sự. Từ chối sử dụng.","bad");return;}
+  let shift="";
+  if(acc.role!=="admin"){
+    shift=prompt("Hôm nay bạn ca nào? VD: 1.1, 2.2, 3.1, KD, TRUC", "")||"";
+    if(!shift.trim()){loginMessage("Bạn cần khai báo ca hôm nay để sử dụng hệ thống.","wait");return;}
+  }
+  setSession(acc,shift);
+  logAction("ĐĂNG NHẬP",`${acc.fullName||id}${shift?(" · Ca hôm nay: "+shift):""}`);
+  luu(); updateAccountUI(); veTatCa();
+}
+function dangKy(){
+  const id=$("regId").value.trim(), fullName=$("regFullName").value.trim(), pass=$("regPass").value;
+  if(!id||!fullName||!pass){loginMessage("Điền đủ ID, Họ tên, Password.","wait");return;}
+  if(state.accounts[id]){loginMessage("ID này đã tồn tại.","bad");return;}
+  const ns=timNhanSuTheoTen(fullName);
+  if(!ns){loginMessage("Họ tên không trùng danh sách nhân sự. Không thể đăng ký.","bad");return;}
+  state.accounts[id]={id,pass,fullName,status:"pending",role:"user",staffMa:ns.ma,permissions:{dashboard:true}};
+  logAction("ĐĂNG KÝ TÀI KHOẢN",`${fullName} (${id}) đang chờ duyệt`);
+  luu(); loginMessage("Đã gửi đăng ký. Chờ Admin duyệt.","ok");
+}
+function dangXuat(){
+  const acc=currentAccount(); if(acc)logAction("ĐĂNG XUẤT",`${acc.fullName||acc.id}`);
+  localStorage.removeItem("ramp_session"); clearActiveEdit(); luu(); updateAccountUI();
+}
+function statusBadgeAccount(st){
+  if(st==="approved")return '<span class="approvedBadge">Đã duyệt</span>';
+  if(st==="locked")return '<span class="lockedBadge">Khóa</span>';
+  return '<span class="pendingBadge">Chờ duyệt</span>';
+}
+function veBangTaiKhoan(){
+  const el=$("bangTaiKhoan"); if(!el)return;
+  const list=Object.values(state.accounts||{}).sort((a,b)=>(a.id||"").localeCompare(b.id||""));
+  const permKeys=["dashboard","phanCa","nhanSu","ycHang","ycVanHanh","log"];
+  el.innerHTML=list.map(acc=>{
+    const p=acc.permissions||{};
+    return `<tr>
+      <td><b>${acc.id}</b></td><td>${acc.fullName||""}</td><td>${statusBadgeAccount(acc.status)}</td>
+      <td><input type="checkbox" ${p.admin||acc.role==="admin"?"checked":""} onchange="doiQuyen('${acc.id}','admin',this.checked)"></td>
+      ${permKeys.map(k=>`<td><input type="checkbox" ${p[k]?"checked":""} onchange="doiQuyen('${acc.id}','${k}',this.checked)"></td>`).join("")}
+      <td><button class="small" onclick="duyetTaiKhoan('${acc.id}')">Duyệt</button> <button class="small danger" onclick="khoaTaiKhoan('${acc.id}')">Khóa</button></td>
+    </tr>`;
+  }).join("");
+}
+function doiQuyen(id,key,val){
+  const acc=state.accounts[id]; if(!acc)return;
+  if(!acc.permissions)acc.permissions={};
+  acc.permissions[key]=val;
+  if(key==="admin")acc.role=val?"admin":"user";
+  logAction("ĐỔI QUYỀN",`${acc.fullName||id}: ${key} = ${val?"ON":"OFF"}`);
+  luu();veTatCa();
+}
+function duyetTaiKhoan(id){
+  const acc=state.accounts[id]; if(!acc)return;
+  acc.status="approved";
+  if(!acc.permissions)acc.permissions={dashboard:true};
+  logAction("DUYỆT TÀI KHOẢN",`${acc.fullName||id}`);
+  luu();veTatCa();
+}
+function khoaTaiKhoan(id){
+  if(id==="tudd")return alert("Không khóa tài khoản admin mặc định.");
+  const acc=state.accounts[id]; if(!acc)return;
+  acc.status="locked";
+  logAction("KHÓA TÀI KHOẢN",`${acc.fullName||id}`);
+  luu();veTatCa();
+}
+
+const LOG_PASSWORD="SAGS2026"; // <- ĐỔI MẬT KHẨU LOG Ở ĐÂY nếu cần
+const MAX_LOGS=500;
+
+function tenNguoiDungHienTai(){
+  const s=getSession();
+  if(s&&s.fullName)return s.fullName;
+  return localStorage.getItem("ramp_current_user")||"Người dùng chưa đăng nhập";
+}
+function logAction(action, detail, extra={}){
+  if(!state.auditLogs)state.auditLogs=[];
+  const item={
+    id:"LOG"+Date.now()+"_"+Math.random().toString(16).slice(2),
+    time:new Date().toLocaleString("vi-VN"),
+    user:tenNguoiDungHienTai(),
+    action,
+    detail,
+    ngay:state.ngayKhaiThac,
+    ...extra
+  };
+  state.auditLogs.unshift(item);
+  state.auditLogs=state.auditLogs.slice(0,MAX_LOGS);
+}
+function setActiveEdit(type,target,label){
+  if(!state.activeEditors)state.activeEditors={};
+  state.activeEditors[localStorage.getItem("ramp_device_id")||taoDeviceId()]={
+    user:tenNguoiDungHienTai(),
+    type,target,label,
+    time:Date.now()
+  };
+}
+function clearActiveEdit(){
+  if(!state.activeEditors)return;
+  const id=localStorage.getItem("ramp_device_id")||taoDeviceId();
+  delete state.activeEditors[id];
+}
+function taoDeviceId(){
+  const id="DEV_"+Date.now()+"_"+Math.random().toString(16).slice(2);
+  localStorage.setItem("ramp_device_id",id);
+  return id;
+}
+function veDangChinhSua(){
+  const el=$("editNotice"); if(!el)return;
+  const id=localStorage.getItem("ramp_device_id")||taoDeviceId();
+  const now=Date.now();
+  const ds=Object.entries(state.activeEditors||{})
+    .filter(([k,v])=>k!==id && v && now-(v.time||0)<120000);
+  if(!ds.length){el.classList.add("hidden");el.textContent="";return;}
+  const v=ds[0][1];
+  el.classList.remove("hidden");
+  el.textContent=`🟢 ${v.user} đang chỉnh ${v.label||v.target||"dữ liệu"}`;
+}
+function moLog(){
+  if($("logPassword").value!==LOG_PASSWORD){
+    alert("Sai mật khẩu log.");
+    return;
+  }
+  $("logLock").classList.add("hidden");
+  $("logContent").classList.remove("hidden");
+  $("tenNguoiDung").value=tenNguoiDungHienTai();
+  veLog();
+}
+function veLog(){
+  const el=$("bangLog"); if(!el)return;
+  const ds=(state.auditLogs||[]).slice(0,200);
+  if(!ds.length){el.innerHTML='<div class="hint">Chưa có log.</div>';return;}
+  el.innerHTML=ds.map(x=>`<div class="logLine">
+    <div><span class="logAction">${x.action}</span> · <span class="logUser">${x.user||""}</span></div>
+    <div class="logTime">${x.time||""} · Ngày ${x.ngay||""}</div>
+    <div class="logDetail">${x.detail||""}</div>
+  </div>`).join("");
+}
+
 
 const TEN_CA={tatca:"Tất cả",TRUC:"Cán bộ",KD:"Kéo đẩy","1":"Ca 1","2":"Ca 2","3":"Ca 3","4":"Ca 4","5":"Ca 5","6":"Ca 6/OFF"};
 const CA_KEYS=["tatca","TRUC","KD","1","2","3","4","5","6"];
@@ -2782,6 +3087,7 @@ function ganCaChoNhanSu(ma){
   const ca=state.caGan?.ca, nhanh=state.caGan?.nhanh||"1";
   if(!ca || ca==="tatca"){alert("Chọn nhóm/ca cụ thể trước."); return;}
   if(datCaDuyNhatChoNhanSu(ma,ca,nhanh,true)){
+    logAction("PHÂN CA",`${tenNV(ma)} → ${tenNhomCa(ca,nhanh)}`);
     luuPhanCaNgayHienTai();luu();veTatCa();
   }
 }
@@ -2790,6 +3096,7 @@ function boCaNhanSu(ma){
   const hien=state.phanCaHomNay[ma]||{};
   if(!hien.ca){state.phanCaHomNay[ma]={...hien,chon:false};luuPhanCaNgayHienTai();luu();veTatCa();return;}
   if(!confirm(`Bỏ ${ns?ns.ten:ma} khỏi ${tenNhomCa(hien.ca,hien.nhanh||"1")} có phải không?`))return;
+  logAction("BỎ CA",`${ns?ns.ten:ma} khỏi ${tenNhomCa(hien.ca,hien.nhanh||"1")}`);
   state.phanCaHomNay[ma]={...hien,chon:false,ca:"",nhanh:"1"};
   luuPhanCaNgayHienTai();luu();veTatCa();
 }
@@ -3734,11 +4041,11 @@ function veDanhSachChon(){
   }).join("");
 }
 
-function veTatCa(){ veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"Bỏ tìm / tìm mới":"Tìm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+function veTatCa(){ updateAccountUI(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"Bỏ tìm / tìm mới":"Tìm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
-function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; luu(); veTatCa();
+function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa();
 setTimeout(canhTheoVachHienTai,100); }
-function boChon(){ nhanSuDoiCho=null; chuyenDangChon=null; ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); veTatCa(); }
+function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); veTatCa(); }
 
 function xoaChuyenDangChon(){
   if(!chuyenDangChon){
@@ -3760,6 +4067,7 @@ function xoaChuyenDangChon(){
 
   if(!confirm(msg)) return;
 
+  logAction("XÓA CHUYẾN",`${cb.flight} - Bãi ${cb.baiDo}`);
   state.danhSachChuyenBay=state.danhSachChuyenBay.filter(x=>x.ma!==chuyenDangChon);
   state.phanCong=state.phanCong.filter(pc=>pc.maChuyen!==chuyenDangChon && pc.dieuDongTu!==chuyenDangChon);
   chuyenDangChon=null;
@@ -3823,9 +4131,11 @@ function themSuaChuyen(){
   if(chuyenDangChon){
     const i=state.danhSachChuyenBay.findIndex(x=>x.ma===chuyenDangChon);
     if(i>=0)state.danhSachChuyenBay[i]={...state.danhSachChuyenBay[i],ngay:state.ngayKhaiThac,flight,eta,std,baiDo,ghiChu};
+    logAction("SỬA CHUYẾN",`${flight} - Bãi ${baiDo} · ETA ${eta||"--"} / STD ${std||"--"}`);
   }else{
     chuyenDangChon="CB"+Date.now();
     state.danhSachChuyenBay.push({ma:chuyenDangChon,ngay:state.ngayKhaiThac,flight,eta,std,baiDo,ghiChu});
+    logAction("THÊM CHUYẾN",`${flight} - Bãi ${baiDo} · ETA ${eta||"--"} / STD ${std||"--"}`);
   }
   luu(); veTatCa();
 }
@@ -3988,6 +4298,7 @@ function ganBoNV(ma){
           `${tenNV(ma)} đang được DỰ KIẾN điều động sang chuyến này từ ${gioTuPhut(co.batDauAbs)}.\n\n`+
           `Bấm OK để BỎ PHÂN CÔNG ĐIỀU ĐỘNG này vì chọn nhầm / đổi ý.`
         )){
+          logAction("BỎ PHÂN CÔNG",`${tenNV(ma)} khỏi ${cb.flight}`);
           state.phanCong=state.phanCong.filter(pc=>pc.id!==co.id);
           luu(); veTatCa(); return;
         }
@@ -3999,6 +4310,7 @@ function ganBoNV(ma){
         `Bấm OK để THU HỒI tại thời điểm hiện tại và vẫn ghi nhận đã làm.\n`+
         `Bấm HỦY nếu muốn chọn cách khác.`
       )){
+        logAction("THU HỒI ĐIỀU ĐỘNG",`${tenNV(ma)} khỏi ${cb.flight}`);
         co.thuHoi=true;
         co.thuHoiAbs=now;
         co.ketThucGocAbs=co.ketThucAbs;
@@ -4088,6 +4400,7 @@ function ganBoNV(ma){
   }
 
   state.phanCong.push(pc);
+  logAction("PHÂN CÔNG NHÂN SỰ",`${tenNV(ma)} → ${cb.flight} - Bãi ${cb.baiDo}`);
   luu(); veTatCa();
 }
 
@@ -4169,6 +4482,7 @@ function themSuaYeuCau(){
   }else{
     state.yeuCauBaiDo.push({id:"YC"+Date.now(),baiDo:bai,coThang,capToiThieu});
   }
+  logAction(yeuCauDangSua?"SỬA BÃI ĐỖ":"THÊM BÃI ĐỖ",`Bãi ${bai} · ${coThang?"Có thang":"Không thang"}`);
   state.yeuCauBaiDoUserEdited=true;
   sapXepYeuCauBaiDo();
   lamMoiYeuCau();
@@ -4189,7 +4503,9 @@ function xoaYeuCauBai(id){
   const yc=(state.yeuCauBaiDo||[]).find(x=>x.id===id);
   if(!yc)return;
   if(!confirm(`Xóa cấu hình bãi ${yc.baiDo}?`))return;
+  logAction("XÓA BÃI ĐỖ",`Bãi ${yc.baiDo}`);
   state.yeuCauBaiDo=state.yeuCauBaiDo.filter(x=>x.id!==id);
+  logAction(yeuCauDangSua?"SỬA BÃI ĐỖ":"THÊM BÃI ĐỖ",`Bãi ${bai} · ${coThang?"Có thang":"Không thang"}`);
   state.yeuCauBaiDoUserEdited=true;
   sapXepYeuCauBaiDo();
   if(yeuCauDangSua===id)lamMoiYeuCau();
@@ -4219,6 +4535,7 @@ function themSuaYeuCauGhiChu(){
   }else{
     state.yeuCauGhiChu.push(data);
   }
+  logAction(yeuCauGhiChuDangSua?"SỬA TỪ KHÓA DỊCH VỤ":"THÊM TỪ KHÓA DỊCH VỤ",`${tuKhoa} → ${nhanYeuCauLabel(yeuCau)}`);
   lamMoiYeuCauGhiChu();
   luu();veTatCa();
 }
@@ -4234,6 +4551,7 @@ function xoaYeuCauGhiChu(id){
   const r=(state.yeuCauGhiChu||[]).find(x=>x.id===id);
   if(!r)return;
   if(!confirm(`Xóa từ khóa "${r.tuKhoa}"?`))return;
+  logAction("XÓA TỪ KHÓA DỊCH VỤ",`${r.tuKhoa}`);
   state.yeuCauGhiChu=state.yeuCauGhiChu.filter(x=>x.id!==id);
   if(yeuCauGhiChuDangSua===id)lamMoiYeuCauGhiChu();
   luu();veTatCa();
@@ -4250,7 +4568,7 @@ $("locCap").onchange=veDanhSachChon; $("sapXep").onchange=veDanhSachChon;
 
 
 const DASHBOARD_IDS=["panelNhapChuyen","panelTimelineChuyen","gridRealtime"];
-const TASK_IDS=["panelNhanSu","panelPhanCa","panelYeuCauHang","panelYeuCauVanHanh"];
+const TASK_IDS=["panelNhanSu","panelPhanCa","panelYeuCauHang","panelYeuCauVanHanh","panelLog","panelQuanLy"];
 function setVisible(ids,show){
   ids.forEach(id=>{const el=$(id); if(el)el.classList.toggle("hidden",!show);});
 }
@@ -4285,6 +4603,8 @@ function moTacVu(key){
   if(key==="phanCa") openTask("panelPhanCa");
   if(key==="ycHang") openTask("panelYeuCauHang");
   if(key==="ycVanHanh") openTask("panelYeuCauVanHanh");
+  if(key==="log") openTask("panelLog");
+  if(key==="quanLy"){ if(!isAdmin())return alert("Chỉ Admin được vào Quản lý."); openTask("panelQuanLy"); }
 }
 $("nutMenuTacVu").onclick=()=>{$("menuTacVu").classList.toggle("hidden");};
 $("dongMenuTacVu").onclick=()=>{$("menuTacVu").classList.add("hidden");};
@@ -4303,6 +4623,15 @@ $("nutThemSuaYeuCau").onclick=themSuaYeuCau;
 $("nutLamMoiYeuCau").onclick=lamMoiYeuCau;
 $("nutThemSuaGhiChu").onclick=themSuaYeuCauGhiChu;
 $("nutLamMoiGhiChu").onclick=lamMoiYeuCauGhiChu;
+$("nutMoLog").onclick=moLog;
+$("nutLuuTenNguoiDung").onclick=()=>{localStorage.setItem("ramp_current_user",$("tenNguoiDung").value.trim()||"Người dùng");alert("Đã lưu tên người dùng.");};
+$("nutLamMoiLog").onclick=veLog;
+$("nutXoaLog").onclick=()=>{if(confirm("Xóa toàn bộ log hiển thị?")){logAction("XÓA LOG","Người dùng đã xóa log hiển thị");state.auditLogs=[];luu();veLog();}};
+$("tabLogin").onclick=()=>showLoginTab("login");
+$("tabRegister").onclick=()=>showLoginTab("register");
+$("btnLogin").onclick=dangNhap;
+$("btnRegister").onclick=dangKy;
+$("btnLogout").onclick=dangXuat;
 $("ycCoThang").onchange=()=>{$("ycCapToiThieu").disabled=$("ycCoThang").checked; if($("ycCoThang").checked)$("ycCapToiThieu").value="1"; else $("ycCapToiThieu").value="2";};
 $("chonTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:true,gioVao1:state.phanCaHomNay[ns.ma]?.gioVao1||"06:00",gioRa1:state.phanCaHomNay[ns.ma]?.gioRa1||"14:00",gioVao2:state.phanCaHomNay[ns.ma]?.gioVao2||"N",gioRa2:state.phanCaHomNay[ns.ma]?.gioRa2||"N"});luu();veTatCa();};
 $("boTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:false,ca:"",nhanh:"1"});luuPhanCaNgayHienTai();luu();veTatCa();};
