@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.65</title>
+<title>Dương Tú v0.66</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2400,7 +2400,7 @@ thayNhanSuChuanV047();
 function luu(){localStorage.setItem(KHO_LUU,JSON.stringify(state));}
 function $(id){return document.getElementById(id);}
 
-const TEN_CA={tatca:"Tất cả",TRUC:"Cán bộ ca",KD:"Kéo đẩy","1":"Ca 1","2":"Ca 2","3":"Ca 3","4":"Ca 4","5":"Ca 5","6":"Ca 6/OFF"};
+const TEN_CA={tatca:"Tất cả",TRUC:"Cán bộ",KD:"Kéo đẩy","1":"Ca 1","2":"Ca 2","3":"Ca 3","4":"Ca 4","5":"Ca 5","6":"Ca 6/OFF"};
 const CA_KEYS=["tatca","TRUC","KD","1","2","3","4","5","6"];
 const CA_MAU_MAC_DINH={
   "1":{"1":{gioVao1:"06:00",gioRa1:"14:00",gioVao2:"N",gioRa2:"N"},"2":{gioVao1:"06:30",gioRa1:"14:30",gioVao2:"N",gioRa2:"N"},"3":{gioVao1:"07:00",gioRa1:"15:00",gioVao2:"N",gioRa2:"N"}},
@@ -2516,7 +2516,7 @@ function veBoNutGanCa(){
   const caHien=state.caGan?.ca||"";
   elMain.innerHTML=[
     ["tatca","Tất cả","caAllColor",""],
-    ["TRUC","Cán bộ ca","trucColor","truc"],
+    ["TRUC","Cán bộ","trucColor","truc"],
     ["KD","Kéo đẩy","kdColor","kd"],
     ["1","Ca 1","ca1Color","ca1"],
     ["2","Ca 2","ca2Color","ca2"],
@@ -2557,7 +2557,7 @@ function veBoNutGanCa(){
     if(!caHien) txt.textContent="Chưa chọn ca gán.";
     else if(caHien==="tatca") txt.textContent="Đang xem: Tất cả. Có thể chỉnh tay từng nhân sự.";
     else{
-      const label = caHien==="6"?"Ca 6/OFF":caHien==="TRUC"?({"DT":"Đội Trưởng","DP1":"Đội Phó 1","DP2":"Đội Phó 2","DP3":"Đội Phó 3","CB1":"Cán bộ Ca 1","CB2":"Cán bộ Ca 2","CB3":"Cán bộ Ca 3"}[state.caGan.nhanh]||"Cán bộ ca"):caHien==="KD"?("Kéo đẩy "+state.caGan.nhanh):("Ca "+caHien+"."+state.caGan.nhanh);
+      const label = caHien==="6"?"Ca 6/OFF":caHien==="TRUC"?({"DT":"Đội Trưởng","DP1":"Đội Phó 1","DP2":"Đội Phó 2","DP3":"Đội Phó 3","CB1":"Cán bộ Ca 1","CB2":"Cán bộ Ca 2","CB3":"Cán bộ Ca 3"}[state.caGan.nhanh]||"Cán bộ"):caHien==="KD"?("Kéo đẩy "+state.caGan.nhanh):("Ca "+caHien+"."+state.caGan.nhanh);
       txt.textContent=`Đang gán: ${label}. Tick nhân sự bên dưới để đưa vào nhóm này.`;
     }
   }
@@ -2598,7 +2598,7 @@ function ganCaChoNhanSu(ma){
   const ca=state.caGan?.ca, nhanh=state.caGan?.nhanh||"1";
   if(!ca || ca==="tatca"){alert("Chọn nhóm/ca cụ thể trước."); return;}
   const hien=state.phanCaHomNay[ma]||{};
-  const tenCa=ca==="6"?"Ca 6/OFF":ca==="TRUC"?({"DT":"Đội Trưởng","DP1":"Đội Phó 1","DP2":"Đội Phó 2","DP3":"Đội Phó 3","CB1":"Cán bộ Ca 1","CB2":"Cán bộ Ca 2","CB3":"Cán bộ Ca 3"}[nhanh]||"Cán bộ ca"):ca==="KD"?("Kéo đẩy "+nhanh):`Ca ${ca}.${nhanh}`;
+  const tenCa=ca==="6"?"Ca 6/OFF":ca==="TRUC"?({"DT":"Đội Trưởng","DP1":"Đội Phó 1","DP2":"Đội Phó 2","DP3":"Đội Phó 3","CB1":"Cán bộ Ca 1","CB2":"Cán bộ Ca 2","CB3":"Cán bộ Ca 3"}[nhanh]||"Cán bộ"):ca==="KD"?("Kéo đẩy "+nhanh):`Ca ${ca}.${nhanh}`;
   if(hien.ca && (hien.ca!==ca || String(hien.nhanh||"1")!==String(nhanh))){
     if(!confirm(`${ns.ten} đang thuộc Ca ${hien.ca}.${hien.nhanh||"1"}.\n\nChuyển sang ${tenCa} có phải không?`))return;
   }else{
