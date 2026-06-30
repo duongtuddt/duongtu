@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.87 Hide Minute Numbers</title>
+<title>Dương Tú v0.77 No Password Popup + Stand Badge</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1216,572 +1216,6 @@ body.taskOnly #khoiYeuCau .scroll{
   vertical-align:middle;
 }
 
-
-/* v0.79 - timeline ổn định: 4 giờ/màn hình, header sticky, giới hạn 10 chuyến */
-#panelTimelineChuyen h2{
-  display:flex!important;
-  align-items:center!important;
-  justify-content:space-between!important;
-  gap:8px!important;
-}
-#panelTimelineChuyen .timeline{
-  max-height:590px!important; /* header + khoảng 10 chuyến */
-  overflow-x:auto!important;
-  overflow-y:auto!important;
-  cursor:grab;
-}
-#khungTimelineNhanSu{
-  cursor:grab;
-}
-#panelTimelineChuyen .timeline.dragging,
-#khungTimelineNhanSu.dragging{
-  cursor:grabbing!important;
-  user-select:none!important;
-}
-.head{
-  position:sticky!important;
-  top:0!important;
-  z-index:35!important;
-  background:#071426!important;
-}
-.labelHead{
-  position:sticky!important;
-  left:0!important;
-  z-index:60!important;
-  background:#081a2f!important;
-}
-.gioHead{
-  z-index:36!important;
-  background:#071426!important;
-}
-.tlLabel{
-  position:sticky!important;
-  left:0!important;
-  z-index:55!important;
-  background:#081a2f!important;
-  box-shadow:2px 0 0 rgba(56,189,248,.22)!important;
-}
-.tlLabel.selected{
-  z-index:58!important;
-}
-.bar{z-index:2!important}
-.flightMonitor,.noteBadge,.warnBadge,.tenSau,.staffChip{z-index:4!important}
-.nowLine{
-  z-index:8!important;
-  pointer-events:none!important;
-}
-.nowLabel{
-  z-index:65!important;
-  pointer-events:none!important;
-}
-.standBadge{
-  min-width:22px!important;
-  height:17px!important;
-  margin-left:5px!important;
-  font-size:10px!important;
-  line-height:17px!important;
-}
-
-
-/* v0.80 - sửa lỗi scale timeline: header, grid, lane dùng cùng RONG_GIO=250 */
-:root{
-  --timelineLabelWidth:185px;
-  --timelineHourWidth:250px;
-  --timelineTotalWidth:6435px; /* 185 + 25*250 */
-}
-.timeGrid{
-  min-width:var(--timelineTotalWidth)!important;
-  width:var(--timelineTotalWidth)!important;
-  grid-template-columns:var(--timelineLabelWidth) repeat(25,var(--timelineHourWidth))!important;
-}
-.tlLane{
-  grid-column:2 / span 25!important;
-  background:
-    repeating-linear-gradient(to right,transparent 0,transparent 40px,rgba(23,49,80,.55) 41.5px),
-    repeating-linear-gradient(to right,transparent 0,transparent 124px,rgba(56,189,248,.22) 125px),
-    repeating-linear-gradient(to right,transparent 0,transparent 249px,#173150 250px)!important;
-}
-.head .gioHead{
-  min-width:var(--timelineHourWidth)!important;
-}
-.labelHead,.tlLabel{
-  width:var(--timelineLabelWidth)!important;
-  min-width:var(--timelineLabelWidth)!important;
-  max-width:var(--timelineLabelWidth)!important;
-  position:sticky!important;
-  left:0!important;
-}
-.tlLabel{
-  z-index:80!important;
-}
-.labelHead{
-  z-index:90!important;
-}
-.head div{
-  position:sticky!important;
-  top:0!important;
-}
-.gioHead{
-  z-index:70!important;
-}
-.nowLine{z-index:12!important}
-.nowLabel{z-index:95!important}
-.bar{z-index:2!important}
-.flightMonitor,.noteBadge,.warnBadge,.tenSau,.staffChip{z-index:5!important}
-@media(max-width:900px){
-  .timeGrid{
-    min-width:var(--timelineTotalWidth)!important;
-    width:var(--timelineTotalWidth)!important;
-    grid-template-columns:var(--timelineLabelWidth) repeat(25,var(--timelineHourWidth))!important;
-  }
-}
-
-
-/* v0.81 - LIVE cuộn dọc tới chuyến đang làm cuối cùng */
-.tlLabel.activeNow{
-  box-shadow:inset 3px 0 #38bdf8, 2px 0 0 rgba(56,189,248,.25)!important;
-}
-.tlLane.activeNowLane{
-  background-color:rgba(56,189,248,.035)!important;
-}
-#panelTimelineChuyen .timeline{
-  scroll-behavior:smooth;
-}
-.head .gioHead span{
-  position:relative;
-  z-index:72!important;
-}
-
-
-/* v0.82 - thước thời gian theo giờ tròn + 26 giờ, tránh lệch cảm giác 30 phút */
-:root{
-  --timelineLabelWidth:185px;
-  --timelineHourWidth:250px;
-  --timelineHourCount:26;
-  --timelineTotalWidth:6685px; /* 185 + 26*250 */
-}
-.timeGrid{
-  min-width:var(--timelineTotalWidth)!important;
-  width:var(--timelineTotalWidth)!important;
-  grid-template-columns:var(--timelineLabelWidth) repeat(26,var(--timelineHourWidth))!important;
-}
-.tlLane{
-  grid-column:2 / span 26!important;
-  background:
-    repeating-linear-gradient(to right,transparent 0,transparent 40px,rgba(23,49,80,.55) 41.5px),
-    repeating-linear-gradient(to right,transparent 0,transparent 124px,rgba(56,189,248,.22) 125px),
-    repeating-linear-gradient(to right,transparent 0,transparent 249px,#173150 250px)!important;
-}
-.head .gioHead{
-  min-width:var(--timelineHourWidth)!important;
-}
-@media(max-width:900px){
-  .timeGrid{
-    min-width:var(--timelineTotalWidth)!important;
-    width:var(--timelineTotalWidth)!important;
-    grid-template-columns:var(--timelineLabelWidth) repeat(26,var(--timelineHourWidth))!important;
-  }
-}
-
-
-/* v0.82 - khung nhân sự có giới hạn chiều cao để người hết ca nằm trong vùng cuộn */
-#khungTimelineNhanSu{
-  max-height:620px!important;
-  overflow-x:auto!important;
-  overflow-y:auto!important;
-}
-
-
-/* v0.83 - chỉnh thước thời gian: số giờ nằm đúng trên vạch giờ, không nằm giữa ô */
-.gioHead{
-  position:relative!important;
-  display:block!important;
-  overflow:visible!important;
-}
-.gioHead span{
-  position:absolute!important;
-  top:2px!important;
-  left:0!important;
-  transform:translateX(-50%)!important;
-  z-index:80!important;
-  background:#071426!important;
-  padding:0 3px!important;
-  line-height:14px!important;
-  pointer-events:none!important;
-}
-.gioHead small{
-  position:absolute!important;
-  bottom:1px!important;
-  color:#5f8ab9!important;
-  font-size:8px!important;
-  font-weight:700!important;
-  transform:translateX(-50%)!important;
-  pointer-events:none!important;
-}
-.gioHead small:nth-of-type(1){left:16.666%!important}
-.gioHead small:nth-of-type(2){left:33.333%!important}
-.gioHead small:nth-of-type(3){left:50%!important}
-.gioHead small:nth-of-type(4){left:66.666%!important}
-.gioHead small:nth-of-type(5){left:83.333%!important}
-
-.nowLine{
-  z-index:120!important;
-}
-.nowLabel{
-  z-index:130!important;
-  top:2px!important;
-  transform:translateX(-50%)!important;
-  pointer-events:none!important;
-  box-shadow:0 0 0 1px rgba(255,255,255,.18);
-}
-
-
-/* v0.84 - TIMELINE ENGINE CLEAN
-   Một hệ tọa độ duy nhất:
-   x = TIMELINE_LABEL_WIDTH + ((abs - startAbs()) / 60) * RONG_GIO
-   Dùng chung cho: thước giờ, phút, LIVE line, thanh chuyến, thanh nhân sự.
-*/
-:root{
-  --timelineLabelWidth:185px;
-  --timelineHourWidth:250px;
-  --timelineHourCount:26;
-  --timelineTotalWidth:6685px; /* 185 + 26*250 */
-  --timelineHeaderHeight:28px;
-}
-.timeGrid{
-  min-width:var(--timelineTotalWidth)!important;
-  width:var(--timelineTotalWidth)!important;
-  display:grid!important;
-  grid-template-columns:var(--timelineLabelWidth) repeat(26,var(--timelineHourWidth))!important;
-  position:relative!important;
-  align-items:stretch!important;
-}
-.timeHeader{
-  grid-column:1 / -1!important;
-  height:var(--timelineHeaderHeight)!important;
-  position:sticky!important;
-  top:0!important;
-  z-index:200!important;
-  background:#071426!important;
-  border-bottom:1px solid var(--line)!important;
-}
-.timeHeaderLabel{
-  position:sticky!important;
-  left:0!important;
-  width:var(--timelineLabelWidth)!important;
-  height:var(--timelineHeaderHeight)!important;
-  z-index:230!important;
-  background:#081a2f!important;
-  border-right:1px solid var(--line)!important;
-}
-.hourMark{
-  position:absolute!important;
-  top:2px!important;
-  transform:translateX(-50%)!important;
-  color:#9fd8ff!important;
-  font-weight:900!important;
-  font-size:14px!important;
-  line-height:14px!important;
-  background:#071426!important;
-  padding:0 3px!important;
-  z-index:220!important;
-  pointer-events:none!important;
-  white-space:nowrap!important;
-}
-.minuteMark{
-  position:absolute!important;
-  bottom:1px!important;
-  transform:translateX(-50%)!important;
-  color:#5f8ab9!important;
-  font-size:8px!important;
-  font-weight:800!important;
-  line-height:8px!important;
-  z-index:215!important;
-  pointer-events:none!important;
-}
-.head,.gioHead,.labelHead{
-  display:none!important;
-}
-.tlLabel{
-  grid-column:1!important;
-  position:sticky!important;
-  left:0!important;
-  z-index:120!important;
-  width:var(--timelineLabelWidth)!important;
-  min-width:var(--timelineLabelWidth)!important;
-  max-width:var(--timelineLabelWidth)!important;
-  background:#081a2f!important;
-}
-.tlLane{
-  grid-column:2 / span 26!important;
-  position:relative!important;
-  background:
-    repeating-linear-gradient(to right,transparent 0,transparent 40px,rgba(23,49,80,.55) 41.5px),
-    repeating-linear-gradient(to right,transparent 0,transparent 124px,rgba(56,189,248,.22) 125px),
-    repeating-linear-gradient(to right,transparent 0,transparent 249px,#173150 250px)!important;
-}
-.nowLine{
-  position:absolute!important;
-  top:var(--timelineHeaderHeight)!important;
-  bottom:0!important;
-  width:2px!important;
-  background:#38bdf8!important;
-  z-index:150!important;
-  pointer-events:none!important;
-}
-.nowLabel{
-  position:sticky!important;
-  top:2px!important;
-  transform:translateX(-50%)!important;
-  background:#0ea5e9!important;
-  color:#00111d!important;
-  border-radius:4px!important;
-  padding:2px 5px!important;
-  font-weight:900!important;
-  font-size:11px!important;
-  z-index:260!important;
-  pointer-events:none!important;
-  box-shadow:0 0 0 1px rgba(255,255,255,.22)!important;
-}
-.bar{z-index:2!important}
-.flightMonitor,.noteBadge,.warnBadge,.tenSau,.staffChip{z-index:5!important}
-@media(max-width:900px){
-  .timeGrid{
-    min-width:var(--timelineTotalWidth)!important;
-    width:var(--timelineTotalWidth)!important;
-    grid-template-columns:var(--timelineLabelWidth) repeat(26,var(--timelineHourWidth))!important;
-  }
-}
-
-
-/* v0.85 - REBUILD TIMELINE LAYOUT
-   Không dùng display:contents/grid cũ nữa.
-   Mỗi dòng là 1 grid riêng: [185px label] [6500px lane].
-   Tất cả giờ / phút / LIVE / thanh chuyến / thanh nhân sự dùng cùng tọa độ:
-   laneX = ((time - startAbs) / 60) * RONG_GIO
-   absoluteX = TIMELINE_LABEL_WIDTH + laneX
-*/
-:root{
-  --timelineLabelWidth:185px;
-  --timelineHourWidth:250px;
-  --timelineHourCount:26;
-  --timelineLaneWidth:6500px;   /* 26 * 250 */
-  --timelineTotalWidth:6685px;  /* 185 + 6500 */
-  --timelineHeaderHeight:30px;
-  --timelineRowHeight:62px;
-}
-
-.timeGrid{
-  display:block!important;
-  position:relative!important;
-  width:var(--timelineTotalWidth)!important;
-  min-width:var(--timelineTotalWidth)!important;
-  max-width:var(--timelineTotalWidth)!important;
-  background:#071426!important;
-}
-
-.timeHeader{
-  display:block!important;
-  position:sticky!important;
-  top:0!important;
-  width:var(--timelineTotalWidth)!important;
-  min-width:var(--timelineTotalWidth)!important;
-  height:var(--timelineHeaderHeight)!important;
-  z-index:500!important;
-  background:#071426!important;
-  border-bottom:1px solid var(--line)!important;
-}
-
-.timeHeaderLabel{
-  position:sticky!important;
-  left:0!important;
-  top:0!important;
-  width:var(--timelineLabelWidth)!important;
-  height:var(--timelineHeaderHeight)!important;
-  z-index:530!important;
-  background:#081a2f!important;
-  border-right:1px solid var(--line)!important;
-}
-
-.hourMark{
-  position:absolute!important;
-  top:2px!important;
-  transform:translateX(-50%)!important;
-  z-index:525!important;
-  color:#9fd8ff!important;
-  background:#071426!important;
-  padding:0 3px!important;
-  font-size:14px!important;
-  line-height:15px!important;
-  font-weight:900!important;
-  white-space:nowrap!important;
-  pointer-events:none!important;
-}
-
-.minuteMark{
-  position:absolute!important;
-  bottom:1px!important;
-  transform:translateX(-50%)!important;
-  z-index:520!important;
-  color:#5f8ab9!important;
-  font-size:8px!important;
-  line-height:8px!important;
-  font-weight:800!important;
-  pointer-events:none!important;
-}
-
-.tlRow{
-  display:grid!important;
-  grid-template-columns:var(--timelineLabelWidth) var(--timelineLaneWidth)!important;
-  width:var(--timelineTotalWidth)!important;
-  min-width:var(--timelineTotalWidth)!important;
-  height:var(--timelineRowHeight)!important;
-  min-height:var(--timelineRowHeight)!important;
-  position:relative!important;
-}
-
-.tlLabel{
-  grid-column:1!important;
-  position:sticky!important;
-  left:0!important;
-  width:var(--timelineLabelWidth)!important;
-  min-width:var(--timelineLabelWidth)!important;
-  max-width:var(--timelineLabelWidth)!important;
-  height:var(--timelineRowHeight)!important;
-  min-height:var(--timelineRowHeight)!important;
-  z-index:300!important;
-  background:#081a2f!important;
-  border-right:1px solid var(--line)!important;
-  border-bottom:1px solid #132946!important;
-  overflow:hidden!important;
-}
-
-.tlLane{
-  grid-column:2!important;
-  position:relative!important;
-  width:var(--timelineLaneWidth)!important;
-  min-width:var(--timelineLaneWidth)!important;
-  height:var(--timelineRowHeight)!important;
-  min-height:var(--timelineRowHeight)!important;
-  border-bottom:1px solid #132946!important;
-  background:
-    repeating-linear-gradient(to right,transparent 0,transparent 40px,rgba(23,49,80,.55) 41.5px),
-    repeating-linear-gradient(to right,transparent 0,transparent 124px,rgba(56,189,248,.22) 125px),
-    repeating-linear-gradient(to right,transparent 0,transparent 249px,#173150 250px)!important;
-}
-
-.nowLine{
-  position:absolute!important;
-  top:var(--timelineHeaderHeight)!important;
-  bottom:0!important;
-  width:2px!important;
-  z-index:180!important;
-  background:#38bdf8!important;
-  pointer-events:none!important;
-}
-
-.nowLabel{
-  position:absolute!important;
-  top:2px!important;
-  transform:translateX(-50%)!important;
-  z-index:560!important;
-  background:#0ea5e9!important;
-  color:#00111d!important;
-  border-radius:4px!important;
-  padding:2px 5px!important;
-  font-size:11px!important;
-  line-height:12px!important;
-  font-weight:900!important;
-  pointer-events:none!important;
-  box-shadow:0 0 0 1px rgba(255,255,255,.25)!important;
-}
-
-.head,.gioHead,.labelHead{display:none!important}
-
-.bar{
-  top:18px!important;
-  z-index:2!important;
-}
-
-.tenSau{
-  top:20px!important;
-  z-index:5!important;
-}
-
-.flightMonitor,.noteBadge,.warnBadge,.staffChip,.flightNote,.requireWarn{
-  z-index:6!important;
-}
-
-#panelTimelineChuyen .timeline{
-  max-height:590px!important;
-  overflow-x:auto!important;
-  overflow-y:auto!important;
-}
-
-#khungTimelineNhanSu{
-  max-height:620px!important;
-  overflow-x:auto!important;
-  overflow-y:auto!important;
-}
-
-@media(max-width:900px){
-  .timeGrid,.timeHeader,.tlRow{
-    width:var(--timelineTotalWidth)!important;
-    min-width:var(--timelineTotalWidth)!important;
-  }
-}
-
-
-/* v0.86 - căn lại phút theo giờ chuẩn */
-.hourTick{
-  position:absolute!important;
-  top:0!important;
-  bottom:0!important;
-  width:1px!important;
-  background:#426991!important;
-  z-index:510!important;
-  pointer-events:none!important;
-}
-.minuteTick{
-  position:absolute!important;
-  top:17px!important;
-  bottom:0!important;
-  width:1px!important;
-  background:rgba(95,138,185,.45)!important;
-  z-index:510!important;
-  pointer-events:none!important;
-}
-.minuteMark{
-  bottom:2px!important;
-  transform:translateX(-50%)!important;
-  min-width:14px!important;
-  text-align:center!important;
-  background:#071426!important;
-}
-.hourMark{
-  transform:translateX(-50%)!important;
-}
-
-
-/* v0.87 - chỉ giữ giờ chính, bỏ số phút 10/20/30/40/50 */
-.minuteMark{
-  display:none!important;
-}
-.minuteTick{
-  top:18px!important;
-  bottom:0!important;
-  width:1px!important;
-  background:rgba(95,138,185,.35)!important;
-}
-.hourTick{
-  background:#5f8ab9!important;
-  opacity:.85!important;
-}
-.hourMark{
-  color:#9fd8ff!important;
-  font-weight:900!important;
-}
-
 </style>
 </head>
 <body>
@@ -1867,7 +1301,7 @@ body.taskOnly #khoiYeuCau .scroll{
 </div>
 </section>
 
-<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span>Realtime chuyến bay - thanh ngang theo thời gian</span><button class="small primary" id="nutLiveTimeline" onclick="canhTheoVachHienTai()">LIVE</button></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
+<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2>Realtime chuyến bay - thanh ngang theo thời gian</h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
 
 <div class="grid2" id="gridRealtime">
 <section class="panel realtimeCompact"><h2>Realtime nhân sự hôm nay - bấm trực tiếp để chọn người</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
@@ -2050,8 +1484,7 @@ body.taskOnly #khoiYeuCau .scroll{
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script>
 const KHO_LUU="duong_tu_rampops_v030";
-const TIMELINE_LABEL_WIDTH=185;
-const GIO_BAT_DAU=4*60, SO_GIO=26, RONG_GIO=250;
+const GIO_BAT_DAU=4*60+30, SO_GIO=25, RONG_GIO=120;
 
 function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 function duLieuMau(){
@@ -4321,26 +3754,14 @@ function biDieuDongDi(pc){
 }
 
 function veHeader(el){
-  const ngayGoc=absNgay(state.ngayKhaiThac);
-  let html='<div class="timeHeader"><div class="timeHeaderLabel"></div>';
-
+  let html='<div class="head"><div class="labelHead"></div>';
   for(let i=0;i<SO_GIO;i++){
     const abs=startAbs()+i*60;
-    const x=TIMELINE_LABEL_WIDTH+viTri(abs);
-    const plus=abs>=ngayGoc+1440?" +1":"";
-    html+=`<div class="hourTick" style="left:${x}px"></div>`;
-    html+=`<div class="hourMark" style="left:${x}px">${gioTuPhut(abs)}${plus}</div>`;
-    [10,20,30,40,50].forEach(m=>{
-      const xm=TIMELINE_LABEL_WIDTH+viTri(abs+m);
-      html+=`<div class="minuteTick" style="left:${xm}px"></div>`;
-    });
+    html+=`<div class="gioHead"><span>${gioTuPhut(abs)}${i===24?" +1":""}</span><small>10</small><small>20</small><small>30</small><small>40</small><small>50</small></div>`;
   }
-
   html+='</div>';
-  let now=hienTaiAbs();
-  if(now<startAbs())now=startAbs();
-  if(now>startAbs()+SO_GIO*60)now=startAbs()+SO_GIO*60;
-  const x=TIMELINE_LABEL_WIDTH+viTri(now);
+  let now=hienTaiAbs(); if(now<startAbs())now=startAbs(); if(now>startAbs()+24*60)now=startAbs()+24*60;
+  const x=viTri(now)+185;
   html+=`<div class="nowLabel" style="left:${x}px">${gioTuPhut(now)}</div><div class="nowLine" style="left:${x}px"></div>`;
   el.innerHTML=html;
 }
@@ -4377,7 +3798,6 @@ function theoDoiChuyen(cb){
 
 function veTimelineChuyen(){
   const el=$("timelineChuyenBay"); veHeader(el);
-  const nowLive=hienTaiAbs();
   if(state.timChuyen){
     el.innerHTML+=`<div style="grid-column:1/-1;padding:4px 8px;color:#7dd3fc;font-weight:900">Đang tìm: <span class="searchingHint">${state.timChuyen}</span></div>`;
   }
@@ -4400,9 +3820,7 @@ function veTimelineChuyen(){
       const names=pcs.length
         ? pcs.map(pc=>`<span class="staffChip ${caClass(caCuaNV(pc.maNV))}">${tenNV(pc.maNV)}</span>`).join("")
         : `<span class="muted">chưa chọn nhân sự</span>`;
-      const bdCB=batDauAbs(cb), ktCB=ketThucAbs(cb);
-      const dangLive=bdCB<=nowLive && nowLive<=ktCB;
-      const mau=mauChuyen(cb.ma), left=viTri(bdCB), width=rong(bdCB,ktCB), sel=cb.ma===chuyenDangChon;
+      const mau=mauChuyen(cb.ma), left=viTri(batDauAbs(cb)), width=rong(batDauAbs(cb),ketThucAbs(cb)), sel=cb.ma===chuyenDangChon;
       const ca=mauCaChuyen(cb.ma), caCls=caClass(ca);
       const mon=theoDoiChuyen(cb);
       const cbWarn=shortCanhBaoCap(cb);
@@ -4415,7 +3833,7 @@ function veTimelineChuyen(){
       const tenLeft=left+width+6+mon.rong+noteRong+warnRong;
       const noteHtml=noteText?`<div class="flightNote" style="left:${noteLeft}px;max-width:250px" title="${noteText.replace(/"/g,'&quot;')}">${noteText}</div>`:"";
       const warnHtml=cbWarn?`<div class="requireWarn" style="left:${warnLeft}px;min-width:${warnRong}px">${cbWarn}</div>`:"";
-      el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""} ${dangLive?"activeNow":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
+      el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${pcs.length} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
     });
 }
 
@@ -4446,11 +3864,10 @@ function uuTienTrangThaiTheoDoi(ma){
 }
 function sapXepNhanSuTimeline(ds){
   return ds.slice().sort((a,b)=>{
-    // Luôn ưu tiên trạng thái để người còn liên quan hiện phía trên.
-    // Người hết ca / chưa vào quá xa sẽ tự trôi xuống dưới, muốn xem thì cuộn dọc.
-    const ua=uuTienTrangThaiTheoDoi(a.ma), ub=uuTienTrangThaiTheoDoi(b.ma);
-    if(ua!==ub)return ua-ub;
-
+    if(state.caDangLoc==="tatca"){
+      const ua=uuTienTrangThaiTheoDoi(a.ma), ub=uuTienTrangThaiTheoDoi(b.ma);
+      if(ua!==ub)return ua-ub;
+    }
     const ga=thuTuNhomCaNV(a.ma), gb=thuTuNhomCaNV(b.ma);
     if(ga!==gb)return ga-gb;
     const na=nhanhCuaNV(a.ma), nb=nhanhCuaNV(b.ma);
@@ -4472,7 +3889,7 @@ function baiDoHienTaiHoacSapLam(ma, now){
 }
 function standBadgeNhanSu(ma, now){
   const bai=baiDoHienTaiHoacSapLam(ma, now);
-  return bai?`<span class="standBadge" title="Đang / sắp làm tại bãi ${bai}">${bai}</span>`:"";
+  return bai?`<span class="standBadge" title="Đang / sắp làm tại bãi ${bai}">B${bai}</span>`:"";
 }
 function veTimelineNhanSu(){
   const el=$("timelineNhanSu"); veHeader(el); const now=hienTaiAbs();
@@ -5475,8 +4892,6 @@ setInterval(()=>{
 },20000);
 
 
-let timelineScrollLeftMemory=null;
-
 function dongBoKeoTimeline(){
   const a=document.getElementById("khungTimelineChuyenBay");
   const b=document.getElementById("khungTimelineNhanSu");
@@ -5488,49 +4903,15 @@ function dongBoKeoTimeline(){
   function syncScroll(src,dst){
     if(khoa)return;
     khoa=true;
-    timelineScrollLeftMemory=src.scrollLeft;
+
+    // Hai bảng dùng cùng một timeGrid nên scrollLeft phải bằng nhau tuyệt đối.
     dst.scrollLeft = src.scrollLeft;
+
     requestAnimationFrame(()=>{khoa=false;});
-  }
-
-  function batKeo(el, other){
-    let down=false, startX=0, startLeft=0, moved=false;
-
-    el.addEventListener("pointerdown",(e)=>{
-      if(e.button!==0)return;
-      if(e.target.closest(".tlLabel,.bar,.flightMonitor,.noteBadge,.warnBadge,.tenSau,.staffChip,button,input,select"))return;
-      down=true; moved=false;
-      startX=e.clientX;
-      startLeft=el.scrollLeft;
-      el.classList.add("dragging");
-      el.setPointerCapture?.(e.pointerId);
-    });
-
-    el.addEventListener("pointermove",(e)=>{
-      if(!down)return;
-      const dx=e.clientX-startX;
-      if(Math.abs(dx)>3)moved=true;
-      el.scrollLeft=startLeft-dx;
-      other.scrollLeft=el.scrollLeft;
-      timelineScrollLeftMemory=el.scrollLeft;
-    });
-
-    function endDrag(e){
-      if(!down)return;
-      down=false;
-      el.classList.remove("dragging");
-      el.releasePointerCapture?.(e.pointerId);
-      if(moved)e.preventDefault?.();
-    }
-    el.addEventListener("pointerup",endDrag);
-    el.addEventListener("pointercancel",endDrag);
-    el.addEventListener("pointerleave",()=>{if(down){down=false;el.classList.remove("dragging");}});
   }
 
   a.addEventListener("scroll",()=>syncScroll(a,b),{passive:true});
   b.addEventListener("scroll",()=>syncScroll(b,a),{passive:true});
-  batKeo(a,b);
-  batKeo(b,a);
 
   a.dataset.syncReady="1";
   b.dataset.syncReady="1";
@@ -5541,7 +4922,8 @@ function dongBoViTriSauRender(){
   const b=document.getElementById("khungTimelineNhanSu");
   if(!a||!b)return;
 
-  const x=timelineScrollLeftMemory!==null ? timelineScrollLeftMemory : a.scrollLeft;
+  // Khi render lại vì realtime update, giữ 2 bảng luôn cùng vị trí.
+  const x=Math.max(a.scrollLeft,b.scrollLeft);
   a.scrollLeft=x;
   b.scrollLeft=x;
 }
@@ -5551,25 +4933,10 @@ function canhTheoVachHienTai(){
   if(!a||!b)return;
   const nowLine=a.querySelector(".nowLine");
   if(!nowLine)return;
-
   const x=parseFloat(nowLine.style.left||"0");
-  const viTriLive=Math.max(0,x-TIMELINE_LABEL_WIDTH);
-
-  // Mép trái cửa sổ = LIVE - 30 phút.
-  const mucTieu=Math.max(0,viTriLive-(RONG_GIO*0.5));
-
-  timelineScrollLeftMemory=mucTieu;
+  const mucTieu=Math.max(0,x-450);
   a.scrollLeft=mucTieu;
   b.scrollLeft=mucTieu;
-
-  requestAnimationFrame(()=>{
-    const active=[...a.querySelectorAll(".tlLabel.activeNow")];
-    if(active.length){
-      const last=active[active.length-1];
-      const top=Math.max(0,last.offsetTop - 34 - (a.clientHeight-last.offsetHeight-18));
-      a.scrollTop=top;
-    }
-  });
 }
 
 suaDieuDongCu();
