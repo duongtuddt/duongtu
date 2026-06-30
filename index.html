@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.76 Shift Scope Permissions</title>
+<title>Dương Tú v0.77 No Password Popup + Stand Badge</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1197,6 +1197,25 @@ body.taskOnly #khoiYeuCau .scroll{
   font-size:12px;
 }
 
+
+/* v0.77 - chặn trình duyệt hỏi lưu mật khẩu + badge bãi nhân sự */
+.standBadge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-left:4px;
+  min-width:26px;
+  height:18px;
+  padding:0 5px;
+  border:1px solid #facc15;
+  border-radius:4px;
+  background:#050505;
+  color:#facc15;
+  font-size:11px;
+  font-weight:900;
+  vertical-align:middle;
+}
+
 </style>
 </head>
 <body>
@@ -1205,27 +1224,27 @@ body.taskOnly #khoiYeuCau .scroll{
   <div class="loginCard">
     <h1>✈ Ramp Scheduler - Đăng nhập</h1>
     <div class="loginBody">
-      <div id="loginForm">
-        <label class="loginLabel">ID
-          <input id="loginId" placeholder="Nhập ID">
+      <div id="loginForm" autocomplete="off">
+        <label class="loginLabel">MÃ ĐIỀU HÀNH
+          <input id="loginId" placeholder="Nhập mã điều hành" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" readonly onfocus="this.removeAttribute('readonly')">
         </label>
-        <label class="loginLabel">PASS
-          <input id="loginPass" type="password" placeholder="Nhập password">
+        <label class="loginLabel">MÃ TRUY CẬP
+          <input id="loginPass" type="password" placeholder="Nhập mã truy cập" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
         </label>
         <div class="loginActions">
-          <button class="primary" id="btnLogin">Đăng nhập</button>
+          <button class="primary" id="btnLogin">Vào hệ thống</button>
           <button class="ghost" id="tabRegister">Đăng ký</button>
         </div>
       </div>
-      <div id="registerForm" class="hidden">
+      <div id="registerForm" class="hidden" autocomplete="off">
         <label class="loginLabel">ID
-          <input id="regId" placeholder="ID đăng nhập">
+          <input id="regId" placeholder="Mã điều hành" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </label>
         <label class="loginLabel">Họ và tên
           <input id="regFullName" placeholder="Đúng như danh sách nhân sự">
         </label>
         <label class="loginLabel">PASS
-          <input id="regPass" type="password" placeholder="Password">
+          <input id="regPass" type="password" placeholder="Mã truy cập" autocomplete="new-password">
         </label>
         <div class="loginActions">
           <button class="primary" id="btnRegister">Gửi đăng ký</button>
@@ -3856,6 +3875,22 @@ function sapXepNhanSuTimeline(ds){
     return String(a.ten||"").localeCompare(String(b.ten||""),"vi");
   });
 }
+
+function baiDoHienTaiHoacSapLam(ma, now){
+  const pcs=(state.phanCong||[])
+    .filter(pc=>pc.maNV===ma && pcDangHieuLuc(pc))
+    .sort((a,b)=>a.batDauAbs-b.batDauAbs);
+  const dang=pcs.find(pc=>pc.batDauAbs<=now && now<=pc.ketThucAbs);
+  const sap=pcs.find(pc=>pc.batDauAbs>now && pc.batDauAbs-now<=30);
+  const pc=dang||sap;
+  if(!pc)return "";
+  const cb=chuyen(pc.maChuyen);
+  return cb&&cb.baiDo ? normBaiDo(cb.baiDo) : "";
+}
+function standBadgeNhanSu(ma, now){
+  const bai=baiDoHienTaiHoacSapLam(ma, now);
+  return bai?`<span class="standBadge" title="Đang / sắp làm tại bãi ${bai}">B${bai}</span>`:"";
+}
 function veTimelineNhanSu(){
   const el=$("timelineNhanSu"); veHeader(el); const now=hienTaiAbs();
   sapXepNhanSuTimeline(state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon).filter(ns=>dungBoLocCaNV(ns.ma))).forEach(ns=>{
@@ -3883,7 +3918,7 @@ function veTimelineNhanSu(){
     const dangDoiCho=nhanSuDoiCho===ns.ma;
     const sapXepText=!chuyenDangChon&&dangDoiCho?`<br><span class="sapXepHint">Đang chọn để đổi vị trí</span>`:"";
     const handle=!chuyenDangChon?`<span class="dragHandle ${caCls}" title="Kéo để chèn vị trí" onpointerdown="batDauKeoNhanSuPointer(event,'${ns.ma}')"></span>`:"";
-    el.innerHTML+=`<div class="tlRow ${dangDoiCho?"reorderSelected":""}" data-ma-nv="${ns.ma}"><div class="tlLabel ${caCls} ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${handle}<b>${ns.ten}</b><br><span class="muted">Cấp ${ns.cap}</span><br><span class="${tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":"greenText"}">${tt.text}</span>${sapXepText}</div><div class="tlLane ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
+    el.innerHTML+=`<div class="tlRow ${dangDoiCho?"reorderSelected":""}" data-ma-nv="${ns.ma}"><div class="tlLabel ${caCls} ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${handle}<b>${ns.ten}</b>${standBadgeNhanSu(ns.ma,now)}<br><span class="muted">Cấp ${ns.cap}</span><br><span class="${tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":"greenText"}">${tt.text}</span>${sapXepText}</div><div class="tlLane ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
   });
 }
 
