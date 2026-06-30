@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.82 Timeline Hour Align</title>
+<title>Dương Tú v0.87 Hide Minute Numbers</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1391,6 +1391,397 @@ body.taskOnly #khoiYeuCau .scroll{
   overflow-y:auto!important;
 }
 
+
+/* v0.83 - chỉnh thước thời gian: số giờ nằm đúng trên vạch giờ, không nằm giữa ô */
+.gioHead{
+  position:relative!important;
+  display:block!important;
+  overflow:visible!important;
+}
+.gioHead span{
+  position:absolute!important;
+  top:2px!important;
+  left:0!important;
+  transform:translateX(-50%)!important;
+  z-index:80!important;
+  background:#071426!important;
+  padding:0 3px!important;
+  line-height:14px!important;
+  pointer-events:none!important;
+}
+.gioHead small{
+  position:absolute!important;
+  bottom:1px!important;
+  color:#5f8ab9!important;
+  font-size:8px!important;
+  font-weight:700!important;
+  transform:translateX(-50%)!important;
+  pointer-events:none!important;
+}
+.gioHead small:nth-of-type(1){left:16.666%!important}
+.gioHead small:nth-of-type(2){left:33.333%!important}
+.gioHead small:nth-of-type(3){left:50%!important}
+.gioHead small:nth-of-type(4){left:66.666%!important}
+.gioHead small:nth-of-type(5){left:83.333%!important}
+
+.nowLine{
+  z-index:120!important;
+}
+.nowLabel{
+  z-index:130!important;
+  top:2px!important;
+  transform:translateX(-50%)!important;
+  pointer-events:none!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18);
+}
+
+
+/* v0.84 - TIMELINE ENGINE CLEAN
+   Một hệ tọa độ duy nhất:
+   x = TIMELINE_LABEL_WIDTH + ((abs - startAbs()) / 60) * RONG_GIO
+   Dùng chung cho: thước giờ, phút, LIVE line, thanh chuyến, thanh nhân sự.
+*/
+:root{
+  --timelineLabelWidth:185px;
+  --timelineHourWidth:250px;
+  --timelineHourCount:26;
+  --timelineTotalWidth:6685px; /* 185 + 26*250 */
+  --timelineHeaderHeight:28px;
+}
+.timeGrid{
+  min-width:var(--timelineTotalWidth)!important;
+  width:var(--timelineTotalWidth)!important;
+  display:grid!important;
+  grid-template-columns:var(--timelineLabelWidth) repeat(26,var(--timelineHourWidth))!important;
+  position:relative!important;
+  align-items:stretch!important;
+}
+.timeHeader{
+  grid-column:1 / -1!important;
+  height:var(--timelineHeaderHeight)!important;
+  position:sticky!important;
+  top:0!important;
+  z-index:200!important;
+  background:#071426!important;
+  border-bottom:1px solid var(--line)!important;
+}
+.timeHeaderLabel{
+  position:sticky!important;
+  left:0!important;
+  width:var(--timelineLabelWidth)!important;
+  height:var(--timelineHeaderHeight)!important;
+  z-index:230!important;
+  background:#081a2f!important;
+  border-right:1px solid var(--line)!important;
+}
+.hourMark{
+  position:absolute!important;
+  top:2px!important;
+  transform:translateX(-50%)!important;
+  color:#9fd8ff!important;
+  font-weight:900!important;
+  font-size:14px!important;
+  line-height:14px!important;
+  background:#071426!important;
+  padding:0 3px!important;
+  z-index:220!important;
+  pointer-events:none!important;
+  white-space:nowrap!important;
+}
+.minuteMark{
+  position:absolute!important;
+  bottom:1px!important;
+  transform:translateX(-50%)!important;
+  color:#5f8ab9!important;
+  font-size:8px!important;
+  font-weight:800!important;
+  line-height:8px!important;
+  z-index:215!important;
+  pointer-events:none!important;
+}
+.head,.gioHead,.labelHead{
+  display:none!important;
+}
+.tlLabel{
+  grid-column:1!important;
+  position:sticky!important;
+  left:0!important;
+  z-index:120!important;
+  width:var(--timelineLabelWidth)!important;
+  min-width:var(--timelineLabelWidth)!important;
+  max-width:var(--timelineLabelWidth)!important;
+  background:#081a2f!important;
+}
+.tlLane{
+  grid-column:2 / span 26!important;
+  position:relative!important;
+  background:
+    repeating-linear-gradient(to right,transparent 0,transparent 40px,rgba(23,49,80,.55) 41.5px),
+    repeating-linear-gradient(to right,transparent 0,transparent 124px,rgba(56,189,248,.22) 125px),
+    repeating-linear-gradient(to right,transparent 0,transparent 249px,#173150 250px)!important;
+}
+.nowLine{
+  position:absolute!important;
+  top:var(--timelineHeaderHeight)!important;
+  bottom:0!important;
+  width:2px!important;
+  background:#38bdf8!important;
+  z-index:150!important;
+  pointer-events:none!important;
+}
+.nowLabel{
+  position:sticky!important;
+  top:2px!important;
+  transform:translateX(-50%)!important;
+  background:#0ea5e9!important;
+  color:#00111d!important;
+  border-radius:4px!important;
+  padding:2px 5px!important;
+  font-weight:900!important;
+  font-size:11px!important;
+  z-index:260!important;
+  pointer-events:none!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.22)!important;
+}
+.bar{z-index:2!important}
+.flightMonitor,.noteBadge,.warnBadge,.tenSau,.staffChip{z-index:5!important}
+@media(max-width:900px){
+  .timeGrid{
+    min-width:var(--timelineTotalWidth)!important;
+    width:var(--timelineTotalWidth)!important;
+    grid-template-columns:var(--timelineLabelWidth) repeat(26,var(--timelineHourWidth))!important;
+  }
+}
+
+
+/* v0.85 - REBUILD TIMELINE LAYOUT
+   Không dùng display:contents/grid cũ nữa.
+   Mỗi dòng là 1 grid riêng: [185px label] [6500px lane].
+   Tất cả giờ / phút / LIVE / thanh chuyến / thanh nhân sự dùng cùng tọa độ:
+   laneX = ((time - startAbs) / 60) * RONG_GIO
+   absoluteX = TIMELINE_LABEL_WIDTH + laneX
+*/
+:root{
+  --timelineLabelWidth:185px;
+  --timelineHourWidth:250px;
+  --timelineHourCount:26;
+  --timelineLaneWidth:6500px;   /* 26 * 250 */
+  --timelineTotalWidth:6685px;  /* 185 + 6500 */
+  --timelineHeaderHeight:30px;
+  --timelineRowHeight:62px;
+}
+
+.timeGrid{
+  display:block!important;
+  position:relative!important;
+  width:var(--timelineTotalWidth)!important;
+  min-width:var(--timelineTotalWidth)!important;
+  max-width:var(--timelineTotalWidth)!important;
+  background:#071426!important;
+}
+
+.timeHeader{
+  display:block!important;
+  position:sticky!important;
+  top:0!important;
+  width:var(--timelineTotalWidth)!important;
+  min-width:var(--timelineTotalWidth)!important;
+  height:var(--timelineHeaderHeight)!important;
+  z-index:500!important;
+  background:#071426!important;
+  border-bottom:1px solid var(--line)!important;
+}
+
+.timeHeaderLabel{
+  position:sticky!important;
+  left:0!important;
+  top:0!important;
+  width:var(--timelineLabelWidth)!important;
+  height:var(--timelineHeaderHeight)!important;
+  z-index:530!important;
+  background:#081a2f!important;
+  border-right:1px solid var(--line)!important;
+}
+
+.hourMark{
+  position:absolute!important;
+  top:2px!important;
+  transform:translateX(-50%)!important;
+  z-index:525!important;
+  color:#9fd8ff!important;
+  background:#071426!important;
+  padding:0 3px!important;
+  font-size:14px!important;
+  line-height:15px!important;
+  font-weight:900!important;
+  white-space:nowrap!important;
+  pointer-events:none!important;
+}
+
+.minuteMark{
+  position:absolute!important;
+  bottom:1px!important;
+  transform:translateX(-50%)!important;
+  z-index:520!important;
+  color:#5f8ab9!important;
+  font-size:8px!important;
+  line-height:8px!important;
+  font-weight:800!important;
+  pointer-events:none!important;
+}
+
+.tlRow{
+  display:grid!important;
+  grid-template-columns:var(--timelineLabelWidth) var(--timelineLaneWidth)!important;
+  width:var(--timelineTotalWidth)!important;
+  min-width:var(--timelineTotalWidth)!important;
+  height:var(--timelineRowHeight)!important;
+  min-height:var(--timelineRowHeight)!important;
+  position:relative!important;
+}
+
+.tlLabel{
+  grid-column:1!important;
+  position:sticky!important;
+  left:0!important;
+  width:var(--timelineLabelWidth)!important;
+  min-width:var(--timelineLabelWidth)!important;
+  max-width:var(--timelineLabelWidth)!important;
+  height:var(--timelineRowHeight)!important;
+  min-height:var(--timelineRowHeight)!important;
+  z-index:300!important;
+  background:#081a2f!important;
+  border-right:1px solid var(--line)!important;
+  border-bottom:1px solid #132946!important;
+  overflow:hidden!important;
+}
+
+.tlLane{
+  grid-column:2!important;
+  position:relative!important;
+  width:var(--timelineLaneWidth)!important;
+  min-width:var(--timelineLaneWidth)!important;
+  height:var(--timelineRowHeight)!important;
+  min-height:var(--timelineRowHeight)!important;
+  border-bottom:1px solid #132946!important;
+  background:
+    repeating-linear-gradient(to right,transparent 0,transparent 40px,rgba(23,49,80,.55) 41.5px),
+    repeating-linear-gradient(to right,transparent 0,transparent 124px,rgba(56,189,248,.22) 125px),
+    repeating-linear-gradient(to right,transparent 0,transparent 249px,#173150 250px)!important;
+}
+
+.nowLine{
+  position:absolute!important;
+  top:var(--timelineHeaderHeight)!important;
+  bottom:0!important;
+  width:2px!important;
+  z-index:180!important;
+  background:#38bdf8!important;
+  pointer-events:none!important;
+}
+
+.nowLabel{
+  position:absolute!important;
+  top:2px!important;
+  transform:translateX(-50%)!important;
+  z-index:560!important;
+  background:#0ea5e9!important;
+  color:#00111d!important;
+  border-radius:4px!important;
+  padding:2px 5px!important;
+  font-size:11px!important;
+  line-height:12px!important;
+  font-weight:900!important;
+  pointer-events:none!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.25)!important;
+}
+
+.head,.gioHead,.labelHead{display:none!important}
+
+.bar{
+  top:18px!important;
+  z-index:2!important;
+}
+
+.tenSau{
+  top:20px!important;
+  z-index:5!important;
+}
+
+.flightMonitor,.noteBadge,.warnBadge,.staffChip,.flightNote,.requireWarn{
+  z-index:6!important;
+}
+
+#panelTimelineChuyen .timeline{
+  max-height:590px!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+}
+
+#khungTimelineNhanSu{
+  max-height:620px!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+}
+
+@media(max-width:900px){
+  .timeGrid,.timeHeader,.tlRow{
+    width:var(--timelineTotalWidth)!important;
+    min-width:var(--timelineTotalWidth)!important;
+  }
+}
+
+
+/* v0.86 - căn lại phút theo giờ chuẩn */
+.hourTick{
+  position:absolute!important;
+  top:0!important;
+  bottom:0!important;
+  width:1px!important;
+  background:#426991!important;
+  z-index:510!important;
+  pointer-events:none!important;
+}
+.minuteTick{
+  position:absolute!important;
+  top:17px!important;
+  bottom:0!important;
+  width:1px!important;
+  background:rgba(95,138,185,.45)!important;
+  z-index:510!important;
+  pointer-events:none!important;
+}
+.minuteMark{
+  bottom:2px!important;
+  transform:translateX(-50%)!important;
+  min-width:14px!important;
+  text-align:center!important;
+  background:#071426!important;
+}
+.hourMark{
+  transform:translateX(-50%)!important;
+}
+
+
+/* v0.87 - chỉ giữ giờ chính, bỏ số phút 10/20/30/40/50 */
+.minuteMark{
+  display:none!important;
+}
+.minuteTick{
+  top:18px!important;
+  bottom:0!important;
+  width:1px!important;
+  background:rgba(95,138,185,.35)!important;
+}
+.hourTick{
+  background:#5f8ab9!important;
+  opacity:.85!important;
+}
+.hourMark{
+  color:#9fd8ff!important;
+  font-weight:900!important;
+}
+
 </style>
 </head>
 <body>
@@ -1659,6 +2050,7 @@ body.taskOnly #khoiYeuCau .scroll{
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script>
 const KHO_LUU="duong_tu_rampops_v030";
+const TIMELINE_LABEL_WIDTH=185;
 const GIO_BAT_DAU=4*60, SO_GIO=26, RONG_GIO=250;
 
 function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
@@ -3929,16 +4321,26 @@ function biDieuDongDi(pc){
 }
 
 function veHeader(el){
-  let html='<div class="head"><div class="labelHead"></div>';
   const ngayGoc=absNgay(state.ngayKhaiThac);
+  let html='<div class="timeHeader"><div class="timeHeaderLabel"></div>';
+
   for(let i=0;i<SO_GIO;i++){
     const abs=startAbs()+i*60;
+    const x=TIMELINE_LABEL_WIDTH+viTri(abs);
     const plus=abs>=ngayGoc+1440?" +1":"";
-    html+=`<div class="gioHead"><span>${gioTuPhut(abs)}${plus}</span><small>10</small><small>20</small><small>30</small><small>40</small><small>50</small></div>`;
+    html+=`<div class="hourTick" style="left:${x}px"></div>`;
+    html+=`<div class="hourMark" style="left:${x}px">${gioTuPhut(abs)}${plus}</div>`;
+    [10,20,30,40,50].forEach(m=>{
+      const xm=TIMELINE_LABEL_WIDTH+viTri(abs+m);
+      html+=`<div class="minuteTick" style="left:${xm}px"></div>`;
+    });
   }
+
   html+='</div>';
-  let now=hienTaiAbs(); if(now<startAbs())now=startAbs(); if(now>startAbs()+24*60)now=startAbs()+24*60;
-  const x=viTri(now)+185;
+  let now=hienTaiAbs();
+  if(now<startAbs())now=startAbs();
+  if(now>startAbs()+SO_GIO*60)now=startAbs()+SO_GIO*60;
+  const x=TIMELINE_LABEL_WIDTH+viTri(now);
   html+=`<div class="nowLabel" style="left:${x}px">${gioTuPhut(now)}</div><div class="nowLine" style="left:${x}px"></div>`;
   el.innerHTML=html;
 }
@@ -5150,19 +5552,16 @@ function canhTheoVachHienTai(){
   const nowLine=a.querySelector(".nowLine");
   if(!nowLine)return;
 
-  const labelWidth=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--timelineLabelWidth"))||185;
   const x=parseFloat(nowLine.style.left||"0");
-  const viTriLive=Math.max(0,x-labelWidth);
+  const viTriLive=Math.max(0,x-TIMELINE_LABEL_WIDTH);
 
-  // LIVE đúng logic: mép trái cửa sổ = LIVE - 30 phút.
+  // Mép trái cửa sổ = LIVE - 30 phút.
   const mucTieu=Math.max(0,viTriLive-(RONG_GIO*0.5));
 
   timelineScrollLeftMemory=mucTieu;
   a.scrollLeft=mucTieu;
   b.scrollLeft=mucTieu;
 
-  // Đồng thời cuộn dọc xuống chuyến đang làm cuối cùng trong khung chuyến bay.
-  // Nếu không có chuyến đang làm thì giữ nguyên vị trí dọc.
   requestAnimationFrame(()=>{
     const active=[...a.querySelectorAll(".tlLabel.activeNow")];
     if(active.length){
