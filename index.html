@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.79 Stable Timeline 4H</title>
+<title>Dương Tú v0.80 Timeline Scale Fix</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1280,6 +1280,60 @@ body.taskOnly #khoiYeuCau .scroll{
   margin-left:5px!important;
   font-size:10px!important;
   line-height:17px!important;
+}
+
+
+/* v0.80 - sửa lỗi scale timeline: header, grid, lane dùng cùng RONG_GIO=250 */
+:root{
+  --timelineLabelWidth:185px;
+  --timelineHourWidth:250px;
+  --timelineTotalWidth:6435px; /* 185 + 25*250 */
+}
+.timeGrid{
+  min-width:var(--timelineTotalWidth)!important;
+  width:var(--timelineTotalWidth)!important;
+  grid-template-columns:var(--timelineLabelWidth) repeat(25,var(--timelineHourWidth))!important;
+}
+.tlLane{
+  grid-column:2 / span 25!important;
+  background:
+    repeating-linear-gradient(to right,transparent 0,transparent 40px,rgba(23,49,80,.55) 41.5px),
+    repeating-linear-gradient(to right,transparent 0,transparent 124px,rgba(56,189,248,.22) 125px),
+    repeating-linear-gradient(to right,transparent 0,transparent 249px,#173150 250px)!important;
+}
+.head .gioHead{
+  min-width:var(--timelineHourWidth)!important;
+}
+.labelHead,.tlLabel{
+  width:var(--timelineLabelWidth)!important;
+  min-width:var(--timelineLabelWidth)!important;
+  max-width:var(--timelineLabelWidth)!important;
+  position:sticky!important;
+  left:0!important;
+}
+.tlLabel{
+  z-index:80!important;
+}
+.labelHead{
+  z-index:90!important;
+}
+.head div{
+  position:sticky!important;
+  top:0!important;
+}
+.gioHead{
+  z-index:70!important;
+}
+.nowLine{z-index:12!important}
+.nowLabel{z-index:95!important}
+.bar{z-index:2!important}
+.flightMonitor,.noteBadge,.warnBadge,.tenSau,.staffChip{z-index:5!important}
+@media(max-width:900px){
+  .timeGrid{
+    min-width:var(--timelineTotalWidth)!important;
+    width:var(--timelineTotalWidth)!important;
+    grid-template-columns:var(--timelineLabelWidth) repeat(25,var(--timelineHourWidth))!important;
+  }
 }
 
 </style>
@@ -5035,11 +5089,8 @@ function canhTheoVachHienTai(){
   const nowLine=a.querySelector(".nowLine");
   if(!nowLine)return;
 
-  // nowLine.left = labelWidth + vị trí LIVE.
-  // Muốn vùng nhìn bắt đầu ở LIVE - 30 phút:
-  // scrollLeft = vị trí LIVE - 30 phút.
+  const labelWidth=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--timelineLabelWidth"))||185;
   const x=parseFloat(nowLine.style.left||"0");
-  const labelWidth=185;
   const viTriLive=Math.max(0,x-labelWidth);
   const mucTieu=Math.max(0,viTriLive-(RONG_GIO*0.5));
 
