@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.09 AI Rule Engine Suggest</title>
+<title>Dương Tú v1.10 Fairness First Rule Engine</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -6082,15 +6082,47 @@ function duocLamNguoiBoSung(ns,cb,need){
   return true;
 }
 function coVSNuocSach(ns){return !!(ns.chungChi&&(ns.chungChi.vesinh||ns.chungChi.nuocsach));}
+function minThongKePool(pool,cb){
+  const ds=pool.map(ns=>thongKeTaiMoc(ns,cb));
+  return {
+    minSo: ds.length?Math.min(...ds.map(x=>x.so)):0,
+    minTg: ds.length?Math.min(...ds.map(x=>x.tg)):0,
+    maxSo: ds.length?Math.max(...ds.map(x=>x.so)):0,
+    maxTg: ds.length?Math.max(...ds.map(x=>x.tg)):0
+  };
+}
+function noCongBang(ns,cb,pool){
+  // Người đang ít chuyến/ít phút hơn nhóm phải được kéo lên làm,
+  // kể cả người đó có nhiều chứng chỉ. Chiều sâu không được làm người đa chứng chỉ ngồi chơi.
+  const tk=thongKeTaiMoc(ns,cb);
+  const m=minThongKePool(pool,cb);
+  return {
+    soNo: Math.max(0, m.maxSo - tk.so),
+    phutNo: Math.max(0, m.maxTg - tk.tg),
+    dangItNhat: tk.so===m.minSo,
+    ganItNhat: tk.so<=m.minSo+1
+  };
+}
 function diemUngVienThuong(ns,cb,pool){
   const tk=thongKeTaiMoc(ns,cb);
   const p=phanLoaiGoiY(ns,cb);
-  // Rule engine: công bằng đứng trước, chiều sâu chỉ phân định khi công bằng gần ngang.
+  const debt=noCongBang(ns,cb,pool);
+
+  // v1.10:
+  // 1. khả dụng/rảnh
+  // 2. ít chuyến nhất
+  // 3. ít phút nhất
+  // 4. rảnh lâu hơn
+  // 5. chỉ khi công bằng gần ngang mới giữ chiều sâu/chứng chỉ
+  //
+  // Nghĩa là Vũ 0 chuyến vẫn phải được chọn nếu người khác đã làm nhiều hơn.
   return [
     p.nhom,
     tk.so,
     tk.tg,
     p.sub||0,
+    debt.dangItNhat ? 0 : 1,
+    debt.ganItNhat ? 0 : 1,
     bacChungChiVanHanh(ns,pool),
     diemChienLuocChungChi(ns,pool),
     String(ns.ten||"")
@@ -6099,6 +6131,8 @@ function diemUngVienThuong(ns,cb,pool){
 function diemUngVienSlot(ns,cb,pool){
   const tk=thongKeTaiMoc(ns,cb);
   const p=phanLoaiGoiY(ns,cb);
+
+  // Slot bắt buộc: đã lọc đúng chứng chỉ rồi, sau đó vẫn phải công bằng.
   return [
     p.nhom,
     tk.so,
@@ -6175,11 +6209,30 @@ function ganVaiTroChoToHop(combo,cb,slots){
 function diemPhuongAn(selected,cb,pool,slots){
   const match=mucPhuHopYeuCau(selected,slots);
   const missing=slots.length-match;
+
+  // Fairness là chính: tổng số chuyến/phút của nhóm được chọn.
   const fair=diemCongBangNhom(selected,cb);
-  const depth=-diemChieuSauConLai(pool,selected); // càng âm càng tốt vì giữ lại nhiều người quý
+
+  // Nếu trong pool còn người "nợ việc" lớn hơn mà không được chọn thì phạt rất mạnh.
+  // Mục tiêu: không để người nhiều chứng chỉ ngồi chơi chỉ vì cần giữ chiều sâu.
+  const selectedSet=new Set(selected.map(it=>it.ns.ma));
+  const minSo=Math.min(...pool.map(ns=>thongKeTaiMoc(ns,cb).so));
+  const skippedDebt=pool
+    .filter(ns=>!selectedSet.has(ns.ma))
+    .map(ns=>thongKeTaiMoc(ns,cb))
+    .filter(tk=>tk.so===minSo)
+    .length;
+
+  const depth=-diemChieuSauConLai(pool,selected);
   const normalCost=selected.reduce((s,it)=>s+bacChungChiVanHanh(it.ns,pool),0);
   const vsBonus=(laChuyenNamSanDi(cb)&&selected.some(it=>coVSNuocSach(it.ns)))?-2500:0;
-  return missing*100000000 + fair + normalCost*200 + depth*20 + vsBonus;
+
+  return missing*100000000 +
+    skippedDebt*250000 +
+    fair +
+    normalCost*80 +
+    depth*5 +
+    vsBonus;
 }
 function chonGoiYNhanSu(cb){
   const need=soNguoiCanGoiY(cb);
@@ -6223,7 +6276,7 @@ function hienGoiYNhanSu(){
   lines.push(`Cần chứng chỉ: ${yc}`);
   lines.push("");
   lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - chỉ đếm chuyến đã bắt đầu trước mốc này`);
-  lines.push("Rule Engine: đúng ca → rảnh → ít chuyến → ít phút → slot bắt buộc → giữ chiều sâu.");
+  lines.push("Rule Engine v1.10: đúng ca → rảnh → ít chuyến/ít phút → slot bắt buộc → giữ chiều sâu khi công bằng gần ngang.");
   lines.push("");
   lines.push("Đề xuất:");
 
