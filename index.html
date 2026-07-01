@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.99 Smart Slot Backtrack Polish</title>
+<title>Dương Tú v1.00 Bar Border Partial Shift Suggest</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2230,6 +2230,39 @@ button:hover,.taskItem:hover{
   transform:translateY(-50%)!important;
   height:32px!important;
   line-height:32px!important;
+}
+
+
+/* v1.00 - chỉ tô viền trên của thanh realtime, không tô khung lớn */
+.flightScopeRow.ca1,.flightScopeRow.ca2,.flightScopeRow.ca3,.flightScopeRow.ca4,.flightScopeRow.ca5,.flightScopeRow.kd,.flightScopeRow.truc{
+  --scopeColor:transparent;
+}
+.flightScopeRow.ca1{--scopeColor:#37e88f}
+.flightScopeRow.ca2{--scopeColor:#f59e0b}
+.flightScopeRow.ca3{--scopeColor:#b084f5}
+.flightScopeRow.ca4{--scopeColor:#38bdf8}
+.flightScopeRow.ca5{--scopeColor:#fb7185}
+.flightScopeRow.kd{--scopeColor:#0f766e}
+.flightScopeRow.truc{--scopeColor:#ffffff}
+
+.flightScopeRow .flightScopeLabel,
+.flightScopeRow .flightScopeLane{
+  border-top:0!important;
+  border-bottom:1px solid rgba(255,255,255,.12)!important;
+}
+.flightScopeRow .flightScopeLabel.selected,
+.flightScopeRow .flightScopeLane.selected{
+  border-top:0!important;
+  box-shadow:inset 0 0 0 2px #38bdf8!important;
+}
+.flightScopeRow .bar.flight{
+  border-top:4px solid var(--scopeColor)!important;
+  box-sizing:border-box!important;
+}
+.flightScopeRow .bar.flight.warn,
+.flightScopeRow .bar.flight.miss,
+.flightScopeRow .bar.flight.ok{
+  border-top-color:var(--scopeColor)!important;
 }
 
 </style>
@@ -5735,8 +5768,21 @@ function doiCaPhuTrachChuyen(ma,val){
   luu(); veTatCa();
 }
 function gioChuyenNamTrongCa(ns,cb){
-  // Dựa vào giờ thực hiện chuyến và phân ca/chấm công để loại người không phù hợp giờ làm.
+  // Full ca: người đó làm đủ cả khung chuyến.
   return !canhBaoGioLamViec(ns.ma,cb);
+}
+function gioChuyenCoGiaoVoiCa(ns,cb){
+  // Partial ca: còn giao thời gian với chuyến, vẫn có thể làm đỡ/điều động một phần.
+  const start=batDauAbs(cb), end=ketThucAbs(cb);
+  const segs=caSegments(ns.ma);
+  return segs.some(s=>end>s.vao && start<s.ra);
+}
+function phutLamDuocTrongChuyen(ns,cb){
+  const start=batDauAbs(cb), end=ketThucAbs(cb);
+  return caSegments(ns.ma).reduce((max,s)=>{
+    const a=Math.max(start,s.vao), b=Math.min(end,s.ra);
+    return Math.max(max, b>a ? b-a : 0);
+  },0);
 }
 function nsTrongPhamViCaChuyen(ns,cb){
   const scope=String(cb?.caPhuTrach||"");
@@ -5744,20 +5790,22 @@ function nsTrongPhamViCaChuyen(ns,cb){
   return caCuaNV(ns.ma)===scope;
 }
 function nsDuocXetGoiY(ns,cb){
-  return state.phanCaHomNay[ns.ma]?.chon && nsTrongPhamViCaChuyen(ns,cb) && gioChuyenNamTrongCa(ns,cb);
+  return state.phanCaHomNay[ns.ma]?.chon && nsTrongPhamViCaChuyen(ns,cb) && gioChuyenCoGiaoVoiCa(ns,cb);
 }
 function phanLoaiGoiY(ns,cb){
   const now=hienTaiAbs();
   const tk=thongKeNV(ns.ma);
   const gioWarn=canhBaoGioLamViec(ns.ma,cb);
   if(!nsTrongPhamViCaChuyen(ns,cb))return {nhom:98,diem:999999,lyDo:"Không thuộc "+caChuyenLabel(cb.caPhuTrach),so:tk.so,tg:tk.tg};
-  if(gioWarn)return {nhom:99,diem:999999,lyDo:"Ngoài giờ làm",so:tk.so,tg:tk.tg};
+  if(gioWarn && !gioChuyenCoGiaoVoiCa(ns,cb))return {nhom:99,diem:999999,lyDo:"Ngoài giờ làm",so:tk.so,tg:tk.tg};
+  const partialPenalty = gioWarn ? 3 : 0;
+  const partialText = gioWarn ? `Làm được ${Math.round(phutLamDuocTrongChuyen(ns,cb))} phút trong khung chuyến` : "";
 
   const trungPc=pcTrungChuyenCuaNV(ns.ma,cb);
   if(!trungPc){
     const truoc=state.phanCong.filter(x=>x.maNV===ns.ma&&pcDangHieuLuc(x)&&x.ketThucAbs<=now).sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0];
     const ranh=truoc?now-truoc.ketThucAbs:999999;
-    return {nhom:0,diem:0,sub:-ranh,so:tk.so,tg:tk.tg,lyDo:"Rảnh"};
+    return {nhom:partialPenalty,diem:partialPenalty?200:0,sub:-ranh,so:tk.so,tg:tk.tg,lyDo:partialText||"Rảnh"};
   }
 
   const cbCu=chuyen(trungPc.maChuyen);
@@ -5767,8 +5815,8 @@ function phanLoaiGoiY(ns,cb){
   // Chỉ cân nhắc người đang vướng chuyến khác nếu chuyến đó sắp xong trong vòng 15 phút tính từ lúc chuyến mới bắt đầu.
   if(remainAtStart<=15 && !(cbCu&&flightCoDichVuGiuNguoi(cbCu))){
     return {
-      nhom:1,
-      diem:Math.max(0,remainAtStart),
+      nhom:1+partialPenalty,
+      diem:Math.max(0,remainAtStart)+(partialPenalty?200:0),
       so:tk.so,
       tg:tk.tg,
       lyDo:`Đang vướng ${cbCu?cbCu.flight:trungPc.maChuyen}, còn ${Math.ceil(Math.max(0,remainAtStart))} phút khi chuyến mới bắt đầu`
@@ -5778,7 +5826,7 @@ function phanLoaiGoiY(ns,cb){
   const gan=khoangCachBai(cbCu?.baiDo,cb.baiDo);
   const coThang=nsCoChungChi(ns,"thang")||nsCoChungChiId(ns,"thang");
   if(gan<=3 && coThang && !(cbCu&&flightCoDichVuGiuNguoi(cbCu)) && remainAtStart<=30){
-    return {nhom:2,diem:gan*100+Math.max(0,remainAtStart),so:tk.so,tg:tk.tg,lyDo:`Ở bãi ${cbCu?.baiDo}, gần bãi ${cb.baiDo} (${gan} bãi)`};
+    return {nhom:2+partialPenalty,diem:gan*100+Math.max(0,remainAtStart)+(partialPenalty?200:0),so:tk.so,tg:tk.tg,lyDo:partialText||`Ở bãi ${cbCu?.baiDo}, gần bãi ${cb.baiDo} (${gan} bãi)`};
   }
 
   return {nhom:90,diem:Math.max(0,remainAtStart),so:tk.so,tg:tk.tg,lyDo:`Đang vướng ${cbCu?cbCu.flight:trungPc.maChuyen} trong giờ chuyến này`};
