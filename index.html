@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.02 Fill First Optimize Suggest</title>
+<title>Dương Tú v1.03 Apply Suggestion Assign</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -6202,6 +6202,62 @@ function chonGoiYNhanSu(cb){
   return toiUuLaiNguoiThuong(selected,candidates,cb,need,usedSlot);
 }
 
+function taoPCTheoGoiY(cb, ma, vaiTro){
+  const now=hienTaiAbs();
+  const pc={id:"PC"+Date.now()+"_"+Math.random().toString(36).slice(2,7),maChuyen:cb.ma,maNV:ma,batDauAbs:batDauAbs(cb),ketThucAbs:ketThucAbs(cb),dieuDongTu:null};
+
+  const cbDangLam=batDauAbs(cb)<=now && now<=ketThucAbs(cb);
+  const trungPc=state.phanCong.find(x=>
+    x.maNV===ma &&
+    pcDangHieuLuc(x) &&
+    !(x.ketThucAbs<=pc.batDauAbs || x.batDauAbs>=pc.ketThucAbs)
+  );
+
+  // Khi áp dụng gợi ý hàng loạt: không bật prompt để tránh thao tác chậm/lỗi xuống dòng.
+  // Nếu người này đang trùng chuyến, ghi nhận là điều động bổ sung và bắt đầu từ thời điểm hợp lý.
+  if(trungPc){
+    pc.dieuDongTu=trungPc.maChuyen;
+    pc.isDieuDongDichVu=true;
+    pc.dichVuDieuDong=vaiTro&&vaiTro!=="Bổ sung người"?vaiTro:"bo sung";
+    pc.batDauAbs=thoiDiemDieuDong(cb,pc,now);
+    pc.ketThucAbs=ketThucAbs(cb);
+  }else if(cbDangLam){
+    pc.batDauAbs=now;
+    pc.ketThucAbs=ketThucAbs(cb);
+  }
+
+  return pc;
+}
+function apDungGoiYNhanSu(cb, selected){
+  if(!requirePerm("dashboard","áp dụng gợi ý nhân sự"))return false;
+  if(!selected || !selected.length){
+    alert("Chưa có nhân sự nào để áp dụng.");
+    return false;
+  }
+
+  let added=0, skipped=0;
+  selected.forEach(item=>{
+    const ma=item.ns.ma;
+    const daCo=state.phanCong.some(pc=>pc.maChuyen===cb.ma&&pc.maNV===ma&&pcDangHieuLuc(pc));
+    if(daCo){
+      skipped++;
+      return;
+    }
+
+    const pc=taoPCTheoGoiY(cb,ma,item.vaiTro);
+    state.phanCong.push(pc);
+    added++;
+  });
+
+  if(added>0){
+    logAction("ÁP DỤNG GỢI Ý NHÂN SỰ",`${cb.flight} - thêm ${added} người${skipped?`, bỏ qua ${skipped} người đã có`:""}`);
+    luu();
+    veTatCa();
+  }else{
+    alert("Các nhân sự gợi ý đã có trong chuyến này rồi.");
+  }
+  return added>0;
+}
 function hienGoiYNhanSu(){
   const cb=chuyen(chuyenDangChon);
   if(!cb)return alert("Chọn chuyến bay trước.");
@@ -6232,10 +6288,19 @@ function hienGoiYNhanSu(){
   if(selected.length<need){
     lines.push("");
     lines.push(`Còn thiếu: ${need-selected.length} người.`);
-    lines.push("Hướng xử lý: dùng người còn giờ làm để làm đỡ / điều động người sắp xong / bãi gần / hoặc xác nhận để trống.");
+    lines.push("Nếu đồng ý, hệ thống sẽ phân những người đã gợi ý vào chuyến và chừa phần còn thiếu để người điều hành xử lý tiếp.");
+  }else{
+    lines.push("");
+    lines.push("Đủ người theo yêu cầu.");
   }
 
-  alert(lines.join("\n"));
+  lines.push("");
+  lines.push("Bấm OK để áp dụng gợi ý vào chuyến.");
+  lines.push("Bấm Hủy để chỉ xem gợi ý, không thay đổi phân công.");
+
+  if(confirm(lines.join("\n"))){
+    apDungGoiYNhanSu(cb,selected);
+  }
 }
 
 function ganBoNV(ma){
