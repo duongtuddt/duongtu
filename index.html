@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.11 Balanced Pair Rule Engine</title>
+<title>Dương Tú v1.12 Transfer ETA Minus 10</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4552,10 +4552,9 @@ function ketThucAbs(cb){
   return batDauAbs(cb)+30;
 }
 function suaDieuDongCu(){
-  // Từ v0.42 không tự ép giờ điều động nữa.
-  // Giờ điều động có thể là:
-  // - giờ bắt đầu chuyến mới nếu chuyến chưa đáp,
-  // - hoặc thời điểm bấm chọn nếu chuyến mới đã đáp / đã bắt đầu thực tế.
+  // v1.12: điều động dùng mốc phục vụ chuyến mới.
+  // Có ETA: ETA - 10'. Chỉ STD: STD - 75'.
+  // Không chờ chuyến cũ kết thúc; thiếu/đủ chuyến cũ xử lý sau.
   let coSua=false;
   state.phanCong.forEach(pc=>{
     if(pc.dieuDongTu && !pc.thuHoi){
@@ -5572,17 +5571,14 @@ function themSuaChuyen(){
   luu(); veTatCa();
 }
 function thoiDiemDieuDong(cb, pcMoi, now){
-  const e = etaAbs(cb);
-  if(e!==null){
-    // Nếu chuyến mới đã đáp rồi, điều động tính từ lúc thao tác.
-    if(now >= e) return now;
-
-    // Nếu chuyến mới chưa đáp, điều động có hiệu lực từ ETA + 10'.
-    return e + 10;
-  }
-
-  // Chuyến chỉ có STD: nếu đã tới giờ làm thì tính từ lúc thao tác, chưa tới thì tính từ giờ làm.
-  return now >= pcMoi.batDauAbs ? now : pcMoi.batDauAbs;
+  // v1.12:
+  // Điều động không phải đợi chuyến cũ xong.
+  // Người được điều động phải có mặt theo mốc bắt đầu phục vụ chuyến mới:
+  // - Có ETA: ETA - 10'
+  // - Chỉ có STD / nằm sân đi: STD - 75'
+  // Nếu người điều hành thao tác sau mốc đó thì tính từ lúc thao tác.
+  const mocPhucVu = batDauAbs(cb);
+  return now >= mocPhucVu ? now : mocPhucVu;
 }
 
 
