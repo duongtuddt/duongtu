@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.08 Rebuild Suggestion Logic</title>
+<title>Dương Tú v1.09 AI Rule Engine Suggest</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -5937,48 +5937,17 @@ function tenChungChiNgan(id){
     nuocsach:"Nước sạch",
     pvdb:"PVĐB",
     highloader:"High Loader",
-    pushback:"Pushback"
-  };
-  return map[id]||id;
-}
-function dichVuChuyenText(cb){
-  const reqs=yeuCauCuaChuyen(cb).filter(r=>r.id!=="stand-thang");
-  const ds=[...new Set(reqs.map(r=>tenChungChiNgan(r.value||r.label)))];
-  return ds.length?ds.join(", "):"";
-}
-function yeuCauChungChiText(cb){
-  const reqs=yeuCauCuaChuyen(cb);
-  const ids=[...new Set(reqs.map(r=>r.value).filter(Boolean))];
-  return ids.length?ids.map(tenChungChiNgan).join(", "):"Không có yêu cầu chứng chỉ đặc biệt";
-}
-function tenChungChiNgan(id){
-  const map={
-    thang:"THANG",
-    gpu:"GPU / cấp điện",
-    acu:"ACU / cấp lạnh",
-    asu:"ASU / khởi động khí",
-    vesinh:"Vệ sinh",
-    nuocsach:"Nước sạch",
-    pvdb:"PVĐB",
-    highloader:"High Loader",
     pushback:"Pushback",
     daukeo:"Đầu kéo",
-    bangchuyen:"Băng chuyền"
+    bangchuyen:"Băng chuyền",
+    forklift:"Forklift"
   };
   return map[id]||id;
 }
-function chungChiLabel(ids){
-  return ids.map(tenChungChiNgan).join(" + ");
-}
-function nsCoTatCaChungChi(ns,ids){
-  return ids.every(id=>nsCoChungChi(ns,id)||nsCoChungChiId(ns,id));
-}
-function tongSoChungChi(ns){
-  return DANH_MUC_CHUNG_CHI.filter(c=>ns.chungChi&&ns.chungChi[c.id]).length;
-}
-function soChungChiNang(ns){
-  return DANH_MUC_CHUNG_CHI.filter(c=>ns.chungChi&&ns.chungChi[c.id]&&["2","2.1","2.2","3.1","3.2"].includes(c.cap)).length;
-}
+function chungChiLabel(ids){return ids.map(tenChungChiNgan).join(" + ");}
+function nsCoTatCaChungChi(ns,ids){return ids.every(id=>nsCoChungChi(ns,id)||nsCoChungChiId(ns,id));}
+function tongSoChungChi(ns){return DANH_MUC_CHUNG_CHI.filter(c=>ns.chungChi&&ns.chungChi[c.id]).length;}
+function soChungChiNang(ns){return DANH_MUC_CHUNG_CHI.filter(c=>ns.chungChi&&ns.chungChi[c.id]&&["2","2.1","2.2","3.1","3.2"].includes(c.cap)).length;}
 function chiCoDauKeo(ns){
   const cc=ns?.chungChi||{};
   const ids=DANH_MUC_CHUNG_CHI.filter(c=>cc[c.id]).map(c=>c.id);
@@ -5987,30 +5956,27 @@ function chiCoDauKeo(ns){
 function laNhanSuCap2Plus(ns){
   return soChungChiNang(ns)>0 || (ns.chungChi&&(ns.chungChi.thang||ns.chungChi.gpu||ns.chungChi.acu||ns.chungChi.asu||ns.chungChi.highloader||ns.chungChi.pushback));
 }
-function diemChienLuocChungChi(ns){
-  const cc=ns.chungChi||{};
-  let d=0;
-  if(cc.daukeo)d+=1;
-  if(cc.bangchuyen)d+=1;
-  if(cc.forklift)d+=2;
-  if(cc.thang)d+=6;
-  if(cc.gpu)d+=7;
-  if(cc.acu)d+=7;
-  if(cc.asu)d+=4;
-  if(cc.vesinh)d+=3;
-  if(cc.nuocsach)d+=3;
-  if(cc.pvdb)d+=3;
-  if(cc.highloader)d+=9;
-  if(cc.pushback)d+=10;
-  return d;
+function diemCoBanChungChi(id){
+  const map={daukeo:1,bangchuyen:1,forklift:2,vesinh:3,nuocsach:3,pvdb:3,asu:4,thang:6,gpu:7,acu:7,highloader:9,pushback:10};
+  return map[id]||1;
 }
-function bacChungChiVanHanh(ns){
-  // càng thấp càng nên dùng cho slot thường khi mọi tiêu chí công bằng gần ngang nhau
+function demNguoiCoCC(id, pool=null){
+  const ds=pool||state.danhSachNhanSu;
+  return ds.filter(ns=>ns.chungChi&&ns.chungChi[id]).length;
+}
+function diemHiemChungChi(id,pool=null){
+  const count=Math.max(1,demNguoiCoCC(id,pool));
+  return diemCoBanChungChi(id) * (1 + 5/count);
+}
+function diemChienLuocChungChi(ns,pool=null){
+  return DANH_MUC_CHUNG_CHI.reduce((s,c)=>s+((ns.chungChi&&ns.chungChi[c.id])?diemHiemChungChi(c.id,pool):0),0);
+}
+function bacChungChiVanHanh(ns,pool=null){
   if(chiCoDauKeo(ns))return 0;
   const cc=ns.chungChi||{};
   if(cc.daukeo&&cc.bangchuyen&&tongSoChungChi(ns)<=2)return 1;
   if(!laNhanSuCap2Plus(ns))return 2 + tongSoChungChi(ns);
-  return 20 + diemChienLuocChungChi(ns);
+  return 20 + diemChienLuocChungChi(ns,pool);
 }
 function laChuyenRaBai(cb){
   const yc=ycBaiDo(cb);
@@ -6018,7 +5984,6 @@ function laChuyenRaBai(cb){
 }
 function laChuyenNamSanDi(cb){
   const ghi=normTextSearch(cb?.ghiChu||"");
-  // Nằm sân đi: thường không có ETA, có STD; hoặc người nhập ghi chú rõ.
   return (!String(cb?.eta||"").trim() && !!String(cb?.std||"").trim()) ||
     ghi.includes("nam san") || ghi.includes("nam san di") || ghi.includes("nằm sân") || ghi.includes("nằm sân đi");
 }
@@ -6027,12 +5992,6 @@ function dichVuChuyenText(cb){
   const ds=[...new Set(reqs.map(r=>tenChungChiNgan(r.value||r.label)))];
   return ds.length?ds.join(", "):"";
 }
-function yeuCauChungChiText(cb){
-  const slots=slotYeuCauChuyen(cb);
-  const ids=[...new Set(slots.flatMap(s=>s.ids||[]))];
-  if(laChuyenNamSanDi(cb)) ids.push("vesinh/nuocsach");
-  return ids.length?ids.map(x=>x==="vesinh/nuocsach"?"Ưu tiên Vệ sinh/Nước sạch":tenChungChiNgan(x)).join(", "):"Không có yêu cầu chứng chỉ đặc biệt";
-}
 function slotYeuCauChuyen(cb){
   const reqs=yeuCauCuaChuyen(cb);
   const ids=[...new Set(reqs.map(r=>r.value).filter(Boolean))];
@@ -6040,266 +5999,209 @@ function slotYeuCauChuyen(cb){
   const raBai=laChuyenRaBai(cb);
 
   if(raBai) slots.push({ten:"THANG", ids:["thang"], loai:"batbuoc"});
-
   const kyThuat=["gpu","acu"].filter(x=>ids.includes(x));
   if(kyThuat.length) slots.push({ten:chungChiLabel(kyThuat), ids:kyThuat, loai:"batbuoc"});
-
   if(ids.includes("asu")) slots.push({ten:tenChungChiNgan("asu"), ids:["asu"], loai:"batbuoc"});
-
   if(ids.includes("highloader")) slots.push({ten:tenChungChiNgan("highloader"), ids:["highloader"], loai:"batbuoc"});
-
-  // VS/Nước sạch/PVĐB/Pushback: không tự tăng người, không bắt buộc slot chính.
   return slots;
+}
+function yeuCauChungChiText(cb){
+  const slots=slotYeuCauChuyen(cb);
+  const ids=[...new Set(slots.flatMap(s=>s.ids||[]))];
+  if(laChuyenNamSanDi(cb)) ids.push("vesinh/nuocsach");
+  return ids.length?ids.map(x=>x==="vesinh/nuocsach"?"Ưu tiên Vệ sinh/Nước sạch":tenChungChiNgan(x)).join(", "):"Không có yêu cầu chứng chỉ đặc biệt";
 }
 function soNguoiCanGoiY(cb){
   const reqs=yeuCauCuaChuyen(cb);
   const ids=new Set(reqs.map(r=>r.value).filter(Boolean));
   const raBai=laChuyenRaBai(cb);
   let n=soNguoiCan(cb.ma);
-
   if(raBai && (ids.has("gpu")||ids.has("acu"))) n=Math.max(n,3);
   if(ids.has("highloader")) n=Math.max(n,3);
-
   return n;
 }
-function thoiDiemXetGoiY(cb){
-  return batDauAbs(cb);
-}
+function thoiDiemXetGoiY(cb){return batDauAbs(cb);}
 function pcTruocThoiDiemCuaNV(ma,moc){
-  return state.phanCong
-    .filter(x=>x.maNV===ma&&pcDangHieuLuc(x)&&x.ketThucAbs<=moc)
+  return state.phanCong.filter(x=>x.maNV===ma&&pcDangHieuLuc(x)&&x.ketThucAbs<=moc)
     .sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0]||null;
 }
 function pcTrungTaiMocCuaNV(ma,cb){
   const moc=thoiDiemXetGoiY(cb);
-  return state.phanCong
-    .filter(pc=>pc.maNV===ma&&pcDangHieuLuc(pc)&&pc.maChuyen!==cb.ma)
+  return state.phanCong.filter(pc=>pc.maNV===ma&&pcDangHieuLuc(pc)&&pc.maChuyen!==cb.ma)
     .find(pc=>pc.batDauAbs<=moc && moc<pc.ketThucAbs) || null;
+}
+function gioiHanTheoCaChuyen(ns,cb){
+  const scope=String(cb?.caPhuTrach||"");
+  if(scope && scope!=="tatca") return nsTrongPhamViCaChuyen(ns,cb);
+  return true;
 }
 function phanLoaiGoiY(ns,cb){
   const moc=thoiDiemXetGoiY(cb);
   const tk=thongKeNV(ns.ma,moc);
 
-  if(!nsTrongPhamViCaChuyen(ns,cb)){
-    return {nhom:98,diem:999999,lyDo:"Không thuộc "+caChuyenLabel(cb.caPhuTrach),so:tk.so,tg:tk.tg};
-  }
-
-  if(!gioChuyenCoGiaoVoiCa(ns,cb)){
-    return {nhom:99,diem:999999,lyDo:"Ngoài giờ làm",so:tk.so,tg:tk.tg};
-  }
+  if(!gioiHanTheoCaChuyen(ns,cb))return {nhom:98,diem:999999,lyDo:"Không thuộc "+caChuyenLabel(cb.caPhuTrach),so:tk.so,tg:tk.tg};
+  if(!gioChuyenCoGiaoVoiCa(ns,cb))return {nhom:99,diem:999999,lyDo:"Ngoài giờ làm",so:tk.so,tg:tk.tg};
 
   const trungPc=pcTrungTaiMocCuaNV(ns.ma,cb);
-  const partialWarn=!!canhBaoGioLamViec(ns.ma,cb);
-  const partialText=partialWarn?`Làm được ${Math.round(phutLamDuocTrongChuyen(ns,cb))} phút trong khung chuyến`:"";
-
   if(!trungPc){
     const truoc=pcTruocThoiDiemCuaNV(ns.ma,moc);
     const ranh=truoc?moc-truoc.ketThucAbs:999999;
-    return {
-      nhom:partialWarn?3:0,
-      diem:partialWarn?300:0,
-      sub:-ranh,
-      ranh,
-      so:tk.so,
-      tg:tk.tg,
-      lyDo:partialText||"Rảnh tại giờ chuyến"
-    };
+    return {nhom:0,diem:0,sub:-ranh,ranh,so:tk.so,tg:tk.tg,lyDo:"Rảnh tại giờ chuyến"};
   }
 
   const cbCu=chuyen(trungPc.maChuyen);
   const remain=trungPc.ketThucAbs-moc;
-
   if(remain<=15 && !(cbCu&&flightCoDichVuGiuNguoi(cbCu))){
     return {nhom:90,diem:remain,sub:9999,ranh:0,so:tk.so,tg:tk.tg,lyDo:`Gợi ý điều động: đang làm ${cbCu?cbCu.flight:trungPc.maChuyen}, còn ${Math.ceil(Math.max(0,remain))} phút`};
   }
-
   const gan=khoangCachBai(cbCu?.baiDo,cb.baiDo);
   if(gan<=3 && !(cbCu&&flightCoDichVuGiuNguoi(cbCu))){
     return {nhom:91,diem:gan*100+remain,sub:9999,ranh:0,so:tk.so,tg:tk.tg,lyDo:`Gợi ý điều động bãi gần: ${cbCu?.baiDo} → ${cb.baiDo}`};
   }
-
   return {nhom:99,diem:999999,sub:9999,ranh:0,so:tk.so,tg:tk.tg,lyDo:`Đang kẹt ${cbCu?cbCu.flight:trungPc.maChuyen} tại mốc chuyến`};
 }
 function ungVienChinh(cb){
-  const scope=String(cb?.caPhuTrach||"");
   return state.danhSachNhanSu
     .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
-    .filter(ns=>{
-      if(scope && scope!=="tatca") return nsTrongPhamViCaChuyen(ns,cb);
-      return true;
-    })
+    .filter(ns=>gioiHanTheoCaChuyen(ns,cb))
     .filter(ns=>gioChuyenCoGiaoVoiCa(ns,cb))
     .filter(ns=>phanLoaiGoiY(ns,cb).nhom<90);
 }
 function ungVienDieuDong(cb){
-  const scope=String(cb?.caPhuTrach||"");
   return state.danhSachNhanSu
     .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
-    .filter(ns=>{
-      if(scope && scope!=="tatca") return nsTrongPhamViCaChuyen(ns,cb);
-      return true;
-    })
+    .filter(ns=>gioiHanTheoCaChuyen(ns,cb))
     .map(ns=>({ns,p:phanLoaiGoiY(ns,cb)}))
     .filter(x=>x.p.nhom>=90 && x.p.nhom<99)
     .sort((a,b)=>a.p.nhom-b.p.nhom || a.p.diem-b.p.diem)
     .slice(0,5);
 }
-function diemCongBangTaiMoc(ns,cb){
-  const tk=thongKeNV(ns.ma,thoiDiemXetGoiY(cb));
-  return tk.so*10000 + tk.tg*100;
-}
-function diemRanhTaiMoc(ns,cb){
-  const p=phanLoaiGoiY(ns,cb);
-  return p.nhom===0 ? (p.sub||0) : 999999 + (p.diem||0);
-}
-function diemChonChinh(ns,cb){
-  const tk=thongKeNV(ns.ma,thoiDiemXetGoiY(cb));
-  const p=phanLoaiGoiY(ns,cb);
-
-  // Thứ tự: rảnh/khả dụng → ít chuyến → ít phút → rảnh lâu hơn → sau cùng mới giữ chiều sâu chứng chỉ.
-  return p.nhom*100000000 +
-    tk.so*1000000 +
-    tk.tg*1000 +
-    diemRanhTaiMoc(ns,cb) +
-    bacChungChiVanHanh(ns)*25;
-}
-function diemChonBatBuoc(ns,cb,slot){
-  const tk=thongKeNV(ns.ma,thoiDiemXetGoiY(cb));
-  const p=phanLoaiGoiY(ns,cb);
-  return p.nhom*100000000 +
-    tk.so*1000000 +
-    tk.tg*1000 +
-    diemRanhTaiMoc(ns,cb) +
-    bacChungChiVanHanh(ns)*15;
-}
-function coVSNuocSach(ns){
-  return !!(ns.chungChi&&(ns.chungChi.vesinh||ns.chungChi.nuocsach));
-}
-function diemThuongSauYeuCau(ns,cb){
-  const base=diemChonChinh(ns,cb);
-  // Chuyến nằm sân đi: ưu tiên VS/Nước sạch nếu không phá công bằng quá nhiều.
-  const bonus=(laChuyenNamSanDi(cb)&&coVSNuocSach(ns))?-120000:0;
-  return base + bonus + bacChungChiVanHanh(ns)*250;
-}
+function thongKeTaiMoc(ns,cb){return thongKeNV(ns.ma,thoiDiemXetGoiY(cb));}
 function duocLamNguoiBoSung(ns,cb,need){
-  // Ngoài bãi chỉ cần 2 người thì người chỉ có đầu kéo không nên là người thứ hai.
-  // Nếu cần 3 người trở lên thì vẫn được dùng để lấp đủ quân.
   if(laChuyenRaBai(cb) && need<=2 && chiCoDauKeo(ns)) return false;
   return true;
 }
-function chonNguoiTotNhat(ds,cb,used,need){
-  return ds
-    .filter(ns=>!used.has(ns.ma))
-    .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
-    .sort((a,b)=>diemChonChinh(a,cb)-diemChonChinh(b,cb) || String(a.ten).localeCompare(String(b.ten),"vi"))[0]||null;
+function coVSNuocSach(ns){return !!(ns.chungChi&&(ns.chungChi.vesinh||ns.chungChi.nuocsach));}
+function diemUngVienThuong(ns,cb,pool){
+  const tk=thongKeTaiMoc(ns,cb);
+  const p=phanLoaiGoiY(ns,cb);
+  // Rule engine: công bằng đứng trước, chiều sâu chỉ phân định khi công bằng gần ngang.
+  return [
+    p.nhom,
+    tk.so,
+    tk.tg,
+    p.sub||0,
+    bacChungChiVanHanh(ns,pool),
+    diemChienLuocChungChi(ns,pool),
+    String(ns.ten||"")
+  ];
 }
-function chonNguoiBatBuoc(ds,cb,slot,used){
-  return ds
-    .filter(ns=>!used.has(ns.ma))
-    .filter(ns=>nsCoTatCaChungChi(ns,slot.ids))
-    .sort((a,b)=>diemChonBatBuoc(a,cb,slot)-diemChonBatBuoc(b,cb,slot) || String(a.ten).localeCompare(String(b.ten),"vi"))[0]||null;
+function diemUngVienSlot(ns,cb,pool){
+  const tk=thongKeTaiMoc(ns,cb);
+  const p=phanLoaiGoiY(ns,cb);
+  return [
+    p.nhom,
+    tk.so,
+    tk.tg,
+    p.sub||0,
+    bacChungChiVanHanh(ns,pool),
+    String(ns.ten||"")
+  ];
 }
-function nguoiTrongNhomDapUngSlot(selected,slot,usedSlot){
-  return selected
-    .filter(it=>!usedSlot.has(it.ns.ma))
-    .filter(it=>nsCoTatCaChungChi(it.ns,slot.ids))
-    .sort((a,b)=>diemChonBatBuoc(a.ns,it.cb||chuyen(chuyenDangChon),slot)-diemChonBatBuoc(b.ns,it.cb||chuyen(chuyenDangChon),slot))[0]||null;
+function cmpArray(a,b){
+  for(let i=0;i<Math.min(a.length,b.length);i++){
+    if(typeof a[i]==="string"||typeof b[i]==="string"){
+      const c=String(a[i]).localeCompare(String(b[i]),"vi");
+      if(c!==0)return c;
+    }else if(a[i]!==b[i]) return a[i]-b[i];
+  }
+  return a.length-b.length;
 }
-function nguoiDeThay(selected,usedSlot,cb){
-  return selected
-    .filter(it=>!usedSlot.has(it.ns.ma))
-    .sort((a,b)=>bacChungChiVanHanh(a.ns)-bacChungChiVanHanh(b.ns) || diemCongBangTaiMoc(b.ns,cb)-diemCongBangTaiMoc(a.ns,cb))[0]||null;
+function sortedThuong(pool,cb,used,need){
+  return pool.filter(ns=>!used.has(ns.ma)).filter(ns=>duocLamNguoiBoSung(ns,cb,need))
+    .sort((a,b)=>cmpArray(diemUngVienThuong(a,cb,pool),diemUngVienThuong(b,cb,pool)));
 }
-function toiUuSauYeuCau(selected,candidates,cb,need,usedSlot){
-  const used=new Set(selected.map(x=>x.ns.ma));
-  let changed=true;
-  let loops=0;
-
-  while(changed && loops++<20){
-    changed=false;
-    for(const it of selected){
-      if(usedSlot.has(it.ns.ma))continue;
-      const better=candidates
-        .filter(ns=>!used.has(ns.ma))
-        .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
-        .sort((a,b)=>diemThuongSauYeuCau(a,cb)-diemThuongSauYeuCau(b,cb))[0];
-
-      if(!better)continue;
-
-      const oldScore=diemThuongSauYeuCau(it.ns,cb);
-      const newScore=diemThuongSauYeuCau(better,cb);
-
-      // Chỉ thay nếu tốt hơn rõ ràng, tránh đảo người vô ích.
-      if(newScore + 5000 < oldScore){
-        used.delete(it.ns.ma);
-        it.ns=better;
-        it.vaiTro="Bổ sung người";
-        used.add(better.ma);
-        changed=true;
-      }
+function sortedSlot(pool,cb,slot,used){
+  return pool.filter(ns=>!used.has(ns.ma)).filter(ns=>nsCoTatCaChungChi(ns,slot.ids))
+    .sort((a,b)=>cmpArray(diemUngVienSlot(a,cb,pool),diemUngVienSlot(b,cb,pool)));
+}
+function mucPhuHopYeuCau(selected,slots){
+  return slots.reduce((n,slot)=>{
+    return n + (selected.some(it=>nsCoTatCaChungChi(it.ns,slot.ids))?1:0);
+  },0);
+}
+function diemChieuSauConLai(all,selected){
+  const used=new Set(selected.map(it=>it.ns.ma));
+  const remain=all.filter(ns=>!used.has(ns.ma));
+  const hiem=["thang","gpu","acu","asu","highloader","pushback"];
+  let score=0;
+  hiem.forEach(id=>{
+    score += remain.filter(ns=>ns.chungChi&&ns.chungChi[id]).length * diemHiemChungChi(id,all);
+  });
+  return score;
+}
+function diemCongBangNhom(selected,cb){
+  return selected.reduce((s,it)=>{
+    const tk=thongKeTaiMoc(it.ns,cb);
+    return s + tk.so*10000 + tk.tg*100 + Math.max(0,phanLoaiGoiY(it.ns,cb).sub||0);
+  },0);
+}
+function taoToHop(arr,k,limit=120){
+  const res=[];
+  function rec(start,cur){
+    if(res.length>=limit)return;
+    if(cur.length===k){res.push([...cur]);return;}
+    for(let i=start;i<arr.length;i++){
+      cur.push(arr[i]);
+      rec(i+1,cur);
+      cur.pop();
+      if(res.length>=limit)return;
     }
   }
+  rec(0,[]);
+  return res;
+}
+function ganVaiTroChoToHop(combo,cb,slots){
+  const selected=combo.map(ns=>({ns,vaiTro:"Bổ sung người"}));
+  const used=new Set();
+  slots.forEach(slot=>{
+    const cand=selected
+      .filter(it=>!used.has(it.ns.ma)&&nsCoTatCaChungChi(it.ns,slot.ids))
+      .sort((a,b)=>cmpArray(diemUngVienSlot(a.ns,cb,combo),diemUngVienSlot(b.ns,cb,combo)))[0];
+    if(cand){cand.vaiTro=slot.ten;used.add(cand.ns.ma);}
+  });
   return selected;
+}
+function diemPhuongAn(selected,cb,pool,slots){
+  const match=mucPhuHopYeuCau(selected,slots);
+  const missing=slots.length-match;
+  const fair=diemCongBangNhom(selected,cb);
+  const depth=-diemChieuSauConLai(pool,selected); // càng âm càng tốt vì giữ lại nhiều người quý
+  const normalCost=selected.reduce((s,it)=>s+bacChungChiVanHanh(it.ns,pool),0);
+  const vsBonus=(laChuyenNamSanDi(cb)&&selected.some(it=>coVSNuocSach(it.ns)))?-2500:0;
+  return missing*100000000 + fair + normalCost*200 + depth*20 + vsBonus;
 }
 function chonGoiYNhanSu(cb){
   const need=soNguoiCanGoiY(cb);
-  const candidates=ungVienChinh(cb);
-  const selected=[];
-  const used=new Set();
-
-  // B1: lấp đủ quân theo công bằng trước.
-  while(selected.length<need){
-    const ns=chonNguoiTotNhat(candidates,cb,used,need);
-    if(!ns)break;
-    used.add(ns.ma);
-    selected.push({ns,vaiTro:"Bổ sung người"});
-  }
-
-  // B2: kiểm tra slot bắt buộc và thay người nếu cần.
+  const pool=ungVienChinh(cb);
   const slots=slotYeuCauChuyen(cb);
-  const usedSlot=new Set();
+  if(!need||!pool.length)return [];
 
+  // Lấy nhóm ứng viên đủ rộng, ưu tiên người công bằng trước nhưng không bỏ người có slot bắt buộc.
+  const base=sortedThuong(pool,cb,new Set(),need).slice(0,14);
   slots.forEach(slot=>{
-    let daCo=selected
-      .filter(it=>!usedSlot.has(it.ns.ma)&&nsCoTatCaChungChi(it.ns,slot.ids))
-      .sort((a,b)=>diemChonBatBuoc(a.ns,cb,slot)-diemChonBatBuoc(b.ns,cb,slot))[0];
-
-    if(daCo){
-      daCo.vaiTro=slot.ten;
-      usedSlot.add(daCo.ns.ma);
-      return;
-    }
-
-    const nguoiNgoai=chonNguoiBatBuoc(candidates,cb,slot,used);
-    if(!nguoiNgoai)return;
-
-    if(selected.length<need){
-      used.add(nguoiNgoai.ma);
-      selected.push({ns:nguoiNgoai,vaiTro:slot.ten});
-      usedSlot.add(nguoiNgoai.ma);
-      return;
-    }
-
-    const biThay=nguoiDeThay(selected,usedSlot,cb);
-    if(biThay){
-      used.delete(biThay.ns.ma);
-      biThay.ns=nguoiNgoai;
-      biThay.vaiTro=slot.ten;
-      used.add(nguoiNgoai.ma);
-      usedSlot.add(nguoiNgoai.ma);
-    }
+    sortedSlot(pool,cb,slot,new Set()).slice(0,6).forEach(ns=>{
+      if(!base.some(x=>x.ma===ns.ma))base.push(ns);
+    });
   });
 
-  // B3: nếu vẫn chưa đủ thì cố lấp tiếp bằng người chính khả dụng.
-  while(selected.length<need){
-    const ns=chonNguoiTotNhat(candidates,cb,used,need);
-    if(!ns)break;
-    used.add(ns.ma);
-    selected.push({ns,vaiTro:"Bổ sung người"});
-  }
+  const combos=taoToHop(base,Math.min(need,base.length),160);
+  if(!combos.length)return [];
 
-  // B4: tối ưu chiều sâu và ưu tiên VS/Nước sạch cho chuyến nằm sân đi.
-  return toiUuSauYeuCau(selected,candidates,cb,need,usedSlot);
+  const plans=combos.map(combo=>ganVaiTroChoToHop(combo,cb,slots))
+    .sort((a,b)=>diemPhuongAn(a,cb,pool,slots)-diemPhuongAn(b,cb,pool,slots));
+
+  return plans[0]||[];
 }
 function hienGoiYNhanSu(){
   const cb=chuyen(chuyenDangChon);
@@ -6321,14 +6223,16 @@ function hienGoiYNhanSu(){
   lines.push(`Cần chứng chỉ: ${yc}`);
   lines.push("");
   lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - chỉ đếm chuyến đã bắt đầu trước mốc này`);
-  lines.push("Logic: đúng ca → rảnh → ít chuyến → ít phút → đúng chứng chỉ → giữ chiều sâu.");
+  lines.push("Rule Engine: đúng ca → rảnh → ít chuyến → ít phút → slot bắt buộc → giữ chiều sâu.");
   lines.push("");
   lines.push("Đề xuất:");
 
   if(selected.length){
     selected.forEach((item,i)=>{
       const tk=thongKeNV(item.ns.ma,thoiDiemXetGoiY(cb));
-      lines.push(`${i+1}. ${item.ns.ten}${item.vaiTro&&item.vaiTro!=="Bổ sung người" ? ` (${item.vaiTro})` : ""} - ${tk.so} chuyến / ${tk.tg}'`);
+      const p=phanLoaiGoiY(item.ns,cb);
+      const giu=diemChienLuocChungChi(item.ns,ungVienChinh(cb)).toFixed(1);
+      lines.push(`${i+1}. ${item.ns.ten}${item.vaiTro&&item.vaiTro!=="Bổ sung người" ? ` (${item.vaiTro})` : ""} - ${tk.so} chuyến / ${tk.tg}' - ${p.lyDo} - GTCC ${giu}`);
     });
   }else{
     lines.push("Chưa chọn được nhân sự phù hợp.");
@@ -6339,7 +6243,7 @@ function hienGoiYNhanSu(){
     lines.push(`Còn thiếu: ${need-selected.length} người.`);
     if(dieuDong.length){
       lines.push("Gợi ý điều động, không tự chia:");
-      dieuDong.forEach((x,i)=>lines.push(`- ${x.ns.ten}: ${x.p.lyDo}`));
+      dieuDong.forEach((x)=>lines.push(`- ${x.ns.ten}: ${x.p.lyDo}`));
     }else{
       lines.push("Không còn phương án điều động hợp lý.");
     }
