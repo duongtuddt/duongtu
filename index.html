@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.00 Bar Border Partial Shift Suggest</title>
+<title>Dương Tú v1.01 Realtime Clean Fill Suggest</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2264,6 +2264,37 @@ button:hover,.taskItem:hover{
 .flightScopeRow .bar.flight.ok{
   border-top-color:var(--scopeColor)!important;
 }
+
+
+/* v1.01 - bỏ viền màu chạy ngang cả dòng, chỉ giữ viền trên của thanh realtime */
+.flightScopeRow.ca1 .flightScopeLabel,.flightScopeRow.ca1 .flightScopeLane,
+.flightScopeRow.ca2 .flightScopeLabel,.flightScopeRow.ca2 .flightScopeLane,
+.flightScopeRow.ca3 .flightScopeLabel,.flightScopeRow.ca3 .flightScopeLane,
+.flightScopeRow.ca4 .flightScopeLabel,.flightScopeRow.ca4 .flightScopeLane,
+.flightScopeRow.ca5 .flightScopeLabel,.flightScopeRow.ca5 .flightScopeLane,
+.flightScopeRow.kd .flightScopeLabel,.flightScopeRow.kd .flightScopeLane,
+.flightScopeRow.truc .flightScopeLabel,.flightScopeRow.truc .flightScopeLane{
+  border-top:0!important;
+  border-bottom:1px solid rgba(255,255,255,.12)!important;
+}
+.flightScopeRow .flightScopeLabel.selected,
+.flightScopeRow .flightScopeLane.selected{
+  border-top:0!important;
+  border-bottom:1px solid rgba(255,255,255,.12)!important;
+  outline:2px solid #38bdf8!important;
+  outline-offset:-2px!important;
+  box-shadow:inset 5px 0 var(--scopeColor), inset 0 0 0 1px rgba(56,189,248,.55)!important;
+}
+.flightScopeRow .bar.flight{
+  border-top:4px solid var(--scopeColor)!important;
+  border-left:0!important;
+  border-right:0!important;
+  border-bottom:0!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.15)!important;
+}
+.flightScopeRow .bar.flight.ok{background:#16a34a!important}
+.flightScopeRow .bar.flight.warn{background:#f59e0b!important}
+.flightScopeRow .bar.flight.miss{background:#dc2626!important}
 
 </style>
 </head>
@@ -5973,16 +6004,44 @@ function layUngVienSlot(pool,slot,cb,limit=8){
 }
 function chonBoSungChoPhuongAn(pool,cb,need,used){
   const them=[];
-  while(them.length+used.size<need){
-    const remaining=pool
+  const pickOne=(list)=>{
+    const cand=list
       .filter(ns=>!used.has(ns.ma))
       .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
-      .sort((a,b)=>sapXepBoSung(a,b,cb,pool,used));
-    const cand=remaining[0];
-    if(!cand)break;
-    used.add(cand.ma);
-    them.push({ns:cand,vaiTro:"Bổ sung người"});
+      .sort((a,b)=>sapXepBoSung(a,b,cb,pool,used))[0];
+    if(cand){
+      used.add(cand.ma);
+      them.push({ns:cand,vaiTro:"Bổ sung người"});
+      return true;
+    }
+    return false;
+  };
+
+  // Vòng 1: người hợp lý nhất theo thuật toán chính.
+  while(them.length+used.size<need){
+    const list=pool.filter(ns=>phanLoaiGoiY(ns,cb).nhom<98);
+    if(!pickOne(list))break;
   }
+
+  // Vòng 2: vẫn còn thiếu thì dùng bất kỳ nhân sự đang được chọn hôm nay, đúng phạm vi ca chuyến.
+  // Mục tiêu: chuyến cần 3 thì phải cố gắng lấp đủ người trước, rồi người điều hành sẽ cân nhắc.
+  while(them.length+used.size<need){
+    const fallback=state.danhSachNhanSu
+      .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
+      .filter(ns=>nsTrongPhamViCaChuyen(ns,cb))
+      .filter(ns=>gioChuyenCoGiaoVoiCa(ns,cb))
+      .filter(ns=>phanLoaiGoiY(ns,cb).nhom<99);
+    if(!pickOne(fallback))break;
+  }
+
+  // Vòng 3: cuối cùng vẫn thiếu thì chọn người đúng ca/phạm vi, không ép full giờ.
+  while(them.length+used.size<need){
+    const last=state.danhSachNhanSu
+      .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
+      .filter(ns=>nsTrongPhamViCaChuyen(ns,cb));
+    if(!pickOne(last))break;
+  }
+
   return them;
 }
 function diemPhuongAn(items,cb,need){
