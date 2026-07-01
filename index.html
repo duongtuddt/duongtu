@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.07 Fix Work Count By Time</title>
+<title>Dương Tú v1.08 Rebuild Suggestion Logic</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -5951,49 +5951,27 @@ function yeuCauChungChiText(cb){
   const ids=[...new Set(reqs.map(r=>r.value).filter(Boolean))];
   return ids.length?ids.map(tenChungChiNgan).join(", "):"Không có yêu cầu chứng chỉ đặc biệt";
 }
-function slotYeuCauChuyen(cb){
-  const reqs=yeuCauCuaChuyen(cb);
-  const ids=[...new Set(reqs.map(r=>r.value).filter(Boolean))];
-  const slots=[];
-  const raBai=!ycBaiDo(cb)?.coThang;
-
-  if(raBai) slots.push({ten:"THANG", ids:["thang"], loai:"batbuoc"});
-  const kyThuat=["gpu","acu"].filter(x=>ids.includes(x)); // ASU không tự tăng thêm người khi ra bãi
-  if(kyThuat.length) slots.push({ten:kyThuat.map(tenChungChiNgan).join(" + "), ids:kyThuat, loai:"batbuoc"});
-  if(ids.includes("highloader")) slots.push({ten:tenChungChiNgan("highloader"), ids:["highloader"], loai:"batbuoc"});
-
-  // VS/Nước sạch/PVĐB/Pushback chỉ để cảnh báo/ghi chú, không tự tạo slot bắt buộc trong gợi ý chính.
-  return slots;
+function tenChungChiNgan(id){
+  const map={
+    thang:"THANG",
+    gpu:"GPU / cấp điện",
+    acu:"ACU / cấp lạnh",
+    asu:"ASU / khởi động khí",
+    vesinh:"Vệ sinh",
+    nuocsach:"Nước sạch",
+    pvdb:"PVĐB",
+    highloader:"High Loader",
+    pushback:"Pushback",
+    daukeo:"Đầu kéo",
+    bangchuyen:"Băng chuyền"
+  };
+  return map[id]||id;
 }
-function soNguoiCanGoiY(cb){
-  const reqs=yeuCauCuaChuyen(cb);
-  const ids=new Set(reqs.map(r=>r.value).filter(Boolean));
-  const raBai=!ycBaiDo(cb)?.coThang;
-  let n=soNguoiCan(cb.ma);
-  if(raBai && (ids.has("gpu")||ids.has("acu"))) n=Math.max(n,3);
-  return n;
-}
-function laNhanSuCap2Plus(ns){
-  return soChungChiNang(ns)>0 || (ns.chungChi&&(ns.chungChi.thang||ns.chungChi.gpu||ns.chungChi.acu||ns.chungChi.asu||ns.chungChi.highloader||ns.chungChi.pushback));
-}
-function capNheDiem(ns){
-  const cc=ns.chungChi||{};
-  const count=tongSoChungChi(ns);
-  const nang=soChungChiNang(ns);
-  if(chiCoDauKeo(ns))return 0;
-  if(cc.daukeo && cc.bangchuyen && count<=2)return 1;
-  if(!laNhanSuCap2Plus(ns))return 2 + count;
-  return 30 + count*5 + nang*15;
-}
-function soCap2DuPhong(pool,used){
-  return pool.filter(ns=>!used.has(ns.ma)&&laNhanSuCap2Plus(ns)).length;
+function chungChiLabel(ids){
+  return ids.map(tenChungChiNgan).join(" + ");
 }
 function nsCoTatCaChungChi(ns,ids){
   return ids.every(id=>nsCoChungChi(ns,id)||nsCoChungChiId(ns,id));
-}
-function diemGoiY(ns,cb){
-  const p=phanLoaiGoiY(ns,cb), tk=thongKeNV(ns.ma);
-  return {p, tk};
 }
 function tongSoChungChi(ns){
   return DANH_MUC_CHUNG_CHI.filter(c=>ns.chungChi&&ns.chungChi[c.id]).length;
@@ -6006,215 +5984,253 @@ function chiCoDauKeo(ns){
   const ids=DANH_MUC_CHUNG_CHI.filter(c=>cc[c.id]).map(c=>c.id);
   return ids.length===1 && ids[0]==="daukeo";
 }
+function laNhanSuCap2Plus(ns){
+  return soChungChiNang(ns)>0 || (ns.chungChi&&(ns.chungChi.thang||ns.chungChi.gpu||ns.chungChi.acu||ns.chungChi.asu||ns.chungChi.highloader||ns.chungChi.pushback));
+}
+function diemChienLuocChungChi(ns){
+  const cc=ns.chungChi||{};
+  let d=0;
+  if(cc.daukeo)d+=1;
+  if(cc.bangchuyen)d+=1;
+  if(cc.forklift)d+=2;
+  if(cc.thang)d+=6;
+  if(cc.gpu)d+=7;
+  if(cc.acu)d+=7;
+  if(cc.asu)d+=4;
+  if(cc.vesinh)d+=3;
+  if(cc.nuocsach)d+=3;
+  if(cc.pvdb)d+=3;
+  if(cc.highloader)d+=9;
+  if(cc.pushback)d+=10;
+  return d;
+}
+function bacChungChiVanHanh(ns){
+  // càng thấp càng nên dùng cho slot thường khi mọi tiêu chí công bằng gần ngang nhau
+  if(chiCoDauKeo(ns))return 0;
+  const cc=ns.chungChi||{};
+  if(cc.daukeo&&cc.bangchuyen&&tongSoChungChi(ns)<=2)return 1;
+  if(!laNhanSuCap2Plus(ns))return 2 + tongSoChungChi(ns);
+  return 20 + diemChienLuocChungChi(ns);
+}
 function laChuyenRaBai(cb){
   const yc=ycBaiDo(cb);
   return yc ? !yc.coThang : false;
 }
-function duocLamNguoiBoSung(ns,cb,need){
-  if(laChuyenRaBai(cb) && need<=2 && chiCoDauKeo(ns)) return false;
-  return true;
+function laChuyenNamSanDi(cb){
+  const ghi=normTextSearch(cb?.ghiChu||"");
+  // Nằm sân đi: thường không có ETA, có STD; hoặc người nhập ghi chú rõ.
+  return (!String(cb?.eta||"").trim() && !!String(cb?.std||"").trim()) ||
+    ghi.includes("nam san") || ghi.includes("nam san di") || ghi.includes("nằm sân") || ghi.includes("nằm sân đi");
 }
-function diemCongBang(ns){
-  const tk=thongKeNV(ns.ma);
-  return tk.so*100 + tk.tg/10;
+function dichVuChuyenText(cb){
+  const reqs=yeuCauCuaChuyen(cb).filter(r=>r.id!=="stand-thang");
+  const ds=[...new Set(reqs.map(r=>tenChungChiNgan(r.value||r.label)))];
+  return ds.length?ds.join(", "):"";
 }
-function sapXepSlotBatBuoc(a,b,cb){
-  const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
-  return da.p.nhom-db.p.nhom ||
-    da.p.diem-db.p.diem ||
-    diemCongBang(a)-diemCongBang(b) ||
-    capNheDiem(a)-capNheDiem(b);
+function yeuCauChungChiText(cb){
+  const slots=slotYeuCauChuyen(cb);
+  const ids=[...new Set(slots.flatMap(s=>s.ids||[]))];
+  if(laChuyenNamSanDi(cb)) ids.push("vesinh/nuocsach");
+  return ids.length?ids.map(x=>x==="vesinh/nuocsach"?"Ưu tiên Vệ sinh/Nước sạch":tenChungChiNgan(x)).join(", "):"Không có yêu cầu chứng chỉ đặc biệt";
 }
-function sapXepBoSung(a,b,cb,pool,used){
-  const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
-  const tka=thongKeNV(a.ma,thoiDiemXetGoiY(cb)), tkb=thongKeNV(b.ma,thoiDiemXetGoiY(cb));
-  const coBatBuoc=chuyenCoYeuCauBatBuoc(cb);
+function slotYeuCauChuyen(cb){
+  const reqs=yeuCauCuaChuyen(cb);
+  const ids=[...new Set(reqs.map(r=>r.value).filter(Boolean))];
+  const slots=[];
+  const raBai=laChuyenRaBai(cb);
 
-  if(da.p.nhom!==db.p.nhom)return da.p.nhom-db.p.nhom;
+  if(raBai) slots.push({ten:"THANG", ids:["thang"], loai:"batbuoc"});
 
-  // Chuyến không yêu cầu gì: giữ chiều sâu là ưu tiên sau điều kiện rảnh.
-  // Ví dụ còn 2 cấp 1 rảnh thì không lấy người nhiều chứng chỉ vào chuyến thường.
-  if(!coBatBuoc){
-    if(bacChungChiVanHanh(a)!==bacChungChiVanHanh(b))return bacChungChiVanHanh(a)-bacChungChiVanHanh(b);
-    if(tka.so!==tkb.so)return tka.so-tkb.so;
-    if(tka.tg!==tkb.tg)return tka.tg-tkb.tg;
-    return (da.p.sub||0)-(db.p.sub||0);
+  const kyThuat=["gpu","acu"].filter(x=>ids.includes(x));
+  if(kyThuat.length) slots.push({ten:chungChiLabel(kyThuat), ids:kyThuat, loai:"batbuoc"});
+
+  if(ids.includes("asu")) slots.push({ten:tenChungChiNgan("asu"), ids:["asu"], loai:"batbuoc"});
+
+  if(ids.includes("highloader")) slots.push({ten:tenChungChiNgan("highloader"), ids:["highloader"], loai:"batbuoc"});
+
+  // VS/Nước sạch/PVĐB/Pushback: không tự tăng người, không bắt buộc slot chính.
+  return slots;
+}
+function soNguoiCanGoiY(cb){
+  const reqs=yeuCauCuaChuyen(cb);
+  const ids=new Set(reqs.map(r=>r.value).filter(Boolean));
+  const raBai=laChuyenRaBai(cb);
+  let n=soNguoiCan(cb.ma);
+
+  if(raBai && (ids.has("gpu")||ids.has("acu"))) n=Math.max(n,3);
+  if(ids.has("highloader")) n=Math.max(n,3);
+
+  return n;
+}
+function thoiDiemXetGoiY(cb){
+  return batDauAbs(cb);
+}
+function pcTruocThoiDiemCuaNV(ma,moc){
+  return state.phanCong
+    .filter(x=>x.maNV===ma&&pcDangHieuLuc(x)&&x.ketThucAbs<=moc)
+    .sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0]||null;
+}
+function pcTrungTaiMocCuaNV(ma,cb){
+  const moc=thoiDiemXetGoiY(cb);
+  return state.phanCong
+    .filter(pc=>pc.maNV===ma&&pcDangHieuLuc(pc)&&pc.maChuyen!==cb.ma)
+    .find(pc=>pc.batDauAbs<=moc && moc<pc.ketThucAbs) || null;
+}
+function phanLoaiGoiY(ns,cb){
+  const moc=thoiDiemXetGoiY(cb);
+  const tk=thongKeNV(ns.ma,moc);
+
+  if(!nsTrongPhamViCaChuyen(ns,cb)){
+    return {nhom:98,diem:999999,lyDo:"Không thuộc "+caChuyenLabel(cb.caPhuTrach),so:tk.so,tg:tk.tg};
   }
 
-  // Chuyến có yêu cầu: vẫn giữ người quý cho slot thường, nhưng cân bằng công việc rõ hơn.
-  if(bacChungChiVanHanh(a)!==bacChungChiVanHanh(b))return bacChungChiVanHanh(a)-bacChungChiVanHanh(b);
-  if(tka.so!==tkb.so)return tka.so-tkb.so;
-  if(tka.tg!==tkb.tg)return tka.tg-tkb.tg;
-  return (da.p.sub||0)-(db.p.sub||0);
-}
-function layUngVienSlot(pool,slot,cb,limit=8){
-  return pool
-    .filter(ns=>nsCoTatCaChungChi(ns,slot.ids))
-    .sort((a,b)=>sapXepSlotBatBuoc(a,b,cb))
-    .slice(0,limit);
-}
-function chonBoSungChoPhuongAn(pool,cb,need,used){
-  const them=[];
-  const pickOne=(list)=>{
-    const cand=list
-      .filter(ns=>!used.has(ns.ma))
-      .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
-      .sort((a,b)=>sapXepBoSung(a,b,cb,pool,used))[0];
-    if(cand){
-      used.add(cand.ma);
-      them.push({ns:cand,vaiTro:"Bổ sung người"});
-      return true;
-    }
-    return false;
-  };
-
-  // Vòng 1: người hợp lý nhất theo thuật toán chính.
-  while(them.length+used.size<need){
-    const list=pool.filter(ns=>phanLoaiGoiY(ns,cb).nhom<98);
-    if(!pickOne(list))break;
+  if(!gioChuyenCoGiaoVoiCa(ns,cb)){
+    return {nhom:99,diem:999999,lyDo:"Ngoài giờ làm",so:tk.so,tg:tk.tg};
   }
 
-  // Vòng 2: vẫn còn thiếu thì dùng bất kỳ nhân sự đang được chọn hôm nay, đúng phạm vi ca chuyến.
-  // Mục tiêu: chuyến cần 3 thì phải cố gắng lấp đủ người trước, rồi người điều hành sẽ cân nhắc.
-  while(them.length+used.size<need){
-    const fallback=state.danhSachNhanSu
-      .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
-      .filter(ns=>nsTrongPhamViCaChuyen(ns,cb))
-      .filter(ns=>gioChuyenCoGiaoVoiCa(ns,cb))
-      .filter(ns=>phanLoaiGoiY(ns,cb).nhom<99);
-    if(!pickOne(fallback))break;
+  const trungPc=pcTrungTaiMocCuaNV(ns.ma,cb);
+  const partialWarn=!!canhBaoGioLamViec(ns.ma,cb);
+  const partialText=partialWarn?`Làm được ${Math.round(phutLamDuocTrongChuyen(ns,cb))} phút trong khung chuyến`:"";
+
+  if(!trungPc){
+    const truoc=pcTruocThoiDiemCuaNV(ns.ma,moc);
+    const ranh=truoc?moc-truoc.ketThucAbs:999999;
+    return {
+      nhom:partialWarn?3:0,
+      diem:partialWarn?300:0,
+      sub:-ranh,
+      ranh,
+      so:tk.so,
+      tg:tk.tg,
+      lyDo:partialText||"Rảnh tại giờ chuyến"
+    };
   }
 
-  // Vòng 3: cuối cùng vẫn thiếu thì chọn người đúng ca/phạm vi, không ép full giờ.
-  while(them.length+used.size<need){
-    const last=state.danhSachNhanSu
-      .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
-      .filter(ns=>nsTrongPhamViCaChuyen(ns,cb));
-    if(!pickOne(last))break;
+  const cbCu=chuyen(trungPc.maChuyen);
+  const remain=trungPc.ketThucAbs-moc;
+
+  if(remain<=15 && !(cbCu&&flightCoDichVuGiuNguoi(cbCu))){
+    return {nhom:90,diem:remain,sub:9999,ranh:0,so:tk.so,tg:tk.tg,lyDo:`Gợi ý điều động: đang làm ${cbCu?cbCu.flight:trungPc.maChuyen}, còn ${Math.ceil(Math.max(0,remain))} phút`};
   }
 
-  return them;
+  const gan=khoangCachBai(cbCu?.baiDo,cb.baiDo);
+  if(gan<=3 && !(cbCu&&flightCoDichVuGiuNguoi(cbCu))){
+    return {nhom:91,diem:gan*100+remain,sub:9999,ranh:0,so:tk.so,tg:tk.tg,lyDo:`Gợi ý điều động bãi gần: ${cbCu?.baiDo} → ${cb.baiDo}`};
+  }
+
+  return {nhom:99,diem:999999,sub:9999,ranh:0,so:tk.so,tg:tk.tg,lyDo:`Đang kẹt ${cbCu?cbCu.flight:trungPc.maChuyen} tại mốc chuyến`};
 }
-function diemPhuongAn(items,cb,need){
-  const nsList=items.map(x=>x.ns);
-  const tkSum=nsList.reduce((s,ns)=>s+thongKeNV(ns.ma).so*80+thongKeNV(ns.ma).tg/10,0);
-  const capCost=nsList.reduce((s,ns)=>s+capNheDiem(ns),0);
-  const cap2Used=nsList.filter(laNhanSuCap2Plus).length;
-  const missing=Math.max(0,need-items.length);
-  const roleWaste=items.reduce((s,it)=>s+(it.vaiTro==="Bổ sung người"&&laNhanSuCap2Plus(it.ns)?120:0),0);
-  return missing*100000 + roleWaste + capCost*20 + cap2Used*60 + tkSum;
-}
-function ungVienGoiYRong(cb){
+function ungVienChinh(cb){
   const scope=String(cb?.caPhuTrach||"");
   return state.danhSachNhanSu
     .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
     .filter(ns=>{
       if(scope && scope!=="tatca") return nsTrongPhamViCaChuyen(ns,cb);
       return true;
-    });
+    })
+    .filter(ns=>gioChuyenCoGiaoVoiCa(ns,cb))
+    .filter(ns=>phanLoaiGoiY(ns,cb).nhom<90);
 }
-function mucDoKhaDung(ns,cb){
+function ungVienDieuDong(cb){
+  const scope=String(cb?.caPhuTrach||"");
+  return state.danhSachNhanSu
+    .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
+    .filter(ns=>{
+      if(scope && scope!=="tatca") return nsTrongPhamViCaChuyen(ns,cb);
+      return true;
+    })
+    .map(ns=>({ns,p:phanLoaiGoiY(ns,cb)}))
+    .filter(x=>x.p.nhom>=90 && x.p.nhom<99)
+    .sort((a,b)=>a.p.nhom-b.p.nhom || a.p.diem-b.p.diem)
+    .slice(0,5);
+}
+function diemCongBangTaiMoc(ns,cb){
+  const tk=thongKeNV(ns.ma,thoiDiemXetGoiY(cb));
+  return tk.so*10000 + tk.tg*100;
+}
+function diemRanhTaiMoc(ns,cb){
   const p=phanLoaiGoiY(ns,cb);
-  if(p.nhom<90)return p.nhom;
-  if(gioChuyenCoGiaoVoiCa(ns,cb))return 20;
-  return 50;
+  return p.nhom===0 ? (p.sub||0) : 999999 + (p.diem||0);
 }
-function diemRanh(ns,cb){
+function diemChonChinh(ns,cb){
+  const tk=thongKeNV(ns.ma,thoiDiemXetGoiY(cb));
   const p=phanLoaiGoiY(ns,cb);
-  // p.sub = -số phút đã rảnh trước mốc chuyến. Số càng âm càng rảnh lâu càng tốt.
-  if(p.nhom===0)return p.sub||0;
-  return (p.diem||0)+5000;
-}
-function chuyenCoYeuCauBatBuoc(cb){
-  return slotYeuCauChuyen(cb).length>0;
-}
-function bacChungChiVanHanh(ns){
-  // Bậc càng thấp càng nên dùng cho slot thường.
-  // Mục tiêu: chuyến không yêu cầu đặc biệt thì dùng người ít/chứng chỉ nhẹ trước để giữ chiều sâu.
-  const cc=ns.chungChi||{};
-  if(chiCoDauKeo(ns))return 0;
-  if(cc.daukeo && cc.bangchuyen && tongSoChungChi(ns)<=2)return 1;
-  if(!laNhanSuCap2Plus(ns))return 2;
-  return 10 + soChungChiNang(ns)*5 + tongSoChungChi(ns);
-}
-function diemSlotThuong(ns,cb){
-  const tk=thongKeNV(ns.ma);
-  const khaDung=mucDoKhaDung(ns,cb);
-  const coBatBuoc=chuyenCoYeuCauBatBuoc(cb);
 
-  // Slot thường:
-  // - Khả dụng/rảnh vẫn là điều kiện đầu tiên.
-  // - Nếu chuyến KHÔNG có yêu cầu bắt buộc: ưu tiên giữ chiều sâu trước,
-  //   tức là dùng nhân sự cấp nhẹ/ít chứng chỉ trước, rồi mới cân số chuyến/giờ.
-  // - Nếu chuyến CÓ yêu cầu bắt buộc: sau khi đã đủ slot bắt buộc, slot thường vẫn giữ chiều sâu,
-  //   nhưng chênh trạng thái rảnh/đang vướng được phạt mạnh hơn.
-  if(!coBatBuoc){
-    return khaDung*1000000 +
-      bacChungChiVanHanh(ns)*12000 +
-      tk.so*2500 +
-      tk.tg*10 +
-      diemRanh(ns,cb)*15;
-  }
-
-  return khaDung*1000000 +
-    bacChungChiVanHanh(ns)*9000 +
-    tk.so*3000 +
-    tk.tg*12 +
-    diemRanh(ns,cb)*20;
+  // Thứ tự: rảnh/khả dụng → ít chuyến → ít phút → rảnh lâu hơn → sau cùng mới giữ chiều sâu chứng chỉ.
+  return p.nhom*100000000 +
+    tk.so*1000000 +
+    tk.tg*1000 +
+    diemRanhTaiMoc(ns,cb) +
+    bacChungChiVanHanh(ns)*25;
 }
-function diemSlotBatBuocMoi(ns,cb){
-  const tk=thongKeNV(ns.ma);
-  const khaDung=mucDoKhaDung(ns,cb);
-
-  // Slot bắt buộc đã lọc đúng chứng chỉ trước.
-  // Sau khi đúng chứng chỉ, vẫn ưu tiên người rảnh hơn và công bằng hơn.
-  return khaDung*1000000 +
-    diemRanh(ns,cb)*80 +
-    tk.so*5000 +
-    tk.tg*15 +
-    capNheDiem(ns)*20;
+function diemChonBatBuoc(ns,cb,slot){
+  const tk=thongKeNV(ns.ma,thoiDiemXetGoiY(cb));
+  const p=phanLoaiGoiY(ns,cb);
+  return p.nhom*100000000 +
+    tk.so*1000000 +
+    tk.tg*1000 +
+    diemRanhTaiMoc(ns,cb) +
+    bacChungChiVanHanh(ns)*15;
 }
-function chonNguoiThuongTotNhat(ds,cb,used,need){
+function coVSNuocSach(ns){
+  return !!(ns.chungChi&&(ns.chungChi.vesinh||ns.chungChi.nuocsach));
+}
+function diemThuongSauYeuCau(ns,cb){
+  const base=diemChonChinh(ns,cb);
+  // Chuyến nằm sân đi: ưu tiên VS/Nước sạch nếu không phá công bằng quá nhiều.
+  const bonus=(laChuyenNamSanDi(cb)&&coVSNuocSach(ns))?-120000:0;
+  return base + bonus + bacChungChiVanHanh(ns)*250;
+}
+function duocLamNguoiBoSung(ns,cb,need){
+  // Ngoài bãi chỉ cần 2 người thì người chỉ có đầu kéo không nên là người thứ hai.
+  // Nếu cần 3 người trở lên thì vẫn được dùng để lấp đủ quân.
+  if(laChuyenRaBai(cb) && need<=2 && chiCoDauKeo(ns)) return false;
+  return true;
+}
+function chonNguoiTotNhat(ds,cb,used,need){
   return ds
     .filter(ns=>!used.has(ns.ma))
     .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
-    .sort((a,b)=>diemSlotThuong(a,cb)-diemSlotThuong(b,cb) || String(a.ten).localeCompare(String(b.ten),"vi"))[0]||null;
+    .sort((a,b)=>diemChonChinh(a,cb)-diemChonChinh(b,cb) || String(a.ten).localeCompare(String(b.ten),"vi"))[0]||null;
 }
-function chonNguoiBatBuocTotNhat(ds,cb,slot,used){
+function chonNguoiBatBuoc(ds,cb,slot,used){
   return ds
     .filter(ns=>!used.has(ns.ma))
     .filter(ns=>nsCoTatCaChungChi(ns,slot.ids))
-    .sort((a,b)=>diemSlotBatBuocMoi(a,cb)-diemSlotBatBuocMoi(b,cb) || String(a.ten).localeCompare(String(b.ten),"vi"))[0]||null;
+    .sort((a,b)=>diemChonBatBuoc(a,cb,slot)-diemChonBatBuoc(b,cb,slot) || String(a.ten).localeCompare(String(b.ten),"vi"))[0]||null;
 }
-function nguoiDaDapUngSlot(selected,slot,usedSlot){
-  return selected.find(it=>!usedSlot.has(it.ns.ma)&&nsCoTatCaChungChi(it.ns,slot.ids))||null;
-}
-function nguoiNenThayTrongNhom(selected,usedSlot,cb){
-  // Ưu tiên thay người chưa giữ slot bắt buộc, và người có ít giá trị bắt buộc nhất trong nhóm.
-  const cand=selected
+function nguoiTrongNhomDapUngSlot(selected,slot,usedSlot){
+  return selected
     .filter(it=>!usedSlot.has(it.ns.ma))
-    .sort((a,b)=>{
-      const aa=capNheDiem(a.ns), bb=capNheDiem(b.ns);
-      const ta=thongKeNV(a.ns.ma,thoiDiemXetGoiY(cb)), tb=thongKeNV(b.ns.ma,thoiDiemXetGoiY(cb));
-      // Thay người nhẹ trước nếu cần, nhưng không thay người đang giữ chứng chỉ hiếm khi còn người thường.
-      return aa-bb || ta.so-tb.so || ta.tg-tb.tg;
-    })[0];
-  return cand||null;
+    .filter(it=>nsCoTatCaChungChi(it.ns,slot.ids))
+    .sort((a,b)=>diemChonBatBuoc(a.ns,it.cb||chuyen(chuyenDangChon),slot)-diemChonBatBuoc(b.ns,it.cb||chuyen(chuyenDangChon),slot))[0]||null;
 }
-function toiUuLaiNguoiThuong(selected,candidates,cb,need,usedSlot){
-  // Sau khi đạt slot bắt buộc, tối ưu lại các slot thường: thay cấp cao bằng người nhẹ hơn nếu không ảnh hưởng yêu cầu.
+function nguoiDeThay(selected,usedSlot,cb){
+  return selected
+    .filter(it=>!usedSlot.has(it.ns.ma))
+    .sort((a,b)=>bacChungChiVanHanh(a.ns)-bacChungChiVanHanh(b.ns) || diemCongBangTaiMoc(b.ns,cb)-diemCongBangTaiMoc(a.ns,cb))[0]||null;
+}
+function toiUuSauYeuCau(selected,candidates,cb,need,usedSlot){
   const used=new Set(selected.map(x=>x.ns.ma));
   let changed=true;
-  let loop=0;
-  while(changed && loop++<20){
+  let loops=0;
+
+  while(changed && loops++<20){
     changed=false;
-    for(const it of [...selected]){
+    for(const it of selected){
       if(usedSlot.has(it.ns.ma))continue;
       const better=candidates
         .filter(ns=>!used.has(ns.ma))
         .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
-        .sort((a,b)=>diemSlotThuong(a,cb)-diemSlotThuong(b,cb))[0];
-      if(better && diemSlotThuong(better,cb)+80 < diemSlotThuong(it.ns,cb)){
+        .sort((a,b)=>diemThuongSauYeuCau(a,cb)-diemThuongSauYeuCau(b,cb))[0];
+
+      if(!better)continue;
+
+      const oldScore=diemThuongSauYeuCau(it.ns,cb);
+      const newScore=diemThuongSauYeuCau(better,cb);
+
+      // Chỉ thay nếu tốt hơn rõ ràng, tránh đảo người vô ích.
+      if(newScore + 5000 < oldScore){
         used.delete(it.ns.ma);
         it.ns=better;
         it.vaiTro="Bổ sung người";
@@ -6227,31 +6243,34 @@ function toiUuLaiNguoiThuong(selected,candidates,cb,need,usedSlot){
 }
 function chonGoiYNhanSu(cb){
   const need=soNguoiCanGoiY(cb);
-  const candidates=ungVienGoiYRong(cb);
+  const candidates=ungVienChinh(cb);
   const selected=[];
   const used=new Set();
 
-  // BƯỚC 1: Lấp đủ quân trước, chưa xét dịch vụ/chứng chỉ.
+  // B1: lấp đủ quân theo công bằng trước.
   while(selected.length<need){
-    const ns=chonNguoiThuongTotNhat(candidates,cb,used,need);
+    const ns=chonNguoiTotNhat(candidates,cb,used,need);
     if(!ns)break;
     used.add(ns.ma);
     selected.push({ns,vaiTro:"Bổ sung người"});
   }
 
-  // BƯỚC 2: Quay lại kiểm tra slot bắt buộc.
+  // B2: kiểm tra slot bắt buộc và thay người nếu cần.
   const slots=slotYeuCauChuyen(cb);
   const usedSlot=new Set();
 
   slots.forEach(slot=>{
-    const daCo=nguoiDaDapUngSlot(selected,slot,usedSlot);
+    let daCo=selected
+      .filter(it=>!usedSlot.has(it.ns.ma)&&nsCoTatCaChungChi(it.ns,slot.ids))
+      .sort((a,b)=>diemChonBatBuoc(a.ns,cb,slot)-diemChonBatBuoc(b.ns,cb,slot))[0];
+
     if(daCo){
       daCo.vaiTro=slot.ten;
       usedSlot.add(daCo.ns.ma);
       return;
     }
 
-    const nguoiNgoai=chonNguoiBatBuocTotNhat(candidates,cb,slot,used);
+    const nguoiNgoai=chonNguoiBatBuoc(candidates,cb,slot,used);
     if(!nguoiNgoai)return;
 
     if(selected.length<need){
@@ -6261,7 +6280,7 @@ function chonGoiYNhanSu(cb){
       return;
     }
 
-    const biThay=nguoiNenThayTrongNhom(selected,usedSlot,cb);
+    const biThay=nguoiDeThay(selected,usedSlot,cb);
     if(biThay){
       used.delete(biThay.ns.ma);
       biThay.ns=nguoiNgoai;
@@ -6271,16 +6290,71 @@ function chonGoiYNhanSu(cb){
     }
   });
 
-  // BƯỚC 3: Nếu vẫn chưa đủ quân thì tiếp tục lấp bằng bất cứ người nào còn có thể dùng.
+  // B3: nếu vẫn chưa đủ thì cố lấp tiếp bằng người chính khả dụng.
   while(selected.length<need){
-    const ns=chonNguoiThuongTotNhat(candidates,cb,used,need);
+    const ns=chonNguoiTotNhat(candidates,cb,used,need);
     if(!ns)break;
     used.add(ns.ma);
     selected.push({ns,vaiTro:"Bổ sung người"});
   }
 
-  // BƯỚC 4: Tối ưu lần cuối để giữ chiều sâu nhân sự.
-  return toiUuLaiNguoiThuong(selected,candidates,cb,need,usedSlot);
+  // B4: tối ưu chiều sâu và ưu tiên VS/Nước sạch cho chuyến nằm sân đi.
+  return toiUuSauYeuCau(selected,candidates,cb,need,usedSlot);
+}
+function hienGoiYNhanSu(){
+  const cb=chuyen(chuyenDangChon);
+  if(!cb)return alert("Chọn chuyến bay trước.");
+
+  const dichVu=dichVuChuyenText(cb);
+  const yc=yeuCauChungChiText(cb);
+  const need=soNguoiCanGoiY(cb);
+  const selected=chonGoiYNhanSu(cb);
+  const dieuDong=ungVienDieuDong(cb);
+
+  const lines=[];
+  lines.push(`GỢI Ý NHÂN SỰ CHO ${cb.flight}`);
+  lines.push(`Bãi: ${cb.baiDo}`);
+  lines.push(`ETA: ${gioHienThi(cb.eta)} / STD: ${gioHienThi(cb.std)}`);
+  if(dichVu) lines.push(`Dịch vụ: ${dichVu}`);
+  if(laChuyenNamSanDi(cb)) lines.push("Loại chuyến: nằm sân đi - ưu tiên VS/Nước sạch nếu phù hợp");
+  lines.push(`Cần tối thiểu: ${need} người`);
+  lines.push(`Cần chứng chỉ: ${yc}`);
+  lines.push("");
+  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - chỉ đếm chuyến đã bắt đầu trước mốc này`);
+  lines.push("Logic: đúng ca → rảnh → ít chuyến → ít phút → đúng chứng chỉ → giữ chiều sâu.");
+  lines.push("");
+  lines.push("Đề xuất:");
+
+  if(selected.length){
+    selected.forEach((item,i)=>{
+      const tk=thongKeNV(item.ns.ma,thoiDiemXetGoiY(cb));
+      lines.push(`${i+1}. ${item.ns.ten}${item.vaiTro&&item.vaiTro!=="Bổ sung người" ? ` (${item.vaiTro})` : ""} - ${tk.so} chuyến / ${tk.tg}'`);
+    });
+  }else{
+    lines.push("Chưa chọn được nhân sự phù hợp.");
+  }
+
+  if(selected.length<need){
+    lines.push("");
+    lines.push(`Còn thiếu: ${need-selected.length} người.`);
+    if(dieuDong.length){
+      lines.push("Gợi ý điều động, không tự chia:");
+      dieuDong.forEach((x,i)=>lines.push(`- ${x.ns.ten}: ${x.p.lyDo}`));
+    }else{
+      lines.push("Không còn phương án điều động hợp lý.");
+    }
+  }else{
+    lines.push("");
+    lines.push("Đủ người theo yêu cầu.");
+  }
+
+  lines.push("");
+  lines.push("Bấm OK để áp dụng gợi ý vào chuyến.");
+  lines.push("Bấm Hủy để chỉ xem gợi ý, không thay đổi phân công.");
+
+  if(confirm(lines.join("\n"))){
+    apDungGoiYNhanSu(cb,selected);
+  }
 }
 
 function taoPCTheoGoiY(cb, ma, vaiTro){
