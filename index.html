@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.94 Suggest Busy Select Highlight</title>
+<title>Dương Tú v0.95 Ops UX Polish</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1928,6 +1928,79 @@ body.menuOpen::after{
   font-weight:950!important;
 }
 
+
+/* v0.95 - UX polish + 3D nhẹ */
+.panel,.taskMenu,.loginCard,.staffCard,.tlRow,.bar,.staffChip,.flightMonitor{
+  box-shadow:0 10px 24px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.panel{
+  border-color:#2d5b8d!important;
+  background:linear-gradient(180deg,#0a2038 0%,#06182a 100%)!important;
+}
+button,.taskItem,input,select{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 4px 10px rgba(0,0,0,.18);
+}
+button:hover,.taskItem:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.08);
+}
+.taskUser{
+  padding:8px 12px;
+  border:1px solid #264c77;
+  border-radius:10px;
+  background:#071a30;
+  margin:6px 0 8px;
+  color:#cfe6ff;
+  font-weight:900;
+}
+#fbStatus.hidden,#accountBadge.hidden{display:none!important}
+.timeInput{width:105px!important;min-width:105px!important}
+.standInput{width:70px!important;min-width:70px!important}
+#flight{width:210px!important;min-width:210px!important}
+#ghiChuChuyen{min-width:170px!important}
+.tlRow{
+  --timelineRowHeight:74px;
+  height:74px!important;
+  min-height:74px!important;
+}
+.tlLabel,.tlLane{
+  height:74px!important;
+  min-height:74px!important;
+}
+.flightCaSelect{
+  width:102px!important;
+  height:28px!important;
+  font-size:12px!important;
+}
+.bar{
+  height:30px!important;
+  top:21px!important;
+  font-size:13px!important;
+}
+.flightMonitor,.flightNote,.requireWarn,.staffChip{
+  min-height:25px!important;
+  line-height:22px!important;
+  font-size:12px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+}
+.tenSau{top:24px!important}
+.noteBadge,.warnBadge{height:25px!important}
+.soonEndCard{
+  box-shadow:inset 4px 0 #ef4444, 0 0 0 1px rgba(239,68,68,.65), 0 10px 26px rgba(0,0,0,.28)!important;
+}
+.soonEndCard::after{
+  content:"SẮP HẾT GIỜ";
+  color:#fecaca;
+  font-weight:950;
+  font-size:11px;
+}
+.busyHardCard{
+  opacity:.88;
+  box-shadow:inset 4px 0 #f59e0b, 0 0 0 1px rgba(245,158,11,.45)!important;
+}
+.permGrid th,.permGrid td{white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -1958,6 +2031,9 @@ body.menuOpen::after{
         <label class="loginLabel">PASS
           <input id="regPass" type="password" placeholder="Mã truy cập" autocomplete="new-password">
         </label>
+        <label class="loginLabel">NHẬP LẠI PASS
+          <input id="regPass2" type="password" placeholder="Nhập lại mã truy cập" autocomplete="new-password">
+        </label>
         <div class="loginActions">
           <button class="primary" id="btnRegister">Gửi đăng ký</button>
           <button class="ghost" id="tabLogin">Quay lại đăng nhập</button>
@@ -1968,10 +2044,16 @@ body.menuOpen::after{
   </div>
 </div>
 
-<header><h1><button class="menuBtn" id="nutMenuTacVu" title="Mở tác vụ">☰<span id="menuBadge" class="menuBadge hidden">0</span></button>✈ Dương Tú</h1><div class="row" style="padding:0"><label>📅 Ngày làm việc <input type="date" id="lichChinh"></label><div class="caFilterBar" id="boLocCaHeader"></div><div>LIVE <span class="live" id="dongHo">--:--</span></div><div id="fbStatus" class="fbStatus">Firebase: chờ</div><div id="accountBadge" class="accountBadge hidden"></div><button class="small ghost" id="btnLogout">Đăng xuất</button></div></header>
+<header><h1><button class="menuBtn" id="nutMenuTacVu" title="Mở tác vụ">☰<span id="menuBadge" class="menuBadge hidden">0</span></button>✈ Dương Tú</h1><div class="row" style="padding:0"><label>📅 Ngày làm việc <input type="date" id="lichChinh"></label><div class="caFilterBar" id="boLocCaHeader"></div><div>LIVE <span class="live" id="dongHo">--:--</span></div><div id="fbStatus" class="fbStatus hidden">Firebase: chờ</div></div></header>
 <div class="taskMenu hidden" id="menuTacVu">
   <div class="taskMenuHead"><span>☰ Tác vụ</span><button class="small ghost" id="dongMenuTacVu">Đóng</button></div>
   <div class="taskTree">
+    <div class="taskGroup">
+      <div class="taskGroupTitle">TÀI KHOẢN</div>
+      <div class="taskUser" id="menuAccountInfo">Chưa đăng nhập</div>
+      <button class="taskItem" onclick="doiMatKhauCuaToi()">Đổi mật khẩu của tôi</button>
+      <button class="taskItem" onclick="dangXuat()">Đăng xuất</button>
+    </div>
     <div class="taskGroup">
       <div class="taskGroupTitle">NHÂN SỰ</div>
       <button class="taskItem" data-open-panel="nhanSu">Nhân sự và chứng chỉ</button>
@@ -1997,13 +2079,13 @@ body.menuOpen::after{
 <h2>Nhập / sửa chuyến bay</h2>
 <div class="body">
 <div id="editNotice" class="editNotice hidden"></div>
-<div class="hint">Đổi ngày làm việc ở lịch trên cùng: chuyến bay và phân công của ngày đó được tải riêng. Bộ lọc ca sẽ lọc chuyến/nhân sự theo ca đang điều hành.</div>
+
 <div class="row">
 <label class="hidden">Ngày khai thác <input type="date" id="ngayKhaiThac"></label>
 <input id="flight" placeholder="Chuyến bay VD: RS511/512">
-<input id="eta" placeholder="ETA (có thể trống)">
-<input id="std" placeholder="STD (có thể trống)">
-<input id="baiDo" placeholder="Bãi đỗ">
+<input id="eta" class="timeInput" placeholder="ETA">
+<input id="std" class="timeInput" placeholder="STD">
+<input id="baiDo" class="standInput" placeholder="Bãi">
 <input id="soNguoiToiThieu" type="number" min="1" value="2" title="Số người tối thiểu" placeholder="Số người tối thiểu" style="width:130px">
 <select id="caPhuTrachChuyen" title="Ca thực hiện chuyến">
   <option value="">Ca: tự động</option>
@@ -2169,7 +2251,7 @@ body.menuOpen::after{
       <thead>
         <tr>
           <th>ID</th><th>Họ tên</th><th>Trạng thái</th><th>Admin</th>
-          <th>Dashboard</th><th>Phân ca</th><th>Nhân sự</th><th>Yêu cầu hãng</th><th>Yêu cầu vận hành</th><th>Log</th><th>Thao tác</th>
+          <th>Dashboard</th><th>Phân ca</th><th>Nhân sự</th><th>Yêu cầu hãng</th><th>Yêu cầu vận hành</th><th>Log</th><th>Đổi pass</th><th>Thao tác</th>
         </tr>
       </thead>
       <tbody id="bangTaiKhoan"></tbody>
@@ -3577,17 +3659,17 @@ function apDungGioiHanCaTheoDangNhap(){
 function loginMessage(msg,cls="muted"){const el=$("loginMessage"); if(el){el.className="status "+cls+(msg?"":" hidden");el.textContent=msg||"";}}
 function showLoginTab(mode){$("loginForm").classList.toggle("hidden",mode!=="login");$("registerForm").classList.toggle("hidden",mode!=="register");}
 function updateAccountUI(){
-  const gate=$("loginGate"), badge=$("accountBadge"), menu=$("menuQuanLyGroup");
+  const gate=$("loginGate"), menu=$("menuQuanLyGroup"), info=$("menuAccountInfo");
   const s=getSession(), acc=s?state.accounts?.[s.id]:null;
   if(acc&&acc.status==="approved"){
     gate.style.display="none";
-    badge.classList.remove("hidden");
-    badge.textContent=`${acc.fullName||acc.id}${acc.role==="admin"?" · ADMIN":""}`;
+    if(info) info.innerHTML=`<b>${acc.fullName||acc.id}</b>${acc.role==="admin"?"<br><span class='greenText'>ADMIN</span>":""}`;
   }else{
     gate.style.display="flex";
-    badge.classList.add("hidden");
+    if(info) info.textContent="Chưa đăng nhập";
   }
   if(menu)menu.style.display=isAdmin()?"block":"none";
+  const fb=$("fbStatus"); if(fb) fb.classList.add("hidden");
   if(!isAdmin() && $("panelQuanLy") && !$("panelQuanLy").classList.contains("hidden"))showDashboard();
   capNhatMenuTheoQuyen();
   capNhatThongBaoTacVu();
@@ -3609,8 +3691,9 @@ function dangNhap(){
   luu(); updateAccountUI(); veTatCa();
 }
 function dangKy(){
-  const id=$("regId").value.trim(), fullName=$("regFullName").value.trim(), pass=$("regPass").value;
-  if(!id||!fullName||!pass){loginMessage("Điền đủ ID, Họ tên, Password.","wait");return;}
+  const id=$("regId").value.trim(), fullName=$("regFullName").value.trim(), pass=$("regPass").value, pass2=val("regPass2");
+  if(!id||!fullName||!pass||!pass2){loginMessage("Điền đủ ID, Họ tên, Password và nhập lại Password.","wait");return;}
+  if(pass!==pass2){loginMessage("Password nhập lại không khớp.","bad");return;}
   if(state.accounts[id]){loginMessage("ID này đã tồn tại.","bad");return;}
   const ns=timNhanSuTheoTen(fullName);
   if(!ns){loginMessage("Họ tên không trùng danh sách nhân sự. Không thể đăng ký.","bad");return;}
@@ -3637,6 +3720,7 @@ function veBangTaiKhoan(){
       <td><b>${acc.id}</b></td><td>${acc.fullName||""}</td><td>${statusBadgeAccount(acc.status)}</td>
       <td><input type="checkbox" ${p.admin||acc.role==="admin"?"checked":""} onchange="doiQuyen('${acc.id}','admin',this.checked)"></td>
       ${permKeys.map(k=>`<td><input type="checkbox" ${p[k]?"checked":""} onchange="doiQuyen('${acc.id}','${k}',this.checked)"></td>`).join("")}
+      <td><button class="small ghost" onclick="adminDoiMatKhau('${acc.id}')">Đổi</button></td>
       <td><button class="small" onclick="duyetTaiKhoan('${acc.id}')">Duyệt</button> <button class="small danger" onclick="khoaTaiKhoan('${acc.id}')">Khóa</button></td>
     </tr>`;
   }).join("");
@@ -3662,6 +3746,33 @@ function khoaTaiKhoan(id){
   acc.status="locked";
   logAction("KHÓA TÀI KHOẢN",`${acc.fullName||id}`);
   luu();veTatCa();
+}
+
+
+function adminDoiMatKhau(id){
+  if(!isAdmin())return alert("Chỉ Admin được đổi mật khẩu tài khoản khác.");
+  const acc=state.accounts[id]; if(!acc)return;
+  const p=prompt(`Nhập mật khẩu mới cho ${acc.fullName||id}:`,"");
+  if(p===null)return;
+  if(!p.trim())return alert("Mật khẩu không được để trống.");
+  acc.pass=p;
+  logAction("ADMIN ĐỔI MẬT KHẨU",`${acc.fullName||id}`);
+  luu();veTatCa();
+}
+function doiMatKhauCuaToi(){
+  const acc=currentAccount(); if(!acc)return alert("Chưa đăng nhập.");
+  const old=prompt("Nhập mật khẩu cũ:","");
+  if(old===null)return;
+  if(old!==acc.pass)return alert("Mật khẩu cũ không đúng.");
+  const p1=prompt("Nhập mật khẩu mới:","");
+  if(p1===null)return;
+  if(!p1.trim())return alert("Mật khẩu mới không được để trống.");
+  const p2=prompt("Nhập lại mật khẩu mới:","");
+  if(p2===null)return;
+  if(p1!==p2)return alert("Mật khẩu nhập lại không khớp.");
+  acc.pass=p1;
+  logAction("ĐỔI MẬT KHẨU",`${acc.fullName||acc.id}`);
+  luu();alert("Đã đổi mật khẩu.");
 }
 
 const LOG_PASSWORD="SAGS2026"; // <- ĐỔI MẬT KHẨU LOG Ở ĐÂY nếu cần
@@ -3882,17 +3993,17 @@ function veBoNutGanCa(){
     elSub.innerHTML=`<button class="subCaBtn ca6Color active" onclick="chonCaGan('6','1')"><span class="caDot ca6"></span>OFF</button>`;
   }else if(caHien==="TRUC"){
     const opts=[["DT","Đội Trưởng"],["DP1","Đội Phó 1"],["DP2","Đội Phó 2"],["DP3","Đội Phó 3"],["CB1","Cán bộ Ca 1"],["CB2","Cán bộ Ca 2"],["CB3","Cán bộ Ca 3"]];
-    elSub.innerHTML=opts.map(([n,label])=>{
+    elSub.innerHTML=`<button class="subCaBtn trucColor ${String(state.caGan?.nhanh||"all")==="all"?"active":""}" onclick="chonCaGan('TRUC','all')"><span class="caDot truc"></span>Tất cả cán bộ</button>`+opts.map(([n,label])=>{
       const active=String(state.caGan?.nhanh||"DT")===n;
       return `<button class="subCaBtn trucColor ${active?"active":""}" onclick="chonCaGan('TRUC','${n}')"><span class="caDot truc"></span>${label}</button>`;
     }).join("");
   }else if(caHien==="KD"){
-    elSub.innerHTML=["1","2","3","4","5"].map(n=>{
+    elSub.innerHTML=`<button class="subCaBtn kdColor ${String(state.caGan?.nhanh||"all")==="all"?"active":""}" onclick="chonCaGan('KD','all')"><span class="caDot kd"></span>Tất cả kéo đẩy</button>`+["1","2","3","4","5"].map(n=>{
       const active=String(state.caGan?.nhanh||"1")===n;
       return `<button class="subCaBtn kdColor ${active?"active":""}" onclick="chonCaGan('KD','${n}')"><span class="caDot kd"></span>Kéo đẩy ${n}</button>`;
     }).join("");
   }else{
-    elSub.innerHTML=["1","2","3"].map(n=>{
+    elSub.innerHTML=`<button class="subCaBtn ca${caHien}Color ${String(state.caGan?.nhanh||"all")==="all"?"active":""}" onclick="chonCaGan('${caHien}','all')"><span class="caDot ca${caHien}"></span>Tất cả ca ${caHien}</button>`+["1","2","3"].map(n=>{
       const active=String(state.caGan?.nhanh||"1")===n;
       return `<button class="subCaBtn ca${caHien}Color ${active?"active":""}" onclick="chonCaGan('${caHien}','${n}')"><span class="caDot ca${caHien}"></span>${caHien}.${n}</button>`;
     }).join("");
@@ -3904,21 +4015,21 @@ function veBoNutGanCa(){
     if(!caHien) txt.textContent="Chưa chọn ca gán.";
     else if(caHien==="tatca") txt.textContent="Đang xem: Tất cả. Có thể chỉnh tay từng nhân sự.";
     else{
-      const label = caHien==="6"?"Ca 6/OFF":caHien==="TRUC"?({"DT":"Đội Trưởng","DP1":"Đội Phó 1","DP2":"Đội Phó 2","DP3":"Đội Phó 3","CB1":"Cán bộ Ca 1","CB2":"Cán bộ Ca 2","CB3":"Cán bộ Ca 3"}[state.caGan.nhanh]||"Cán bộ"):caHien==="KD"?("Kéo đẩy "+state.caGan.nhanh):("Ca "+caHien+"."+state.caGan.nhanh);
-      txt.textContent=`Đang gán: ${label}. Tick nhân sự bên dưới để đưa vào nhóm này.`;
+      const label = caHien==="6"?"Ca 6/OFF":caHien==="TRUC"?(String(state.caGan.nhanh)==="all"?"Cán bộ":({"DT":"Đội Trưởng","DP1":"Đội Phó 1","DP2":"Đội Phó 2","DP3":"Đội Phó 3","CB1":"Cán bộ Ca 1","CB2":"Cán bộ Ca 2","CB3":"Cán bộ Ca 3"}[state.caGan.nhanh]||"Cán bộ")):caHien==="KD"?(String(state.caGan.nhanh)==="all"?"Kéo đẩy":("Kéo đẩy "+state.caGan.nhanh)):(String(state.caGan.nhanh)==="all"?("Ca "+caHien):("Ca "+caHien+"."+state.caGan.nhanh));
+      txt.textContent=String(state.caGan?.nhanh)==="all"?`Đang xem: ${label}. Chọn nhánh cụ thể bên dưới mới tick gán nhân sự.`:`Đang gán: ${label}. Tick nhân sự bên dưới để đưa vào nhóm này.`;
     }
   }
 }
 function chonCaGan(ca,nhanh){
   if(ca==="tatca" && !isAdmin())return alert("Tài khoản thường không được chọn Tất cả.");
   if(!requireCaScope(ca,TEN_CA[ca]||ca))return;
-  state.caGan={ca,nhanh:nhanh||(ca==="TRUC"?"DT":"1")};
+  state.caGan={ca,nhanh:nhanh||(ca==="TRUC"?"all":ca==="KD"?"all":(["1","2","3","4","5"].includes(String(ca))?"all":"1"))};
   luu();veTatCa();
 }
 function hienGioCaDangChon(){
   const kh=$("khungGioCaGan"); if(!kh)return;
   const ca=state.caGan?.ca, n=state.caGan?.nhanh||"1";
-  if(!ca || ca==="tatca"){kh.style.display="none";return;}
+  if(!ca || ca==="tatca" || String(n)==="all"){kh.style.display="none";return;}
   kh.style.display="flex";
   const gio=gioMauCa(ca,n);
   $("gioGanVao1").value=gio.gioVao1;
@@ -3979,7 +4090,7 @@ function datCaDuyNhatChoNhanSu(ma,ca,nhanh,hoiXacNhan=true){
 function ganCaChoNhanSu(ma){
   if(!requirePerm("phanCa","phân ca/chấm công"))return;
   const ca=state.caGan?.ca, nhanh=state.caGan?.nhanh||"1";
-  if(!ca || ca==="tatca"){alert("Chọn nhóm/ca cụ thể trước."); return;}
+  if(!ca || ca==="tatca" || String(nhanh)==="all"){alert("Chọn nhánh cụ thể trước rồi mới gán nhân sự."); return;}
   if(!requireCaScope(ca,TEN_CA[ca]||ca))return;
   if(datCaDuyNhatChoNhanSu(ma,ca,nhanh,true)){
     logAction("PHÂN CA",`${tenNV(ma)} → ${tenNhomCa(ca,nhanh)}`);
@@ -4816,10 +4927,10 @@ function veBangPhanCa(){
     state.phanCaHomNay[ns.ma]=chuanHoaCa(state.phanCaHomNay[ns.ma]);
     if(!state.chamCong[ns.ma])state.chamCong[ns.ma]={vao:null,ra:null};
     const ca=state.phanCaHomNay[ns.ma],cc=state.chamCong[ns.ma],tt=trangThaiCa(ns.ma),cls=tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":tt.loai==="green"?"greenText":"muted";
-    const checked=(caGan && caGan!=="tatca") ? (String(ca.ca)===String(caGan)&&String(ca.nhanh||"1")===String(nhanhGan)) : !!ca.chon;
+    const checked=(caGan && caGan!=="tatca") ? (String(ca.ca)===String(caGan)&&(String(nhanhGan)==="all"||String(ca.nhanh||"1")===String(nhanhGan))) : !!ca.chon;
     const selectedCa=caNhanSuValue(ns.ma);
     return `<tr class="${checked?"rowSelectedTop":""}">
-      <td><input type="checkbox" ${checked?"checked":""} onchange="${(caGan&&caGan!=="tatca")?`(this.checked?ganCaChoNhanSu('${ns.ma}'):boCaNhanSu('${ns.ma}'))`:`doiChon('${ns.ma}',this.checked)`}"></td>
+      <td><input type="checkbox" ${checked?"checked":""} onchange="${(caGan&&caGan!=="tatca"&&String(nhanhGan)!=="all")?`(this.checked?ganCaChoNhanSu('${ns.ma}'):boCaNhanSu('${ns.ma}'))`:`doiChon('${ns.ma}',this.checked)`}"></td>
       <td>${ns.ten}</td><td>${ns.cap}</td><td><select class="caQuickSelect" onchange="chonCaNhanSuTuSelect('${ns.ma}',this.value)">${caNhanSuOptions(selectedCa)}</select></td>
       <td><input value="${ca.gioVao1}" onchange="doiGioCa('${ns.ma}','gioVao1',this.value)" style="width:90px"></td>
       <td><input value="${ca.gioRa1}" onchange="doiGioCa('${ns.ma}','gioRa1',this.value)" style="width:90px"></td>
@@ -4959,7 +5070,6 @@ function veDanhSachChon(){
   const loc=$("locCap").value, sx=$("sapXep").value;  let ds=state.danhSachNhanSu
     .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
     .filter(ns=>cb&&cb.caPhuTrach?nsTrongPhamViCaChuyen(ns,cb):dungBoLocCaNV(ns.ma))
-    .filter(ns=>!cb || gioChuyenNamTrongCa(ns,cb))
     .filter(ns=>datCap(ns.cap,loc))
     .map(ns=>{
       const ct=chiTietNhanSu(ns.ma);
@@ -4989,7 +5099,8 @@ function veDanhSachChon(){
     const trangThaiHienThi = ns.ct.coChuyenTiepNguyCo
       ? ns.ct.trangThai.replace(ns.ct.textChuyenTiepNguyCo, `<span class="badgeTiepNguyCo">${ns.ct.textChuyenTiepNguyCo}</span>`)
       : ns.ct.trangThai;
-    const goiYText = cb ? phanLoaiGoiY(ns,cb).lyDo : "";
+    const goiY=cb ? phanLoaiGoiY(ns,cb) : null;
+    const goiYText = goiY ? goiY.lyDo : "";
     const sapLamHienThi = ns.ct.coChuyenTiepNguyCo
       ? `<span class="staffNextDanger">${ns.ct.tiep.replace("Chuyến tiếp: ","🚨 TIẾP: ")}</span>`
       : ns.ct.tiep.replace("Sắp làm: ","").replace("Chuyến tiếp: ","").replace("Sau đó: ","Sau đó: ");
@@ -5515,7 +5626,7 @@ function chonGoiYNhanSu(cb){
   let pool=state.danhSachNhanSu
     .filter(ns=>nsDuocXetGoiY(ns,cb))
     .filter(ns=>cb.caPhuTrach?true:dungBoLocCaNV(ns.ma))
-    .filter(ns=>phanLoaiGoiY(ns,cb).nhom<90);
+    .filter(ns=>phanLoaiGoiY(ns,cb).nhom<98);
 
   pool=sapXepGoiYNhanSu(pool,cb);
   const selected=[];
@@ -5594,6 +5705,7 @@ function hienGoiYNhanSu(){
   if(selected.length<need){
     lines.push("");
     lines.push(`Còn thiếu: ${need-selected.length} người phù hợp.`);
+    lines.push("Hướng xử lý: dùng người còn giờ làm để làm đỡ / điều động người sắp xong / bãi gần / hoặc xác nhận để trống.");
   }
 
   alert(lines.join("\n"));
@@ -5923,7 +6035,9 @@ $("tabLogin").onclick=()=>showLoginTab("login");
 $("tabRegister").onclick=()=>showLoginTab("register");
 $("btnLogin").onclick=dangNhap;
 $("btnRegister").onclick=dangKy;
-$("btnLogout").onclick=dangXuat;
+["loginId","loginPass"].forEach(id=>{const el=$(id); if(el)el.addEventListener("keydown",e=>{if(e.key==="Enter")dangNhap();});});
+["regId","regFullName","regPass","regPass2"].forEach(id=>{const el=$(id); if(el)el.addEventListener("keydown",e=>{if(e.key==="Enter")dangKy();});});
+if($("btnLogout"))$("btnLogout").onclick=dangXuat;
 $("ycCoThang").onchange=()=>{$("ycCapToiThieu").disabled=$("ycCoThang").checked; if($("ycCoThang").checked)$("ycCapToiThieu").value="1"; else $("ycCapToiThieu").value="2";};
 $("chonTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:true,gioVao1:state.phanCaHomNay[ns.ma]?.gioVao1||"06:00",gioRa1:state.phanCaHomNay[ns.ma]?.gioRa1||"14:00",gioVao2:state.phanCaHomNay[ns.ma]?.gioVao2||"N",gioRa2:state.phanCaHomNay[ns.ma]?.gioRa2||"N"});luu();veTatCa();};
 $("boTatCa").onclick=()=>{state.danhSachNhanSu.forEach(ns=>state.phanCaHomNay[ns.ma]={...(state.phanCaHomNay[ns.ma]||{}),chon:false,ca:"",nhanh:"1"});luuPhanCaNgayHienTai();luu();veTatCa();};
