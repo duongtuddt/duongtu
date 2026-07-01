@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.01 Realtime Clean Fill Suggest</title>
+<title>Dương Tú v1.02 Fill First Optimize Suggest</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -6053,47 +6053,153 @@ function diemPhuongAn(items,cb,need){
   const roleWaste=items.reduce((s,it)=>s+(it.vaiTro==="Bổ sung người"&&laNhanSuCap2Plus(it.ns)?120:0),0);
   return missing*100000 + roleWaste + capCost*20 + cap2Used*60 + tkSum;
 }
+function ungVienGoiYRong(cb){
+  const scope=String(cb?.caPhuTrach||"");
+  return state.danhSachNhanSu
+    .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
+    .filter(ns=>{
+      if(scope && scope!=="tatca") return nsTrongPhamViCaChuyen(ns,cb);
+      return true;
+    });
+}
+function mucDoKhaDung(ns,cb){
+  const p=phanLoaiGoiY(ns,cb);
+  if(p.nhom<90)return p.nhom;
+  if(gioChuyenCoGiaoVoiCa(ns,cb))return 20;
+  return 50;
+}
+function diemSlotThuong(ns,cb){
+  const tk=thongKeNV(ns.ma);
+  const p=phanLoaiGoiY(ns,cb);
+  const khaDung=mucDoKhaDung(ns,cb);
+
+  // Slot thường: ưu tiên lấp đủ người, nhưng phải giữ chiều sâu nhân sự.
+  // Ít chứng chỉ/cấp thấp hơn được ưu tiên mạnh, sau đó mới xét số chuyến và số phút.
+  return khaDung*10000 +
+    capNheDiem(ns)*500 +
+    tk.so*120 +
+    tk.tg +
+    (p.diem||0);
+}
+function diemSlotBatBuocMoi(ns,cb){
+  const tk=thongKeNV(ns.ma);
+  const p=phanLoaiGoiY(ns,cb);
+  const khaDung=mucDoKhaDung(ns,cb);
+
+  // Slot bắt buộc: đúng chứng chỉ trước, nhưng vẫn ưu tiên người ít làm hơn.
+  return khaDung*10000 +
+    tk.so*180 +
+    tk.tg +
+    capNheDiem(ns)*30 +
+    (p.diem||0);
+}
+function chonNguoiThuongTotNhat(ds,cb,used,need){
+  return ds
+    .filter(ns=>!used.has(ns.ma))
+    .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
+    .sort((a,b)=>diemSlotThuong(a,cb)-diemSlotThuong(b,cb) || String(a.ten).localeCompare(String(b.ten),"vi"))[0]||null;
+}
+function chonNguoiBatBuocTotNhat(ds,cb,slot,used){
+  return ds
+    .filter(ns=>!used.has(ns.ma))
+    .filter(ns=>nsCoTatCaChungChi(ns,slot.ids))
+    .sort((a,b)=>diemSlotBatBuocMoi(a,cb)-diemSlotBatBuocMoi(b,cb) || String(a.ten).localeCompare(String(b.ten),"vi"))[0]||null;
+}
+function nguoiDaDapUngSlot(selected,slot,usedSlot){
+  return selected.find(it=>!usedSlot.has(it.ns.ma)&&nsCoTatCaChungChi(it.ns,slot.ids))||null;
+}
+function nguoiNenThayTrongNhom(selected,usedSlot,cb){
+  // Ưu tiên thay người chưa giữ slot bắt buộc, và người có ít giá trị bắt buộc nhất trong nhóm.
+  const cand=selected
+    .filter(it=>!usedSlot.has(it.ns.ma))
+    .sort((a,b)=>{
+      const aa=capNheDiem(a.ns), bb=capNheDiem(b.ns);
+      const ta=thongKeNV(a.ns.ma), tb=thongKeNV(b.ns.ma);
+      // Thay người nhẹ trước nếu cần, nhưng không thay người đang giữ chứng chỉ hiếm khi còn người thường.
+      return aa-bb || ta.so-tb.so || ta.tg-tb.tg;
+    })[0];
+  return cand||null;
+}
+function toiUuLaiNguoiThuong(selected,candidates,cb,need,usedSlot){
+  // Sau khi đạt slot bắt buộc, tối ưu lại các slot thường: thay cấp cao bằng người nhẹ hơn nếu không ảnh hưởng yêu cầu.
+  const used=new Set(selected.map(x=>x.ns.ma));
+  let changed=true;
+  let loop=0;
+  while(changed && loop++<20){
+    changed=false;
+    for(const it of [...selected]){
+      if(usedSlot.has(it.ns.ma))continue;
+      const better=candidates
+        .filter(ns=>!used.has(ns.ma))
+        .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
+        .sort((a,b)=>diemSlotThuong(a,cb)-diemSlotThuong(b,cb))[0];
+      if(better && diemSlotThuong(better,cb)+80 < diemSlotThuong(it.ns,cb)){
+        used.delete(it.ns.ma);
+        it.ns=better;
+        it.vaiTro="Bổ sung người";
+        used.add(better.ma);
+        changed=true;
+      }
+    }
+  }
+  return selected;
+}
 function chonGoiYNhanSu(cb){
   const need=soNguoiCanGoiY(cb);
-  let pool=state.danhSachNhanSu
-    .filter(ns=>nsDuocXetGoiY(ns,cb))
-    .filter(ns=>cb.caPhuTrach?true:dungBoLocCaNV(ns.ma))
-    .filter(ns=>phanLoaiGoiY(ns,cb).nhom<98);
+  const candidates=ungVienGoiYRong(cb);
+  const selected=[];
+  const used=new Set();
 
-  pool=sapXepGoiYNhanSu(pool,cb);
+  // BƯỚC 1: Lấp đủ quân trước, chưa xét dịch vụ/chứng chỉ.
+  while(selected.length<need){
+    const ns=chonNguoiThuongTotNhat(candidates,cb,used,need);
+    if(!ns)break;
+    used.add(ns.ma);
+    selected.push({ns,vaiTro:"Bổ sung người"});
+  }
+
+  // BƯỚC 2: Quay lại kiểm tra slot bắt buộc.
   const slots=slotYeuCauChuyen(cb);
+  const usedSlot=new Set();
 
-  let plans=[{items:[],used:new Set()}];
-
-  // Thử nhiều tổ hợp cho slot bắt buộc, không khóa cứng người đầu tiên.
   slots.forEach(slot=>{
-    const next=[];
-    plans.forEach(plan=>{
-      const cands=layUngVienSlot(pool.filter(ns=>!plan.used.has(ns.ma)),slot,cb,8);
-      if(!cands.length){
-        next.push(plan);
-      }else{
-        cands.forEach(cand=>{
-          const used=new Set(plan.used);
-          used.add(cand.ma);
-          next.push({
-            items:[...plan.items,{ns:cand,vaiTro:slot.ten}],
-            used
-          });
-        });
-      }
-    });
-    plans=next.slice(0,40);
+    const daCo=nguoiDaDapUngSlot(selected,slot,usedSlot);
+    if(daCo){
+      daCo.vaiTro=slot.ten;
+      usedSlot.add(daCo.ns.ma);
+      return;
+    }
+
+    const nguoiNgoai=chonNguoiBatBuocTotNhat(candidates,cb,slot,used);
+    if(!nguoiNgoai)return;
+
+    if(selected.length<need){
+      used.add(nguoiNgoai.ma);
+      selected.push({ns:nguoiNgoai,vaiTro:slot.ten});
+      usedSlot.add(nguoiNgoai.ma);
+      return;
+    }
+
+    const biThay=nguoiNenThayTrongNhom(selected,usedSlot,cb);
+    if(biThay){
+      used.delete(biThay.ns.ma);
+      biThay.ns=nguoiNgoai;
+      biThay.vaiTro=slot.ten;
+      used.add(nguoiNgoai.ma);
+      usedSlot.add(nguoiNgoai.ma);
+    }
   });
 
-  // Với mỗi phương án slot, bổ sung người nhẹ nhất rồi so điểm tổng thể.
-  const finalPlans=plans.map(plan=>{
-    const used=new Set(plan.used);
-    const more=chonBoSungChoPhuongAn(pool,cb,need,used);
-    return {items:[...plan.items,...more],used};
-  }).sort((a,b)=>diemPhuongAn(a.items,cb,need)-diemPhuongAn(b.items,cb,need));
+  // BƯỚC 3: Nếu vẫn chưa đủ quân thì tiếp tục lấp bằng bất cứ người nào còn có thể dùng.
+  while(selected.length<need){
+    const ns=chonNguoiThuongTotNhat(candidates,cb,used,need);
+    if(!ns)break;
+    used.add(ns.ma);
+    selected.push({ns,vaiTro:"Bổ sung người"});
+  }
 
-  return finalPlans[0]?.items || [];
+  // BƯỚC 4: Tối ưu lần cuối để giữ chiều sâu nhân sự.
+  return toiUuLaiNguoiThuong(selected,candidates,cb,need,usedSlot);
 }
 
 function hienGoiYNhanSu(){
@@ -6120,12 +6226,12 @@ function hienGoiYNhanSu(){
       lines.push(`${i+1}. ${item.ns.ten}${item.vaiTro&&item.vaiTro!=="Bổ sung người" ? ` (${item.vaiTro})` : ""}`);
     });
   }else{
-    lines.push("Chưa có nhân sự phù hợp trong phạm vi đang lọc.");
+    lines.push("Chưa chọn được nhân sự phù hợp.");
   }
 
   if(selected.length<need){
     lines.push("");
-    lines.push(`Còn thiếu: ${need-selected.length} người phù hợp.`);
+    lines.push(`Còn thiếu: ${need-selected.length} người.`);
     lines.push("Hướng xử lý: dùng người còn giờ làm để làm đỡ / điều động người sắp xong / bãi gần / hoặc xác nhận để trống.");
   }
 
