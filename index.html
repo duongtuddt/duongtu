@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.03 Apply Suggestion Assign</title>
+<title>Dương Tú v1.04 Suggest At Flight Time</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -5823,44 +5823,85 @@ function nsTrongPhamViCaChuyen(ns,cb){
 function nsDuocXetGoiY(ns,cb){
   return state.phanCaHomNay[ns.ma]?.chon && nsTrongPhamViCaChuyen(ns,cb) && gioChuyenCoGiaoVoiCa(ns,cb);
 }
+
+function thoiDiemXetGoiY(cb){
+  // Gợi ý nhân sự phải xét tại thời điểm chuyến bắt đầu thực hiện,
+  // không xét theo giờ hiện tại của hệ thống.
+  return batDauAbs(cb);
+}
+function pcTruocThoiDiemCuaNV(ma, moc){
+  return state.phanCong
+    .filter(x=>x.maNV===ma&&pcDangHieuLuc(x)&&x.ketThucAbs<=moc)
+    .sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0]||null;
+}
 function phanLoaiGoiY(ns,cb){
-  const now=hienTaiAbs();
+  const moc=thoiDiemXetGoiY(cb);
   const tk=thongKeNV(ns.ma);
   const gioWarn=canhBaoGioLamViec(ns.ma,cb);
-  if(!nsTrongPhamViCaChuyen(ns,cb))return {nhom:98,diem:999999,lyDo:"Không thuộc "+caChuyenLabel(cb.caPhuTrach),so:tk.so,tg:tk.tg};
-  if(gioWarn && !gioChuyenCoGiaoVoiCa(ns,cb))return {nhom:99,diem:999999,lyDo:"Ngoài giờ làm",so:tk.so,tg:tk.tg};
+
+  if(!nsTrongPhamViCaChuyen(ns,cb)){
+    return {nhom:98,diem:999999,lyDo:"Không thuộc "+caChuyenLabel(cb.caPhuTrach),so:tk.so,tg:tk.tg};
+  }
+
+  // Nếu hoàn toàn không giao với giờ làm của chuyến thì loại.
+  // Nếu chỉ làm được một phần thì vẫn cho vào nhưng phạt điểm.
+  if(gioWarn && !gioChuyenCoGiaoVoiCa(ns,cb)){
+    return {nhom:99,diem:999999,lyDo:"Ngoài giờ làm",so:tk.so,tg:tk.tg};
+  }
+
   const partialPenalty = gioWarn ? 3 : 0;
   const partialText = gioWarn ? `Làm được ${Math.round(phutLamDuocTrongChuyen(ns,cb))} phút trong khung chuyến` : "";
 
   const trungPc=pcTrungChuyenCuaNV(ns.ma,cb);
+
+  // Không có chuyến nào trùng với chuyến đang xét:
+  // nghĩa là tại thời điểm chuyến này bắt đầu, người đó khả dụng.
   if(!trungPc){
-    const truoc=state.phanCong.filter(x=>x.maNV===ns.ma&&pcDangHieuLuc(x)&&x.ketThucAbs<=now).sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0];
-    const ranh=truoc?now-truoc.ketThucAbs:999999;
-    return {nhom:partialPenalty,diem:partialPenalty?200:0,sub:-ranh,so:tk.so,tg:tk.tg,lyDo:partialText||"Rảnh"};
+    const truoc=pcTruocThoiDiemCuaNV(ns.ma,moc);
+    const ranh=truoc?moc-truoc.ketThucAbs:999999;
+    return {
+      nhom:partialPenalty,
+      diem:partialPenalty?200:0,
+      sub:-ranh,
+      so:tk.so,
+      tg:tk.tg,
+      lyDo:partialText||"Rảnh tại giờ chuyến"
+    };
   }
 
   const cbCu=chuyen(trungPc.maChuyen);
-  const startNew=batDauAbs(cb);
-  const remainAtStart=trungPc.ketThucAbs-startNew;
+  const remainAtStart=trungPc.ketThucAbs-moc;
 
-  // Chỉ cân nhắc người đang vướng chuyến khác nếu chuyến đó sắp xong trong vòng 15 phút tính từ lúc chuyến mới bắt đầu.
+  // Nếu tại giờ chuyến mới bắt đầu, chuyến cũ còn <=15 phút thì có thể cân nhắc điều động/sắp xong.
   if(remainAtStart<=15 && !(cbCu&&flightCoDichVuGiuNguoi(cbCu))){
     return {
       nhom:1+partialPenalty,
       diem:Math.max(0,remainAtStart)+(partialPenalty?200:0),
       so:tk.so,
       tg:tk.tg,
-      lyDo:`Đang vướng ${cbCu?cbCu.flight:trungPc.maChuyen}, còn ${Math.ceil(Math.max(0,remainAtStart))} phút khi chuyến mới bắt đầu`
+      lyDo:`Tại giờ chuyến bắt đầu, đang vướng ${cbCu?cbCu.flight:trungPc.maChuyen}, còn ${Math.ceil(Math.max(0,remainAtStart))} phút`
     };
   }
 
   const gan=khoangCachBai(cbCu?.baiDo,cb.baiDo);
   const coThang=nsCoChungChi(ns,"thang")||nsCoChungChiId(ns,"thang");
   if(gan<=3 && coThang && !(cbCu&&flightCoDichVuGiuNguoi(cbCu)) && remainAtStart<=30){
-    return {nhom:2+partialPenalty,diem:gan*100+Math.max(0,remainAtStart)+(partialPenalty?200:0),so:tk.so,tg:tk.tg,lyDo:partialText||`Ở bãi ${cbCu?.baiDo}, gần bãi ${cb.baiDo} (${gan} bãi)`};
+    return {
+      nhom:2+partialPenalty,
+      diem:gan*100+Math.max(0,remainAtStart)+(partialPenalty?200:0),
+      so:tk.so,
+      tg:tk.tg,
+      lyDo:partialText||`Ở bãi ${cbCu?.baiDo}, gần bãi ${cb.baiDo} (${gan} bãi)`
+    };
   }
 
-  return {nhom:90,diem:Math.max(0,remainAtStart),so:tk.so,tg:tk.tg,lyDo:`Đang vướng ${cbCu?cbCu.flight:trungPc.maChuyen} trong giờ chuyến này`};
+  return {
+    nhom:90,
+    diem:Math.max(0,remainAtStart),
+    so:tk.so,
+    tg:tk.tg,
+    lyDo:`Tại giờ chuyến bắt đầu, đang vướng ${cbCu?cbCu.flight:trungPc.maChuyen}`
+  };
 }
 function sapXepGoiYNhanSu(ds,cb){
   return ds.slice().sort((a,b)=>{
@@ -6275,7 +6316,7 @@ function hienGoiYNhanSu(){
   lines.push(`Cần tối thiểu: ${need} người`);
   lines.push(`Cần chứng chỉ: ${yc}`);
   lines.push("");
-  lines.push("Đề xuất:");
+  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))}`); lines.push(""); lines.push("Đề xuất:");
 
   if(selected.length){
     selected.forEach((item,i)=>{
