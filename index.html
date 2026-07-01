@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.98 Shift Border Smart Suggest</title>
+<title>Dương Tú v0.99 Smart Slot Backtrack Polish</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2179,6 +2179,59 @@ button:hover,.taskItem:hover{
   max-height:770px!important;
 }
 
+
+/* v0.99 - viền ca giữ nguyên khi chọn + căn giữa nhãn sau thanh */
+.flightScopeRow.ca1{--scopeColor:#37e88f}
+.flightScopeRow.ca2{--scopeColor:#f59e0b}
+.flightScopeRow.ca3{--scopeColor:#b084f5}
+.flightScopeRow.ca4{--scopeColor:#38bdf8}
+.flightScopeRow.ca5{--scopeColor:#fb7185}
+.flightScopeRow.kd{--scopeColor:#0f766e}
+.flightScopeRow.truc{--scopeColor:#ffffff}
+
+.flightScopeRow.ca1 .flightScopeLabel,.flightScopeRow.ca1 .flightScopeLane,
+.flightScopeRow.ca2 .flightScopeLabel,.flightScopeRow.ca2 .flightScopeLane,
+.flightScopeRow.ca3 .flightScopeLabel,.flightScopeRow.ca3 .flightScopeLane,
+.flightScopeRow.ca4 .flightScopeLabel,.flightScopeRow.ca4 .flightScopeLane,
+.flightScopeRow.ca5 .flightScopeLabel,.flightScopeRow.ca5 .flightScopeLane,
+.flightScopeRow.kd .flightScopeLabel,.flightScopeRow.kd .flightScopeLane,
+.flightScopeRow.truc .flightScopeLabel,.flightScopeRow.truc .flightScopeLane{
+  border-top:3px solid var(--scopeColor)!important;
+  border-bottom:1px solid rgba(255,255,255,.12)!important;
+}
+
+.flightScopeRow .flightScopeLabel.selected,
+.flightScopeRow .flightScopeLane.selected{
+  border-top:3px solid var(--scopeColor)!important;
+  box-shadow:inset 0 0 0 2px #38bdf8, inset 5px 0 var(--scopeColor)!important;
+}
+
+.flightMonitor,.flightNote,.requireWarn,.tenSau{
+  top:50%!important;
+  transform:translateY(-50%)!important;
+}
+.flightMonitor{
+  height:28px!important;
+  min-width:48px!important;
+  font-size:13px!important;
+}
+.flightNote,.requireWarn,.staffChip{
+  height:28px!important;
+  min-height:28px!important;
+  line-height:26px!important;
+  font-size:13px!important;
+}
+.tenSau{
+  height:30px!important;
+  align-items:center!important;
+}
+.bar.flight{
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  height:32px!important;
+  line-height:32px!important;
+}
+
 </style>
 </head>
 <body>
@@ -4283,7 +4336,7 @@ function ganCaChoNhanSu(ma){
   const ca=state.caGan?.ca, nhanh=state.caGan?.nhanh||"1";
   if(!ca || ca==="tatca" || String(nhanh)==="all"){alert("Chọn nhánh cụ thể trước rồi mới gán nhân sự."); return;}
   if(!requireCaScope(ca,TEN_CA[ca]||ca))return;
-  if(datCaDuyNhatChoNhanSu(ma,ca,nhanh,true)){
+  if(datCaDuyNhatChoNhanSu(ma,ca,nhanh,false)){
     logAction("PHÂN CA",`${tenNV(ma)} → ${tenNhomCa(ca,nhanh)}`);
     luuPhanCaNgayHienTai();luu();veTatCa();
   }
@@ -4861,7 +4914,12 @@ function theoDoiChuyen(cb){
 
 function caScopeChuyen(cb){
   const v=String(cb?.caPhuTrach||"");
-  if(v && v!=="tatca")return v;
+  // Nếu đã chọn ca cụ thể lúc nhập chuyến thì giữ nguyên ca đó.
+  // Nếu chọn "Tất cả" thì không hiển thị viền ca và không tự nhảy theo người được phân.
+  if(v==="tatca")return "";
+  if(v)return v;
+
+  // Chỉ chuyến cũ chưa có trường caPhuTrach mới fallback theo người đầu tiên.
   const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc));
   if(pcs.length)return caCuaNV(pcs[0].maNV);
   return "";
@@ -5691,16 +5749,15 @@ function nsDuocXetGoiY(ns,cb){
 function phanLoaiGoiY(ns,cb){
   const now=hienTaiAbs();
   const tk=thongKeNV(ns.ma);
-  const duCC=nsDuYeuCauChuyen(ns,cb);
   const gioWarn=canhBaoGioLamViec(ns.ma,cb);
   if(!nsTrongPhamViCaChuyen(ns,cb))return {nhom:98,diem:999999,lyDo:"Không thuộc "+caChuyenLabel(cb.caPhuTrach),so:tk.so,tg:tk.tg};
-  if(!duCC || gioWarn)return {nhom:99,diem:999999,lyDo:!duCC?"Thiếu chứng chỉ":"Ngoài giờ làm",so:tk.so,tg:tk.tg};
+  if(gioWarn)return {nhom:99,diem:999999,lyDo:"Ngoài giờ làm",so:tk.so,tg:tk.tg};
 
   const trungPc=pcTrungChuyenCuaNV(ns.ma,cb);
   if(!trungPc){
     const truoc=state.phanCong.filter(x=>x.maNV===ns.ma&&pcDangHieuLuc(x)&&x.ketThucAbs<=now).sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0];
     const ranh=truoc?now-truoc.ketThucAbs:999999;
-    return {nhom:0,diem:0,sub:-ranh,so:tk.so,tg:tk.tg,lyDo:"Rảnh + đủ chứng chỉ"};
+    return {nhom:0,diem:0,sub:-ranh,so:tk.so,tg:tk.tg,lyDo:"Rảnh"};
   }
 
   const cbCu=chuyen(trungPc.maChuyen);
@@ -5860,6 +5917,35 @@ function sapXepBoSung(a,b,cb,pool,used){
   // Mặc định: tiết kiệm chứng chỉ trước, rồi mới xét công bằng.
   return ca-cbp || tka.so-tkb.so || tka.tg-tkb.tg || da.p.diem-db.p.diem;
 }
+function layUngVienSlot(pool,slot,cb,limit=8){
+  return pool
+    .filter(ns=>nsCoTatCaChungChi(ns,slot.ids))
+    .sort((a,b)=>sapXepSlotBatBuoc(a,b,cb))
+    .slice(0,limit);
+}
+function chonBoSungChoPhuongAn(pool,cb,need,used){
+  const them=[];
+  while(them.length+used.size<need){
+    const remaining=pool
+      .filter(ns=>!used.has(ns.ma))
+      .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
+      .sort((a,b)=>sapXepBoSung(a,b,cb,pool,used));
+    const cand=remaining[0];
+    if(!cand)break;
+    used.add(cand.ma);
+    them.push({ns:cand,vaiTro:"Bổ sung người"});
+  }
+  return them;
+}
+function diemPhuongAn(items,cb,need){
+  const nsList=items.map(x=>x.ns);
+  const tkSum=nsList.reduce((s,ns)=>s+thongKeNV(ns.ma).so*80+thongKeNV(ns.ma).tg/10,0);
+  const capCost=nsList.reduce((s,ns)=>s+capNheDiem(ns),0);
+  const cap2Used=nsList.filter(laNhanSuCap2Plus).length;
+  const missing=Math.max(0,need-items.length);
+  const roleWaste=items.reduce((s,it)=>s+(it.vaiTro==="Bổ sung người"&&laNhanSuCap2Plus(it.ns)?120:0),0);
+  return missing*100000 + roleWaste + capCost*20 + cap2Used*60 + tkSum;
+}
 function chonGoiYNhanSu(cb){
   const need=soNguoiCanGoiY(cb);
   let pool=state.danhSachNhanSu
@@ -5868,33 +5954,39 @@ function chonGoiYNhanSu(cb){
     .filter(ns=>phanLoaiGoiY(ns,cb).nhom<98);
 
   pool=sapXepGoiYNhanSu(pool,cb);
-  const selected=[];
-  const used=new Set();
   const slots=slotYeuCauChuyen(cb);
 
+  let plans=[{items:[],used:new Set()}];
+
+  // Thử nhiều tổ hợp cho slot bắt buộc, không khóa cứng người đầu tiên.
   slots.forEach(slot=>{
-    const cand=pool
-      .filter(ns=>!used.has(ns.ma))
-      .filter(ns=>nsCoTatCaChungChi(ns,slot.ids))
-      .sort((a,b)=>sapXepSlotBatBuoc(a,b,cb))[0];
-    if(cand){
-      used.add(cand.ma);
-      selected.push({ns:cand, vaiTro:slot.ten});
-    }
+    const next=[];
+    plans.forEach(plan=>{
+      const cands=layUngVienSlot(pool.filter(ns=>!plan.used.has(ns.ma)),slot,cb,8);
+      if(!cands.length){
+        next.push(plan);
+      }else{
+        cands.forEach(cand=>{
+          const used=new Set(plan.used);
+          used.add(cand.ma);
+          next.push({
+            items:[...plan.items,{ns:cand,vaiTro:slot.ten}],
+            used
+          });
+        });
+      }
+    });
+    plans=next.slice(0,40);
   });
 
-  while(selected.length<need){
-    const remaining=pool
-      .filter(ns=>!used.has(ns.ma))
-      .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
-      .sort((a,b)=>sapXepBoSung(a,b,cb,pool,used));
-    const cand=remaining[0];
-    if(!cand)break;
-    used.add(cand.ma);
-    selected.push({ns:cand, vaiTro:"Bổ sung người"});
-  }
+  // Với mỗi phương án slot, bổ sung người nhẹ nhất rồi so điểm tổng thể.
+  const finalPlans=plans.map(plan=>{
+    const used=new Set(plan.used);
+    const more=chonBoSungChoPhuongAn(pool,cb,need,used);
+    return {items:[...plan.items,...more],used};
+  }).sort((a,b)=>diemPhuongAn(a.items,cb,need)-diemPhuongAn(b.items,cb,need));
 
-  return selected;
+  return finalPlans[0]?.items || [];
 }
 
 function hienGoiYNhanSu(){
