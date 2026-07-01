@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.10 Fairness First Rule Engine</title>
+<title>Dương Tú v1.11 Balanced Pair Rule Engine</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -6206,6 +6206,43 @@ function ganVaiTroChoToHop(combo,cb,slots){
   });
   return selected;
 }
+function laCapNhe(ns){
+  return !laNhanSuCap2Plus(ns);
+}
+function diemCanBangCoCau(selected,cb,pool,slots){
+  const need=soNguoiCanGoiY(cb);
+  const coBatBuoc=slots.length>0;
+  const poolCap1=pool.filter(laCapNhe).length;
+  const poolCap2=pool.filter(laNhanSuCap2Plus).length;
+  const selCap1=selected.filter(it=>laCapNhe(it.ns)).length;
+  const selCap2=selected.filter(it=>laNhanSuCap2Plus(it.ns)).length;
+
+  // Nếu thiếu một nhóm thì không ép cân bằng nữa.
+  if(poolCap1===0 || poolCap2===0)return 0;
+
+  // Chuyến thường cần 2 người: ưu tiên 1 cấp nhẹ + 1 cấp cao để không đốt hết cấp 1 đầu ca.
+  if(!coBatBuoc && need===2){
+    if(selCap1===1 && selCap2===1)return 0;
+    if(selCap1===2 || selCap2===2)return 180000;
+  }
+
+  // Chuyến thường cần nhiều hơn 2: cố giữ tỉ lệ gần 50/50 nếu nguồn lực còn đủ.
+  if(!coBatBuoc && need>2){
+    const targetCap2=Math.round(need/2);
+    return Math.abs(selCap2-targetCap2)*90000;
+  }
+
+  // Chuyến có slot bắt buộc: dùng đúng người có chứng chỉ cho slot đó,
+  // phần còn lại vẫn nên có cấp nhẹ nếu còn đủ người.
+  if(coBatBuoc){
+    const requiredCap2=slots.length; // ước lượng số người cần chứng chỉ bắt buộc
+    const minCap2=Math.min(requiredCap2, need);
+    if(selCap2<minCap2)return (minCap2-selCap2)*200000;
+    if(need>minCap2 && selCap1===0 && poolCap1>0)return 120000;
+  }
+
+  return 0;
+}
 function diemPhuongAn(selected,cb,pool,slots){
   const match=mucPhuHopYeuCau(selected,slots);
   const missing=slots.length-match;
@@ -6213,8 +6250,8 @@ function diemPhuongAn(selected,cb,pool,slots){
   // Fairness là chính: tổng số chuyến/phút của nhóm được chọn.
   const fair=diemCongBangNhom(selected,cb);
 
-  // Nếu trong pool còn người "nợ việc" lớn hơn mà không được chọn thì phạt rất mạnh.
-  // Mục tiêu: không để người nhiều chứng chỉ ngồi chơi chỉ vì cần giữ chiều sâu.
+  // Nếu trong pool còn người ít chuyến nhất bị bỏ qua thì phạt,
+  // nhưng không phạt quá mức để còn cân bằng cơ cấu đội.
   const selectedSet=new Set(selected.map(it=>it.ns.ma));
   const minSo=Math.min(...pool.map(ns=>thongKeTaiMoc(ns,cb).so));
   const skippedDebt=pool
@@ -6223,14 +6260,16 @@ function diemPhuongAn(selected,cb,pool,slots){
     .filter(tk=>tk.so===minSo)
     .length;
 
+  const balance=diemCanBangCoCau(selected,cb,pool,slots);
   const depth=-diemChieuSauConLai(pool,selected);
   const normalCost=selected.reduce((s,it)=>s+bacChungChiVanHanh(it.ns,pool),0);
   const vsBonus=(laChuyenNamSanDi(cb)&&selected.some(it=>coVSNuocSach(it.ns)))?-2500:0;
 
   return missing*100000000 +
-    skippedDebt*250000 +
+    balance +
+    skippedDebt*120000 +
     fair +
-    normalCost*80 +
+    normalCost*60 +
     depth*5 +
     vsBonus;
 }
@@ -6276,7 +6315,7 @@ function hienGoiYNhanSu(){
   lines.push(`Cần chứng chỉ: ${yc}`);
   lines.push("");
   lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - chỉ đếm chuyến đã bắt đầu trước mốc này`);
-  lines.push("Rule Engine v1.10: đúng ca → rảnh → ít chuyến/ít phút → slot bắt buộc → giữ chiều sâu khi công bằng gần ngang.");
+  lines.push("Rule Engine v1.11: đúng ca → rảnh → ít chuyến/phút → cân bằng cấp 1/cấp 2 → slot bắt buộc → giữ chiều sâu.");
   lines.push("");
   lines.push("Đề xuất:");
 
