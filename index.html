@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.05 Fair Idle First Suggest</title>
+<title>Dương Tú v1.06 Preserve Depth Suggest</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -6014,18 +6014,24 @@ function sapXepSlotBatBuoc(a,b,cb){
 function sapXepBoSung(a,b,cb,pool,used){
   const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
   const tka=thongKeNV(a.ma), tkb=thongKeNV(b.ma);
+  const coBatBuoc=chuyenCoYeuCauBatBuoc(cb);
 
-  // Ưu tiên đúng tinh thần điều hành:
-  // 1. trạng thái khả dụng/rảnh
-  // 2. ai rảnh lâu hơn
-  // 3. ai làm ít chuyến hơn
-  // 4. ai làm ít phút hơn
-  // 5. cuối cùng mới xét giữ người nhiều chứng chỉ
   if(da.p.nhom!==db.p.nhom)return da.p.nhom-db.p.nhom;
-  if((da.p.sub||0)!==(db.p.sub||0))return (da.p.sub||0)-(db.p.sub||0);
+
+  // Chuyến không yêu cầu gì: giữ chiều sâu là ưu tiên sau điều kiện rảnh.
+  // Ví dụ còn 2 cấp 1 rảnh thì không lấy người nhiều chứng chỉ vào chuyến thường.
+  if(!coBatBuoc){
+    if(bacChungChiVanHanh(a)!==bacChungChiVanHanh(b))return bacChungChiVanHanh(a)-bacChungChiVanHanh(b);
+    if(tka.so!==tkb.so)return tka.so-tkb.so;
+    if(tka.tg!==tkb.tg)return tka.tg-tkb.tg;
+    return (da.p.sub||0)-(db.p.sub||0);
+  }
+
+  // Chuyến có yêu cầu: vẫn giữ người quý cho slot thường, nhưng cân bằng công việc rõ hơn.
+  if(bacChungChiVanHanh(a)!==bacChungChiVanHanh(b))return bacChungChiVanHanh(a)-bacChungChiVanHanh(b);
   if(tka.so!==tkb.so)return tka.so-tkb.so;
   if(tka.tg!==tkb.tg)return tka.tg-tkb.tg;
-  return capNheDiem(a)-capNheDiem(b);
+  return (da.p.sub||0)-(db.p.sub||0);
 }
 function layUngVienSlot(pool,slot,cb,limit=8){
   return pool
@@ -6105,21 +6111,42 @@ function diemRanh(ns,cb){
   if(p.nhom===0)return p.sub||0;
   return (p.diem||0)+5000;
 }
+function chuyenCoYeuCauBatBuoc(cb){
+  return slotYeuCauChuyen(cb).length>0;
+}
+function bacChungChiVanHanh(ns){
+  // Bậc càng thấp càng nên dùng cho slot thường.
+  // Mục tiêu: chuyến không yêu cầu đặc biệt thì dùng người ít/chứng chỉ nhẹ trước để giữ chiều sâu.
+  const cc=ns.chungChi||{};
+  if(chiCoDauKeo(ns))return 0;
+  if(cc.daukeo && cc.bangchuyen && tongSoChungChi(ns)<=2)return 1;
+  if(!laNhanSuCap2Plus(ns))return 2;
+  return 10 + soChungChiNang(ns)*5 + tongSoChungChi(ns);
+}
 function diemSlotThuong(ns,cb){
   const tk=thongKeNV(ns.ma);
   const khaDung=mucDoKhaDung(ns,cb);
+  const coBatBuoc=chuyenCoYeuCauBatBuoc(cb);
 
   // Slot thường:
-  // 1) khả dụng/rảnh tại mốc chuyến
-  // 2) ai rảnh lâu hơn
-  // 3) công bằng số chuyến
-  // 4) công bằng tổng phút làm
-  // 5) cuối cùng mới xét giữ chứng chỉ/cấp cao
+  // - Khả dụng/rảnh vẫn là điều kiện đầu tiên.
+  // - Nếu chuyến KHÔNG có yêu cầu bắt buộc: ưu tiên giữ chiều sâu trước,
+  //   tức là dùng nhân sự cấp nhẹ/ít chứng chỉ trước, rồi mới cân số chuyến/giờ.
+  // - Nếu chuyến CÓ yêu cầu bắt buộc: sau khi đã đủ slot bắt buộc, slot thường vẫn giữ chiều sâu,
+  //   nhưng chênh trạng thái rảnh/đang vướng được phạt mạnh hơn.
+  if(!coBatBuoc){
+    return khaDung*1000000 +
+      bacChungChiVanHanh(ns)*12000 +
+      tk.so*2500 +
+      tk.tg*10 +
+      diemRanh(ns,cb)*15;
+  }
+
   return khaDung*1000000 +
-    diemRanh(ns,cb)*80 +
-    tk.so*5000 +
-    tk.tg*15 +
-    capNheDiem(ns)*30;
+    bacChungChiVanHanh(ns)*9000 +
+    tk.so*3000 +
+    tk.tg*12 +
+    diemRanh(ns,cb)*20;
 }
 function diemSlotBatBuocMoi(ns,cb){
   const tk=thongKeNV(ns.ma);
@@ -6315,7 +6342,7 @@ function hienGoiYNhanSu(){
   lines.push(`Cần tối thiểu: ${need} người`);
   lines.push(`Cần chứng chỉ: ${yc}`);
   lines.push("");
-  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))}`); lines.push("Ưu tiên: rảnh hơn → ít chuyến → ít phút → giữ chứng chỉ."); lines.push(""); lines.push("Đề xuất:");
+  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))}`); lines.push("Ưu tiên slot thường: rảnh/khả dụng → giữ chiều sâu chứng chỉ → ít chuyến → ít phút."); lines.push(""); lines.push("Đề xuất:");
 
   if(selected.length){
     selected.forEach((item,i)=>{
