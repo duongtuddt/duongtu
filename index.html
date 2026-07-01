@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.92 Suggestion Logic Clean</title>
+<title>Dương Tú v0.94 Suggest Busy Select Highlight</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1895,6 +1895,37 @@ body.menuOpen::after{
 }
 .nowLine{
   top:var(--timelineHeaderHeight)!important;
+}
+
+
+/* v0.94 - chọn chuyến trực quan hơn */
+.tlLabel.selected{
+  background:#12385c!important;
+  box-shadow:inset 4px 0 #38bdf8, 0 0 0 2px #38bdf8!important;
+  color:#fff!important;
+}
+.tlLabel.selected::after{
+  content:"ĐANG CHỌN";
+  display:inline-block;
+  margin-top:3px;
+  padding:1px 6px;
+  border-radius:999px;
+  background:#0ea5e9;
+  color:#00111d;
+  font-size:10px;
+  font-weight:950;
+}
+.tlLane.selected{
+  outline:2px solid #38bdf8!important;
+  background-color:rgba(56,189,248,.08)!important;
+}
+.tlLane.selected .bar.flight{
+  box-shadow:0 0 0 2px #eaf3ff, 0 0 14px rgba(56,189,248,.65)!important;
+}
+.quarterMark.major{
+  font-size:16px!important;
+  line-height:16px!important;
+  font-weight:950!important;
 }
 
 </style>
@@ -4476,7 +4507,7 @@ function veHeader(el){
       const t=abs+m;
       const x=TIMELINE_LABEL_WIDTH+viTri(t);
       const plus=t>=ngayGoc+1440?" +1":"";
-      const major=m===0;
+      const major=(m===0||m===30);
       html+=`<div class="${major?"hourTick":"quarterTick"}" style="left:${x}px"></div>`;
       html+=`<div class="quarterMark ${major?"major":""}" style="left:${x}px">${gioTuPhut(t)}${plus}</div>`;
     });
@@ -5256,17 +5287,28 @@ function dichVuTam15Phut(service){
   return s==="vs"||s.includes("ve sinh")||s==="ns"||s.includes("nuoc sach");
 }
 function promptDichVuDieuDong(cb,ma,trungPc){
-  const dangLam=trungPc?`\\n\\n${tenNV(ma)} đang làm ${tenChuyenTuPC(trungPc)}.`:"";
-  const dv=prompt(
-    `Điều động ${tenNV(ma)} sang ${cb.flight} để làm gì?${dangLam}\\n\\n`+
-    `bo sung = bổ sung người đến hết chuyến\\n`+
-    `gpu / asu / acu = ở đến hết chuyến\\n`+
-    `vs / ns = vệ sinh/nước sạch 15 phút rồi rảnh hoặc quay lại chuyến cũ\\n\\n`+
-    `Nhập dịch vụ:`,
-    "bo sung"
-  );
-  if(dv===null)return null;
-  return dv.trim()||"bo sung";
+  const dangLam=trungPc?`\n\n${tenNV(ma)} đang làm ${tenChuyenTuPC(trungPc)}.`:"";
+  const base=`Điều động ${tenNV(ma)} sang ${cb.flight} để làm gì?${dangLam}\n\n`;
+
+  if(confirm(base+
+    `Bấm OK: BỔ SUNG NGƯỜI - ở đến hết chuyến.\n`+
+    `Bấm HỦY: chọn dịch vụ khác.`)){
+    return "bo sung";
+  }
+
+  if(confirm(base+
+    `Bấm OK: VỆ SINH / NƯỚC SẠCH - làm 15 phút rồi rảnh/quay lại chuyến cũ.\n`+
+    `Bấm HỦY: GPU / ASU / ACU hoặc dịch vụ giữ chuyến.`)){
+    return confirm(base+`Bấm OK: VỆ SINH\nBấm HỦY: NƯỚC SẠCH`) ? "vs" : "ns";
+  }
+
+  if(confirm(base+
+    `Bấm OK: GPU / ASU / ACU - ở đến hết chuyến.\n`+
+    `Bấm HỦY: DỊCH VỤ KHÁC - ở đến hết chuyến.`)){
+    return "gpu asu acu";
+  }
+
+  return "khac";
 }
 function apDungDichVuChoPC(pc,service,cb,trungPc,now){
   pc.dichVuDieuDong=service;
@@ -5297,6 +5339,13 @@ function flightCoDichVuGiuNguoi(cb){
 }
 function pcDangLamCuaNV(ma,now=hienTaiAbs()){
   return state.phanCong.find(pc=>pc.maNV===ma && pcDangHieuLuc(pc) && pc.batDauAbs<=now && now<=pc.ketThucAbs)||null;
+}
+function pcTrungChuyenCuaNV(ma,cb){
+  const bd=batDauAbs(cb), kt=ketThucAbs(cb);
+  return state.phanCong
+    .filter(pc=>pc.maNV===ma && pcDangHieuLuc(pc) && pc.maChuyen!==cb.ma)
+    .filter(pc=>!(pc.ketThucAbs<=bd || pc.batDauAbs>=kt))
+    .sort((a,b)=>a.ketThucAbs-b.ketThucAbs)[0]||null;
 }
 
 function caChuyenLabel(v){
@@ -5337,28 +5386,41 @@ function nsDuocXetGoiY(ns,cb){
 }
 function phanLoaiGoiY(ns,cb){
   const now=hienTaiAbs();
-  const pc=pcDangLamCuaNV(ns.ma,now);
   const tk=thongKeNV(ns.ma);
   const duCC=nsDuYeuCauChuyen(ns,cb);
   const gioWarn=canhBaoGioLamViec(ns.ma,cb);
   if(!nsTrongPhamViCaChuyen(ns,cb))return {nhom:98,diem:999999,lyDo:"Không thuộc "+caChuyenLabel(cb.caPhuTrach),so:tk.so,tg:tk.tg};
   if(!duCC || gioWarn)return {nhom:99,diem:999999,lyDo:!duCC?"Thiếu chứng chỉ":"Ngoài giờ làm",so:tk.so,tg:tk.tg};
-  if(!pc){
+
+  const trungPc=pcTrungChuyenCuaNV(ns.ma,cb);
+  if(!trungPc){
     const truoc=state.phanCong.filter(x=>x.maNV===ns.ma&&pcDangHieuLuc(x)&&x.ketThucAbs<=now).sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0];
     const ranh=truoc?now-truoc.ketThucAbs:999999;
     return {nhom:0,diem:0,sub:-ranh,so:tk.so,tg:tk.tg,lyDo:"Rảnh + đủ chứng chỉ"};
   }
-  const remain=pc.ketThucAbs-now;
-  const cbCu=chuyen(pc.maChuyen);
-  if(remain<=15 && !(cbCu&&flightCoDichVuGiuNguoi(cbCu))){
-    return {nhom:1,diem:remain,so:tk.so,tg:tk.tg,lyDo:`Đang làm ${cbCu?cbCu.flight:pc.maChuyen}, còn ${Math.ceil(remain)} phút`};
+
+  const cbCu=chuyen(trungPc.maChuyen);
+  const startNew=batDauAbs(cb);
+  const remainAtStart=trungPc.ketThucAbs-startNew;
+
+  // Chỉ cân nhắc người đang vướng chuyến khác nếu chuyến đó sắp xong trong vòng 15 phút tính từ lúc chuyến mới bắt đầu.
+  if(remainAtStart<=15 && !(cbCu&&flightCoDichVuGiuNguoi(cbCu))){
+    return {
+      nhom:1,
+      diem:Math.max(0,remainAtStart),
+      so:tk.so,
+      tg:tk.tg,
+      lyDo:`Đang vướng ${cbCu?cbCu.flight:trungPc.maChuyen}, còn ${Math.ceil(Math.max(0,remainAtStart))} phút khi chuyến mới bắt đầu`
+    };
   }
+
   const gan=khoangCachBai(cbCu?.baiDo,cb.baiDo);
-  const coThang=nsCoChungChi(ns,"thang");
-  if(gan<=3 && coThang && !(cbCu&&flightCoDichVuGiuNguoi(cbCu))){
-    return {nhom:2,diem:gan*100+remain,so:tk.so,tg:tk.tg,lyDo:`Ở bãi ${cbCu?.baiDo}, gần bãi ${cb.baiDo} (${gan} bãi)`};
+  const coThang=nsCoChungChi(ns,"thang")||nsCoChungChiId(ns,"thang");
+  if(gan<=3 && coThang && !(cbCu&&flightCoDichVuGiuNguoi(cbCu)) && remainAtStart<=30){
+    return {nhom:2,diem:gan*100+Math.max(0,remainAtStart),so:tk.so,tg:tk.tg,lyDo:`Ở bãi ${cbCu?.baiDo}, gần bãi ${cb.baiDo} (${gan} bãi)`};
   }
-  return {nhom:90,diem:remain,so:tk.so,tg:tk.tg,lyDo:"Đang bận / không nên điều động"};
+
+  return {nhom:90,diem:Math.max(0,remainAtStart),so:tk.so,tg:tk.tg,lyDo:`Đang vướng ${cbCu?cbCu.flight:trungPc.maChuyen} trong giờ chuyến này`};
 }
 function sapXepGoiYNhanSu(ds,cb){
   return ds.slice().sort((a,b)=>{
@@ -5427,8 +5489,26 @@ function diemGoiY(ns,cb){
   const p=phanLoaiGoiY(ns,cb), tk=thongKeNV(ns.ma);
   return {p, tk};
 }
+function tongSoChungChi(ns){
+  return DANH_MUC_CHUNG_CHI.filter(c=>ns.chungChi&&ns.chungChi[c.id]).length;
+}
 function soChungChiNang(ns){
   return DANH_MUC_CHUNG_CHI.filter(c=>ns.chungChi&&ns.chungChi[c.id]&&["2","2.1","2.2","3.1","3.2"].includes(c.cap)).length;
+}
+function chiCoDauKeo(ns){
+  const cc=ns?.chungChi||{};
+  const ids=DANH_MUC_CHUNG_CHI.filter(c=>cc[c.id]).map(c=>c.id);
+  return ids.length===1 && ids[0]==="daukeo";
+}
+function laChuyenRaBai(cb){
+  const yc=ycBaiDo(cb);
+  return yc ? !yc.coThang : false;
+}
+function duocLamNguoiBoSung(ns,cb,need){
+  // Ngoài bãi mà chuyến chỉ cần 2 người thì không dùng nhân sự chỉ có đầu kéo.
+  // Nếu chuyến cần 3 người trở lên thì nhân sự chỉ có đầu kéo được phép làm người bổ sung.
+  if(laChuyenRaBai(cb) && need<=2 && chiCoDauKeo(ns)) return false;
+  return true;
 }
 function chonGoiYNhanSu(cb){
   const need=soNguoiCanGoiY(cb);
@@ -5442,13 +5522,18 @@ function chonGoiYNhanSu(cb){
   const used=new Set();
   const slots=slotYeuCauChuyen(cb);
 
+  // 1) Chọn người đúng chứng chỉ bắt buộc trước.
   slots.forEach(slot=>{
     const cand=pool
       .filter(ns=>!used.has(ns.ma))
       .filter(ns=>nsCoTatCaChungChi(ns,slot.ids))
       .sort((a,b)=>{
         const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
-        return da.p.nhom-db.p.nhom || da.p.diem-db.p.diem || da.tk.so-db.tk.so || da.tk.tg-db.tk.tg;
+        return da.p.nhom-db.p.nhom ||
+          da.p.diem-db.p.diem ||
+          da.tk.so-db.tk.so ||
+          da.tk.tg-db.tk.tg ||
+          tongSoChungChi(a)-tongSoChungChi(b);
       })[0];
     if(cand){
       used.add(cand.ma);
@@ -5456,12 +5541,15 @@ function chonGoiYNhanSu(cb){
     }
   });
 
+  // 2) Người còn lại là người bổ sung: ưu tiên người ít chứng chỉ nhất để giữ người đa năng dự phòng.
   while(selected.length<need){
     const remaining=pool
       .filter(ns=>!used.has(ns.ma))
+      .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
       .sort((a,b)=>{
         const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
         return da.p.nhom-db.p.nhom ||
+          tongSoChungChi(a)-tongSoChungChi(b) ||
           soChungChiNang(a)-soChungChiNang(b) ||
           da.tk.so-db.tk.so ||
           da.tk.tg-db.tk.tg ||
@@ -5475,6 +5563,7 @@ function chonGoiYNhanSu(cb){
 
   return selected;
 }
+
 function hienGoiYNhanSu(){
   const cb=chuyen(chuyenDangChon);
   if(!cb)return alert("Chọn chuyến bay trước.");
