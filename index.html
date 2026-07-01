@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.97 Smooth Firebase Shift Select</title>
+<title>Dương Tú v0.98 Shift Border Smart Suggest</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2111,6 +2111,74 @@ button:hover,.taskItem:hover{
   box-shadow:0 0 0 2px #38bdf8,0 0 14px rgba(56,189,248,.35)!important;
 }
 
+
+/* v0.98 - ca border cho chuyến + realtime nhân sự gọn */
+#panelTimelineChuyen h2{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+#editNotice{
+  flex:1!important;
+  min-height:24px!important;
+  max-height:24px!important;
+  display:flex!important;
+  align-items:center!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+  text-overflow:ellipsis!important;
+  padding:2px 10px!important;
+  margin-left:8px!important;
+  font-size:12px!important;
+  opacity:.95;
+}
+#editNotice.hidden{
+  visibility:hidden!important;
+  display:flex!important;
+}
+.flightScopeLabel.ca1,.flightScopeLane.ca1{border-left:4px solid #37e88f!important}
+.flightScopeLabel.ca2,.flightScopeLane.ca2{border-left:4px solid #f59e0b!important}
+.flightScopeLabel.ca3,.flightScopeLane.ca3{border-left:4px solid #b084f5!important}
+.flightScopeLabel.ca4,.flightScopeLane.ca4{border-left:4px solid #38bdf8!important}
+.flightScopeLabel.ca5,.flightScopeLane.ca5{border-left:4px solid #fb7185!important}
+.flightScopeLabel.kd,.flightScopeLane.kd{border-left:4px solid #0f766e!important}
+.flightScopeLabel.truc,.flightScopeLane.truc{border-left:4px solid #ffffff!important}
+.flightScopeLabel.selected{
+  box-shadow:inset 4px 0 currentColor,0 0 0 2px #38bdf8!important;
+}
+.flightScopeLane.selected{
+  outline:2px solid #38bdf8!important;
+}
+#khungTimelineNhanSu .tlRow{
+  height:60px!important;
+  min-height:60px!important;
+}
+#khungTimelineNhanSu .tlLabel,#khungTimelineNhanSu .tlLane{
+  height:60px!important;
+  min-height:60px!important;
+}
+#khungTimelineNhanSu .tlLabel{
+  padding-top:7px!important;
+}
+#khungTimelineNhanSu .tlLabel b{
+  font-size:13px!important;
+}
+#khungTimelineNhanSu .tlLabel .muted{
+  font-size:12px!important;
+}
+#khungTimelineNhanSu .bar{
+  height:24px!important;
+  top:18px!important;
+  font-size:12px!important;
+}
+#khungTimelineNhanSu .standBadge{
+  transform:scale(.88);
+  transform-origin:left center;
+}
+#khungTimelineNhanSu{
+  max-height:770px!important;
+}
+
 </style>
 </head>
 <body>
@@ -2188,8 +2256,6 @@ button:hover,.taskItem:hover{
 <section class="panel" id="panelNhapChuyen">
 <h2>Nhập / sửa chuyến bay</h2>
 <div class="body">
-<div id="editNotice" class="editNotice hidden"></div>
-
 <div class="row">
 <label class="hidden">Ngày khai thác <input type="date" id="ngayKhaiThac"></label>
 <input id="flight" placeholder="Chuyến bay VD: RS511/512">
@@ -2215,7 +2281,7 @@ button:hover,.taskItem:hover{
 </div>
 </section>
 
-<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span>Realtime chuyến bay</span><span class="rtActions"><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
+<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span>Realtime chuyến bay</span><span id="editNotice" class="editNotice hidden"></span><span class="rtActions"><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
 
 <div class="grid2" id="gridRealtime">
 <section class="panel realtimeCompact"><h2>Realtime nhân sự hôm nay</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
@@ -4792,6 +4858,14 @@ function theoDoiChuyen(cb){
   return {html:"", rong:0};
 }
 
+
+function caScopeChuyen(cb){
+  const v=String(cb?.caPhuTrach||"");
+  if(v && v!=="tatca")return v;
+  const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc));
+  if(pcs.length)return caCuaNV(pcs[0].maNV);
+  return "";
+}
 function veTimelineChuyen(){
   const el=$("timelineChuyenBay"); veHeader(el);
   const nowLive=hienTaiAbs();
@@ -4820,7 +4894,7 @@ function veTimelineChuyen(){
       const bdCB=batDauAbs(cb), ktCB=ketThucAbs(cb);
       const dangLive=bdCB<=nowLive && nowLive<=ktCB;
       const mau=mauChuyen(cb.ma), left=viTri(bdCB), width=rong(bdCB,ktCB), sel=cb.ma===chuyenDangChon;
-      const ca=mauCaChuyen(cb.ma), caCls=caClass(ca);
+      const ca=mauCaChuyen(cb.ma), caCls=caClass(ca), caScope=caScopeChuyen(cb), scopeCls=caScope?caClass(caScope):"";
       const mon=theoDoiChuyen(cb);
       const cbWarn=shortCanhBaoCap(cb);
       const noteText=String(cb.ghiChu||"").trim();
@@ -4832,7 +4906,7 @@ function veTimelineChuyen(){
       const tenLeft=left+width+6+mon.rong+noteRong+warnRong;
       const noteHtml=noteText?`<div class="flightNote" style="left:${noteLeft}px;max-width:250px" title="${noteText.replace(/"/g,'&quot;')}">${noteText}</div>`:"";
       const warnHtml=cbWarn?`<div class="requireWarn" style="left:${warnLeft}px;min-width:${warnRong}px">${cbWarn}</div>`:"";
-      el.innerHTML+=`<div class="tlRow"><div class="tlLabel ${caCls} ${sel?"selected":""} ${dangLive?"activeNow":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><select class="flightCaSelect" onclick="event.stopPropagation()" onchange="doiCaPhuTrachChuyen('${cb.ma}',this.value)">${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
+      el.innerHTML+=`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><select class="flightCaSelect" onclick="event.stopPropagation()" onchange="doiCaPhuTrachChuyen('${cb.ma}',this.value)">${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls} ${scopeCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
     });
 }
 
@@ -4918,7 +4992,7 @@ function veTimelineNhanSu(){
     const dangDoiCho=nhanSuDoiCho===ns.ma;
     const sapXepText=!chuyenDangChon&&dangDoiCho?`<br><span class="sapXepHint">Đang chọn để đổi vị trí</span>`:"";
     const handle=!chuyenDangChon?`<span class="dragHandle ${caCls}" title="Kéo để chèn vị trí" onpointerdown="batDauKeoNhanSuPointer(event,'${ns.ma}')"></span>`:"";
-    el.innerHTML+=`<div class="tlRow ${dangDoiCho?"reorderSelected":""}" data-ma-nv="${ns.ma}"><div class="tlLabel ${caCls} ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${handle}<b>${ns.ten}</b>${standBadgeNhanSu(ns.ma,now)}<br><span class="muted">Cấp ${ns.cap}</span><br><span class="${tt.loai==="red"?"redText":tt.loai==="orange"?"orangeText":"greenText"}">${tt.text}</span>${sapXepText}</div><div class="tlLane ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
+    el.innerHTML+=`<div class="tlRow ${dangDoiCho?"reorderSelected":""}" data-ma-nv="${ns.ma}"><div class="tlLabel ${caCls} ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${handle}<b>${ns.ten}</b>${standBadgeNhanSu(ns.ma,now)}<br><span class="muted">Cấp ${ns.cap}</span>${sapXepText}</div><div class="tlLane ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
   });
 }
 
@@ -5708,19 +5782,20 @@ function soNguoiCanGoiY(cb){
   if(raBai && (ids.has("gpu")||ids.has("acu"))) n=Math.max(n,3);
   return n;
 }
+function laNhanSuCap2Plus(ns){
+  return soChungChiNang(ns)>0 || (ns.chungChi&&(ns.chungChi.thang||ns.chungChi.gpu||ns.chungChi.acu||ns.chungChi.asu||ns.chungChi.highloader||ns.chungChi.pushback));
+}
 function capNheDiem(ns){
-  // Càng thấp càng nhẹ: dùng để giữ người cấp cao/đa chứng chỉ cho chuyến sau.
   const cc=ns.chungChi||{};
   const count=tongSoChungChi(ns);
   const nang=soChungChiNang(ns);
   if(chiCoDauKeo(ns))return 0;
-  const coBangChuyen=!!cc.bangchuyen;
-  const coDauKeo=!!cc.daukeo;
-  if(coDauKeo&&coBangChuyen&&count<=2)return 1;
-  return count*10+nang*20;
+  if(cc.daukeo && cc.bangchuyen && count<=2)return 1;
+  if(!laNhanSuCap2Plus(ns))return 2 + count;
+  return 30 + count*5 + nang*15;
 }
 function soCap2DuPhong(pool,used){
-  return pool.filter(ns=>!used.has(ns.ma)&&soChungChiNang(ns)>0).length;
+  return pool.filter(ns=>!used.has(ns.ma)&&laNhanSuCap2Plus(ns)).length;
 }
 function nsCoTatCaChungChi(ns,ids){
   return ids.every(id=>nsCoChungChi(ns,id)||nsCoChungChiId(ns,id));
@@ -5745,10 +5820,45 @@ function laChuyenRaBai(cb){
   return yc ? !yc.coThang : false;
 }
 function duocLamNguoiBoSung(ns,cb,need){
-  // Ngoài bãi mà chuyến chỉ cần 2 người thì không dùng nhân sự chỉ có đầu kéo.
-  // Nếu chuyến cần 3 người trở lên thì nhân sự chỉ có đầu kéo được phép làm người bổ sung.
   if(laChuyenRaBai(cb) && need<=2 && chiCoDauKeo(ns)) return false;
   return true;
+}
+function diemCongBang(ns){
+  const tk=thongKeNV(ns.ma);
+  return tk.so*100 + tk.tg/10;
+}
+function sapXepSlotBatBuoc(a,b,cb){
+  const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
+  return da.p.nhom-db.p.nhom ||
+    da.p.diem-db.p.diem ||
+    diemCongBang(a)-diemCongBang(b) ||
+    capNheDiem(a)-capNheDiem(b);
+}
+function sapXepBoSung(a,b,cb,pool,used){
+  const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
+  const ca=capNheDiem(a), cbp=capNheDiem(b);
+
+  // Ưu tiên người còn rảnh/hợp lý trước, nhưng nếu đều rảnh gần như nhau thì giữ cấp cao.
+  if(da.p.nhom!==db.p.nhom)return da.p.nhom-db.p.nhom;
+
+  const diffRanh=Math.abs((da.p.sub||0)-(db.p.sub||0));
+  if(da.p.nhom===0 && db.p.nhom===0 && diffRanh<20){
+    return ca-cbp || diemCongBang(a)-diemCongBang(b);
+  }
+
+  // Nếu số chuyến ngang hoặc chỉ lệch 1 chuyến: ưu tiên người cấp/chứng chỉ thấp hơn để giữ chiều sâu.
+  const tka=thongKeNV(a.ma), tkb=thongKeNV(b.ma);
+  if(Math.abs(tka.so-tkb.so)<=1){
+    return ca-cbp || tka.tg-tkb.tg || tka.so-tkb.so;
+  }
+
+  // Nếu còn dư cấp 2/cấp cao bên ngoài thì có thể cân bằng theo số chuyến/giờ làm.
+  if(soCap2DuPhong(pool,used)>=1){
+    return tka.so-tkb.so || tka.tg-tkb.tg || ca-cbp;
+  }
+
+  // Mặc định: tiết kiệm chứng chỉ trước, rồi mới xét công bằng.
+  return ca-cbp || tka.so-tkb.so || tka.tg-tkb.tg || da.p.diem-db.p.diem;
 }
 function chonGoiYNhanSu(cb){
   const need=soNguoiCanGoiY(cb);
@@ -5762,56 +5872,22 @@ function chonGoiYNhanSu(cb){
   const used=new Set();
   const slots=slotYeuCauChuyen(cb);
 
-  // 1) Slot bắt buộc: chọn người vừa đủ chứng chỉ nhưng vẫn ưu tiên người rảnh/hợp lý.
   slots.forEach(slot=>{
     const cand=pool
       .filter(ns=>!used.has(ns.ma))
       .filter(ns=>nsCoTatCaChungChi(ns,slot.ids))
-      .sort((a,b)=>{
-        const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
-        return da.p.nhom-db.p.nhom ||
-          da.p.diem-db.p.diem ||
-          capNheDiem(a)-capNheDiem(b) ||
-          da.tk.so-db.tk.so ||
-          da.tk.tg-db.tk.tg;
-      })[0];
+      .sort((a,b)=>sapXepSlotBatBuoc(a,b,cb))[0];
     if(cand){
       used.add(cand.ma);
       selected.push({ns:cand, vaiTro:slot.ten});
     }
   });
 
-  // 2) Người bổ sung: tiết kiệm nhân sự có chứng chỉ cao.
   while(selected.length<need){
-    const duPhongCap2=soCap2DuPhong(pool,used);
     const remaining=pool
       .filter(ns=>!used.has(ns.ma))
       .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
-      .sort((a,b)=>{
-        const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
-        const diffRanh=Math.abs((da.p.sub||0)-(db.p.sub||0));
-        // Nếu đều cùng trạng thái rảnh và chênh thời gian rảnh dưới 20 phút: ưu tiên cấp/chứng chỉ thấp hơn.
-        if(da.p.nhom===0 && db.p.nhom===0 && diffRanh<20){
-          return capNheDiem(a)-capNheDiem(b) || da.tk.so-db.tk.so || da.tk.tg-db.tk.tg;
-        }
-        // Nếu số chuyến ngang nhau: ưu tiên cấp thấp/chứng chỉ ít.
-        if(da.tk.so===db.tk.so){
-          return capNheDiem(a)-capNheDiem(b) || da.tk.tg-db.tk.tg || da.p.nhom-db.p.nhom;
-        }
-        // Chấp nhận chọn cấp 1 dù cấp 2 ít hơn 1 chuyến để giữ chiều sâu nhân sự.
-        if(Math.abs(da.tk.so-db.tk.so)<=1){
-          return capNheDiem(a)-capNheDiem(b) || da.tk.so-db.tk.so || da.tk.tg-db.tk.tg;
-        }
-        // Nếu vẫn còn dư cấp 2 bên ngoài, có thể dùng cấp 2 thoải mái hơn.
-        if(duPhongCap2>=1){
-          return da.p.nhom-db.p.nhom || da.tk.so-db.tk.so || da.tk.tg-db.tk.tg || capNheDiem(a)-capNheDiem(b);
-        }
-        return da.p.nhom-db.p.nhom ||
-          capNheDiem(a)-capNheDiem(b) ||
-          da.tk.so-db.tk.so ||
-          da.tk.tg-db.tk.tg ||
-          da.p.diem-db.p.diem;
-      });
+      .sort((a,b)=>sapXepBoSung(a,b,cb,pool,used));
     const cand=remaining[0];
     if(!cand)break;
     used.add(cand.ma);
