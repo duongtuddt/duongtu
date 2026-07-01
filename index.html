@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.90 Flight Shift Scope Suggest</title>
+<title>Dương Tú v0.92 Suggestion Logic Clean</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1829,6 +1829,72 @@ body.menuOpen::after{
 }
 .tlLabel .greenText,.tlLabel .orangeText,.tlLabel .redText{
   vertical-align:middle;
+}
+
+
+/* v0.91 - thước giờ 15 phút và LIVE label luôn dính trên đỉnh */
+.timeHeader{
+  height:34px!important;
+  overflow:visible!important;
+}
+:root{
+  --timelineHeaderHeight:34px;
+}
+.quarterMark{
+  position:absolute!important;
+  top:15px!important;
+  transform:translateX(-50%)!important;
+  color:#77aee0!important;
+  font-size:10px!important;
+  line-height:11px!important;
+  font-weight:800!important;
+  background:#071426!important;
+  padding:0 2px!important;
+  z-index:520!important;
+  white-space:nowrap!important;
+  pointer-events:none!important;
+}
+.quarterMark.major{
+  top:3px!important;
+  color:#9fd8ff!important;
+  font-size:15px!important;
+  line-height:15px!important;
+  font-weight:950!important;
+  z-index:525!important;
+}
+.quarterTick{
+  position:absolute!important;
+  top:21px!important;
+  bottom:0!important;
+  width:1px!important;
+  background:rgba(95,138,185,.55)!important;
+  z-index:510!important;
+  pointer-events:none!important;
+}
+.hourTick{
+  position:absolute!important;
+  top:0!important;
+  bottom:0!important;
+  width:1px!important;
+  background:#6ea2d1!important;
+  opacity:.9!important;
+  z-index:515!important;
+  pointer-events:none!important;
+}
+.hourMark,.minuteMark{
+  display:none!important;
+}
+.minuteTick{
+  display:none!important;
+}
+.nowLabel{
+  position:absolute!important;
+  top:1px!important;
+  transform:translateX(-50%)!important;
+  z-index:560!important;
+}
+.nowLine{
+  top:var(--timelineHeaderHeight)!important;
 }
 
 </style>
@@ -4405,22 +4471,26 @@ function veHeader(el){
 
   for(let i=0;i<SO_GIO;i++){
     const abs=startAbs()+i*60;
-    const x=TIMELINE_LABEL_WIDTH+viTri(abs);
-    const plus=abs>=ngayGoc+1440?" +1":"";
-    html+=`<div class="hourTick" style="left:${x}px"></div>`;
-    html+=`<div class="hourMark" style="left:${x}px">${gioTuPhut(abs)}${plus}</div>`;
-    [10,20,30,40,50].forEach(m=>{
-      const xm=TIMELINE_LABEL_WIDTH+viTri(abs+m);
-      html+=`<div class="minuteTick" style="left:${xm}px"></div>`;
+
+    [0,15,30,45].forEach(m=>{
+      const t=abs+m;
+      const x=TIMELINE_LABEL_WIDTH+viTri(t);
+      const plus=t>=ngayGoc+1440?" +1":"";
+      const major=m===0;
+      html+=`<div class="${major?"hourTick":"quarterTick"}" style="left:${x}px"></div>`;
+      html+=`<div class="quarterMark ${major?"major":""}" style="left:${x}px">${gioTuPhut(t)}${plus}</div>`;
     });
   }
 
-  html+='</div>';
   let now=hienTaiAbs();
   if(now<startAbs())now=startAbs();
   if(now>startAbs()+SO_GIO*60)now=startAbs()+SO_GIO*60;
   const x=TIMELINE_LABEL_WIDTH+viTri(now);
-  html+=`<div class="nowLabel" style="left:${x}px">${gioTuPhut(now)}</div><div class="nowLine" style="left:${x}px"></div>`;
+
+  // Label LIVE nằm trong timeHeader để khi cuộn dọc vẫn luôn dính trên đầu.
+  html+=`<div class="nowLabel" style="left:${x}px">${gioTuPhut(now)}</div>`;
+  html+='</div>';
+  html+=`<div class="nowLine" style="left:${x}px"></div>`;
   el.innerHTML=html;
 }
 
@@ -5300,17 +5370,146 @@ function sapXepGoiYNhanSu(ds,cb){
     return pa.diem-pb.diem || pa.so-pb.so || pa.tg-pb.tg || String(a.ten).localeCompare(String(b.ten),"vi");
   });
 }
+function tenChungChiNgan(id){
+  const map={
+    thang:"THANG",
+    gpu:"GPU / cấp điện",
+    acu:"ACU / cấp lạnh",
+    asu:"ASU / khởi động khí",
+    vesinh:"Vệ sinh",
+    nuocsach:"Nước sạch",
+    pvdb:"PVĐB",
+    highloader:"High Loader",
+    pushback:"Pushback"
+  };
+  return map[id]||id;
+}
+function dichVuChuyenText(cb){
+  const reqs=yeuCauCuaChuyen(cb).filter(r=>r.id!=="stand-thang");
+  const ds=[...new Set(reqs.map(r=>tenChungChiNgan(r.value||r.label)))];
+  return ds.length?ds.join(", "):"";
+}
+function yeuCauChungChiText(cb){
+  const reqs=yeuCauCuaChuyen(cb);
+  const ids=[...new Set(reqs.map(r=>r.value).filter(Boolean))];
+  return ids.length?ids.map(tenChungChiNgan).join(", "):"Không có yêu cầu chứng chỉ đặc biệt";
+}
+function slotYeuCauChuyen(cb){
+  const reqs=yeuCauCuaChuyen(cb);
+  const ids=[...new Set(reqs.map(r=>r.value).filter(Boolean))];
+  const slots=[];
+
+  const raBai=!ycBaiDo(cb)?.coThang;
+  if(raBai) slots.push({ten:"THANG", ids:["thang"]});
+
+  const kyThuat=["gpu","acu","asu"].filter(x=>ids.includes(x));
+  if(kyThuat.length) slots.push({ten:kyThuat.map(tenChungChiNgan).join(" + "), ids:kyThuat});
+
+  ["vesinh","nuocsach","pvdb","highloader","pushback"].forEach(id=>{
+    if(ids.includes(id)) slots.push({ten:tenChungChiNgan(id), ids:[id]});
+  });
+
+  return slots;
+}
+function soNguoiCanGoiY(cb){
+  const reqs=yeuCauCuaChuyen(cb);
+  const ids=new Set(reqs.map(r=>r.value).filter(Boolean));
+  const raBai=!ycBaiDo(cb)?.coThang;
+  const coKyThuat=ids.has("gpu")||ids.has("acu")||ids.has("asu");
+  let n=soNguoiCan(cb.ma);
+  if(raBai && coKyThuat) n=Math.max(n,3);
+  return n;
+}
+function nsCoTatCaChungChi(ns,ids){
+  return ids.every(id=>nsCoChungChi(ns,id)||nsCoChungChiId(ns,id));
+}
+function diemGoiY(ns,cb){
+  const p=phanLoaiGoiY(ns,cb), tk=thongKeNV(ns.ma);
+  return {p, tk};
+}
+function soChungChiNang(ns){
+  return DANH_MUC_CHUNG_CHI.filter(c=>ns.chungChi&&ns.chungChi[c.id]&&["2","2.1","2.2","3.1","3.2"].includes(c.cap)).length;
+}
+function chonGoiYNhanSu(cb){
+  const need=soNguoiCanGoiY(cb);
+  let pool=state.danhSachNhanSu
+    .filter(ns=>nsDuocXetGoiY(ns,cb))
+    .filter(ns=>cb.caPhuTrach?true:dungBoLocCaNV(ns.ma))
+    .filter(ns=>phanLoaiGoiY(ns,cb).nhom<90);
+
+  pool=sapXepGoiYNhanSu(pool,cb);
+  const selected=[];
+  const used=new Set();
+  const slots=slotYeuCauChuyen(cb);
+
+  slots.forEach(slot=>{
+    const cand=pool
+      .filter(ns=>!used.has(ns.ma))
+      .filter(ns=>nsCoTatCaChungChi(ns,slot.ids))
+      .sort((a,b)=>{
+        const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
+        return da.p.nhom-db.p.nhom || da.p.diem-db.p.diem || da.tk.so-db.tk.so || da.tk.tg-db.tk.tg;
+      })[0];
+    if(cand){
+      used.add(cand.ma);
+      selected.push({ns:cand, vaiTro:slot.ten});
+    }
+  });
+
+  while(selected.length<need){
+    const remaining=pool
+      .filter(ns=>!used.has(ns.ma))
+      .sort((a,b)=>{
+        const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
+        return da.p.nhom-db.p.nhom ||
+          soChungChiNang(a)-soChungChiNang(b) ||
+          da.tk.so-db.tk.so ||
+          da.tk.tg-db.tk.tg ||
+          da.p.diem-db.p.diem;
+      });
+    const cand=remaining[0];
+    if(!cand)break;
+    used.add(cand.ma);
+    selected.push({ns:cand, vaiTro:"Bổ sung người"});
+  }
+
+  return selected;
+}
 function hienGoiYNhanSu(){
   const cb=chuyen(chuyenDangChon);
   if(!cb)return alert("Chọn chuyến bay trước.");
-  let ds=state.danhSachNhanSu.filter(ns=>nsDuocXetGoiY(ns,cb)).filter(ns=>cb.caPhuTrach?true:dungBoLocCaNV(ns.ma));
-  ds=sapXepGoiYNhanSu(ds,cb).slice(0,8);
-  const lines=ds.map((ns,i)=>{
-    const p=phanLoaiGoiY(ns,cb), tk=thongKeNV(ns.ma);
-    return `${i+1}. ${ns.ten} - ${p.lyDo} - ${tk.so} chuyến / ${tk.tg} phút`;
-  });
-  alert(`GỢI Ý NHÂN SỰ CHO ${cb.flight} - Bãi ${cb.baiDo}\\nCần tối thiểu: ${soNguoiCan(cb.ma)} người\\n\\n${lines.join("\\n")}`);
+
+  const dichVu=dichVuChuyenText(cb);
+  const yc=yeuCauChungChiText(cb);
+  const need=soNguoiCanGoiY(cb);
+  const selected=chonGoiYNhanSu(cb);
+
+  const lines=[];
+  lines.push(`GỢI Ý NHÂN SỰ CHO ${cb.flight}`);
+  lines.push(`Bãi: ${cb.baiDo}`);
+  lines.push(`ETA: ${gioHienThi(cb.eta)} / STD: ${gioHienThi(cb.std)}`);
+  if(dichVu) lines.push(`Dịch vụ: ${dichVu}`);
+  lines.push(`Cần tối thiểu: ${need} người`);
+  lines.push(`Cần chứng chỉ: ${yc}`);
+  lines.push("");
+  lines.push("Đề xuất:");
+
+  if(selected.length){
+    selected.forEach((item,i)=>{
+      lines.push(`${i+1}. ${item.ns.ten}${item.vaiTro&&item.vaiTro!=="Bổ sung người" ? ` (${item.vaiTro})` : ""}`);
+    });
+  }else{
+    lines.push("Chưa có nhân sự phù hợp trong phạm vi đang lọc.");
+  }
+
+  if(selected.length<need){
+    lines.push("");
+    lines.push(`Còn thiếu: ${need-selected.length} người phù hợp.`);
+  }
+
+  alert(lines.join("\n"));
 }
+
 function ganBoNV(ma){
   if(!requirePerm("dashboard","phân công nhân sự"))return;
   if(!isAdmin() && caCuaNV(ma)!==caQuanLyTheoDangNhap())return alert("Bạn chỉ được phân công nhân sự thuộc "+moTaCaQuanLy()+".");
