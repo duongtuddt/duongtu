@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.06 Preserve Depth Suggest</title>
+<title>Dương Tú v1.07 Fix Work Count By Time</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4856,10 +4856,24 @@ function trangThaiCa(ma){
 
   return {text:"Hết ca",loai:"gray"};
 }
-function thongKeNV(ma){
-  const ds=state.phanCong.filter(pc=>pc.maNV===ma);
-  const so=ds.length, tg=Math.round(ds.reduce((s,pc)=>s+Math.max(0,pc.ketThucAbs-pc.batDauAbs),0));
-  const cuoi=ds.length?Math.max(...ds.map(pc=>pc.ketThucAbs)):null, ranh=cuoi===null?999:Math.max(0,Math.round(hienTaiAbs()-cuoi));
+function thongKeNV(ma,moc=hienTaiAbs()){
+  // v1.07: thống kê phải tính theo MỐC THỜI GIAN, không đếm toàn bộ phân công cả ngày.
+  // Nếu không, các chuyến tương lai sẽ bị tính là "đã làm", làm sai hoàn toàn logic công bằng.
+  const ds=state.phanCong.filter(pc=>{
+    if(pc.maNV!==ma || !pcDangHieuLuc(pc))return false;
+    const cb=chuyen(pc.maChuyen);
+    if(cb && cb.ngay!==state.ngayKhaiThac)return false;
+    return pc.batDauAbs < moc; // chỉ tính chuyến đã bắt đầu trước mốc xét
+  });
+
+  const so=ds.length;
+  const tg=Math.round(ds.reduce((s,pc)=>{
+    const den=Math.min(pc.ketThucAbs,moc);
+    return s+Math.max(0,den-pc.batDauAbs);
+  },0));
+
+  const cuoi=ds.length?Math.max(...ds.map(pc=>Math.min(pc.ketThucAbs,moc))):null;
+  const ranh=cuoi===null?999:Math.max(0,Math.round(moc-cuoi));
   return {so,tg,ranh};
 }
 function dangLam(ma){
@@ -6013,7 +6027,7 @@ function sapXepSlotBatBuoc(a,b,cb){
 }
 function sapXepBoSung(a,b,cb,pool,used){
   const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
-  const tka=thongKeNV(a.ma), tkb=thongKeNV(b.ma);
+  const tka=thongKeNV(a.ma,thoiDiemXetGoiY(cb)), tkb=thongKeNV(b.ma,thoiDiemXetGoiY(cb));
   const coBatBuoc=chuyenCoYeuCauBatBuoc(cb);
 
   if(da.p.nhom!==db.p.nhom)return da.p.nhom-db.p.nhom;
@@ -6181,7 +6195,7 @@ function nguoiNenThayTrongNhom(selected,usedSlot,cb){
     .filter(it=>!usedSlot.has(it.ns.ma))
     .sort((a,b)=>{
       const aa=capNheDiem(a.ns), bb=capNheDiem(b.ns);
-      const ta=thongKeNV(a.ns.ma), tb=thongKeNV(b.ns.ma);
+      const ta=thongKeNV(a.ns.ma,thoiDiemXetGoiY(cb)), tb=thongKeNV(b.ns.ma,thoiDiemXetGoiY(cb));
       // Thay người nhẹ trước nếu cần, nhưng không thay người đang giữ chứng chỉ hiếm khi còn người thường.
       return aa-bb || ta.so-tb.so || ta.tg-tb.tg;
     })[0];
@@ -6342,7 +6356,7 @@ function hienGoiYNhanSu(){
   lines.push(`Cần tối thiểu: ${need} người`);
   lines.push(`Cần chứng chỉ: ${yc}`);
   lines.push("");
-  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))}`); lines.push("Ưu tiên slot thường: rảnh/khả dụng → giữ chiều sâu chứng chỉ → ít chuyến → ít phút."); lines.push(""); lines.push("Đề xuất:");
+  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - chỉ đếm chuyến đã bắt đầu trước mốc này`); lines.push("Ưu tiên slot thường: rảnh/khả dụng → giữ chiều sâu chứng chỉ → ít chuyến → ít phút."); lines.push(""); lines.push("Đề xuất:");
 
   if(selected.length){
     selected.forEach((item,i)=>{
