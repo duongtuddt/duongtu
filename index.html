@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.95 Ops UX Polish</title>
+<title>Dương Tú v0.97 Smooth Firebase Shift Select</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2001,6 +2001,116 @@ button:hover,.taskItem:hover{
 }
 .permGrid th,.permGrid td{white-space:nowrap}
 
+
+/* v0.96 - live toggle + tối ưu chọn nhân sự */
+#nutLiveTimeline{
+  min-width:64px!important;
+  height:30px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:5px!important;
+}
+#nutLiveTimeline.liveOn{
+  background:#1b1020!important;
+  color:#ff6b6b!important;
+  border-color:#ef4444!important;
+  box-shadow:0 0 0 1px rgba(239,68,68,.7),0 0 18px rgba(239,68,68,.35)!important;
+}
+.liveDot{
+  width:8px;height:8px;border-radius:50%;
+  background:#ef4444;
+  box-shadow:0 0 9px #ef4444;
+  display:inline-block;
+}
+.tlLabel .redText,.tlLabel .orangeText,.tlLabel .greenText{
+  font-size:0!important;
+}
+.tlLabel .redText::before,.tlLabel .orangeText::before,.tlLabel .greenText::before{
+  content:"";
+  display:inline-block;
+  width:9px;height:9px;border-radius:50%;
+  vertical-align:middle;
+  margin-left:4px;
+}
+.tlLabel .redText::before{background:#fb7185;box-shadow:0 0 8px rgba(251,113,133,.8)}
+.tlLabel .orangeText::before{background:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,.8)}
+.tlLabel .greenText::before{background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.8)}
+#khungTimelineNhanSu{max-height:980px!important}
+#gridRealtime{grid-template-columns:1fr!important}
+.staffMetaGrid.compact3{
+  display:grid!important;
+  grid-template-columns:1fr 1fr 1fr!important;
+  gap:6px 14px!important;
+  align-items:start;
+}
+.staffCard{padding:10px 14px!important}
+.staffCard h3{font-size:20px!important}
+.staffHeader{display:none!important}
+.timeInput{width:54px!important;min-width:54px!important}
+.standInput{width:38px!important;min-width:38px!important}
+.minStaffInput{width:38px!important;min-width:38px!important}
+#flight{width:140px!important;min-width:140px!important}
+.serviceInput{min-width:150px!important;width:150px!important}
+#caPhuTrachChuyen{width:92px!important}
+#nutTimChuyen{width:42px!important;padding-left:0!important;padding-right:0!important}
+#panelTimelineChuyen h2,.realtimeCompact h2{font-size:14px!important}
+
+
+/* v0.96b - hoàn thiện compact card và nút tìm */
+.staffInfo.compact3{
+  display:grid!important;
+  grid-template-columns:1fr 1fr 1fr!important;
+  gap:4px 12px!important;
+  justify-content:start!important;
+}
+.staffInfo.compact3 .staffLine{
+  margin:2px 0!important;
+  min-height:18px!important;
+  font-size:12px!important;
+}
+.staffInfo.compact3 .staffLabel{
+  min-width:62px!important;
+}
+.staffInfo.compact3 .staffValue{
+  max-width:260px!important;
+}
+.staffCard{
+  min-width:760px!important;
+  max-width:none!important;
+  padding:8px 12px!important;
+  margin-bottom:7px!important;
+}
+.staffTop{
+  margin-bottom:5px!important;
+}
+.staffName{
+  font-size:18px!important;
+}
+.staffCap{
+  font-size:12px!important;
+}
+#danhSachChonNhanSu{
+  max-height:960px!important;
+  overflow:auto!important;
+}
+#khungTimelineNhanSu{
+  max-height:1030px!important;
+}
+
+
+/* v0.97 - chọn ca tổng mượt + Firebase chạy nền */
+#fbStatus{display:none!important}
+#bangPhanCa input[type=checkbox]:disabled{
+  opacity:1!important;
+  filter:none!important;
+  cursor:not-allowed!important;
+  accent-color:#38bdf8;
+}
+.subCaBtn.active{
+  box-shadow:0 0 0 2px #38bdf8,0 0 14px rgba(56,189,248,.35)!important;
+}
+
 </style>
 </head>
 <body>
@@ -2086,7 +2196,7 @@ button:hover,.taskItem:hover{
 <input id="eta" class="timeInput" placeholder="ETA">
 <input id="std" class="timeInput" placeholder="STD">
 <input id="baiDo" class="standInput" placeholder="Bãi">
-<input id="soNguoiToiThieu" type="number" min="1" value="2" title="Số người tối thiểu" placeholder="Số người tối thiểu" style="width:130px">
+<input id="soNguoiToiThieu" type="number" min="1" value="2" title="Số người tối thiểu" placeholder="Số người tối thiểu" class="minStaffInput">
 <select id="caPhuTrachChuyen" title="Ca thực hiện chuyến">
   <option value="">Ca: tự động</option>
   <option value="tatca">Ca: tất cả</option>
@@ -2096,19 +2206,19 @@ button:hover,.taskItem:hover{
   <option value="4">Ca 4</option>
   <option value="5">Ca 5</option>
 </select>
-<input id="ghiChuChuyen" placeholder="Ghi chú: GPU, VS, 3 xe..." style="min-width:210px">
+<input id="ghiChuChuyen" placeholder="Ghi chú: GPU, VS, 3 xe..." class="serviceInput">
 <button class="primary" id="nutChuyenBay">Thêm chuyến</button>
-<button class="ghost" id="nutTimChuyen">Tìm chuyến</button>
+<button class="ghost" id="nutTimChuyen">🔍</button>
 <button class="danger" id="nutXoaChuyen">Xóa chuyến</button>
-<button class="ghost" id="nutBoChon">Bỏ chọn / làm mới</button>
+<button class="ghost" id="nutBoChon">Làm mới</button>
 </div>
 </div>
 </section>
 
-<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span>Realtime chuyến bay - thanh ngang theo thời gian</span><span class="rtActions"><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="canhTheoVachHienTai()">LIVE</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
+<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span>Realtime chuyến bay</span><span class="rtActions"><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
 
 <div class="grid2" id="gridRealtime">
-<section class="panel realtimeCompact"><h2>Realtime nhân sự hôm nay - bấm trực tiếp để chọn người</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
+<section class="panel realtimeCompact"><h2>Realtime nhân sự hôm nay</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
 <section class="panel">
 <h2>Chọn nhân sự cho chuyến đang chọn</h2>
 <div class="body">
@@ -3467,10 +3577,12 @@ const FIREBASE_CONFIG={
 const FIREBASE_DOC_PATH=["ramp_scheduler","main_state"];
 
 function fbSetStatus(text,cls=""){
+  // v0.97: trạng thái Firebase chạy nền, không nhấp nháy/đẩy layout khi thao tác.
   const el=document.getElementById("fbStatus");
   if(!el)return;
-  el.textContent=text;
-  el.className="fbStatus "+cls;
+  el.textContent=text||"";
+  el.dataset.status=cls||"";
+  el.className="fbStatus hidden";
 }
 
 function taoBanLuuFirebase(){
@@ -3485,17 +3597,23 @@ function taoBanLuuFirebase(){
 function luu(){
   localStorage.setItem(KHO_LUU,JSON.stringify(state));
   if(firebaseReady && !dangNhanFirebase){
+    localDirty=true;
+    lastLocalWriteAt=Date.now();
+    const jsonLocal=JSON.stringify(state);
+    // Cập nhật dấu vết local ngay để snapshot echo từ chính máy này không ghi đè ngược UI.
+    lastRemoteJson=jsonLocal;
     clearTimeout(saveTimer);
     saveTimer=setTimeout(async()=>{
       try{
-        fbSetStatus("Firebase: đang lưu","sync");
         await fbDb.collection(FIREBASE_DOC_PATH[0]).doc(FIREBASE_DOC_PATH[1]).set(taoBanLuuFirebase(),{merge:true});
-        fbSetStatus("Firebase: đã lưu","ok");
+        lastRemoteJson=JSON.stringify(state);
+        localDirty=false;
       }catch(e){
         console.error(e);
         fbSetStatus("Firebase: lỗi lưu","err");
+        localDirty=false;
       }
-    },700);
+    },350);
   }
 }
 
@@ -3531,13 +3649,18 @@ async function khoiDongFirebase(){
       const json=JSON.stringify(incoming);
       if(json===lastRemoteJson)return;
       if(json===JSON.stringify(state))return;
+
+      // v0.97: đang thao tác local thì không nhận ngược snapshot cũ làm mất tick/chớp UI.
+      if(localDirty && Date.now()-lastLocalWriteAt<2500){
+        return;
+      }
+
       dangNhanFirebase=true;
       state=incoming;
       if(!state.accounts)state.accounts={}; seedAdminAccount();
       localStorage.setItem(KHO_LUU,JSON.stringify(state));
       lastRemoteJson=json;
       dangNhanFirebase=false;
-      fbSetStatus("Firebase: realtime nhận","ok");
       veTatCa();
     },err=>{
       console.error(err);
@@ -3983,8 +4106,8 @@ function veBoNutGanCa(){
   ].map(([c,label,cls,dot])=>{
     if(!isAdmin() && c==="tatca")return "";
     const locked=!duocQuanLyCa(c);
-    if(c==="tatca") return `<button class="mainCaBtn ${cls} ${caHien==="tatca"?"active":""}" onclick="chonCaGan('tatca','1')"><span class="caDot"></span>${label}</button>`;
-    return `<button class="mainCaBtn ${cls} ${caHien===c?"active":""} ${locked?"caLocked":""}" onclick="chonCaGan('${c}','1')"><span class="caDot ${dot}"></span>${label}</button>`;
+    if(c==="tatca") return `<button class="mainCaBtn ${cls} ${caHien==="tatca"?"active":""}" onclick="chonCaGan('tatca','all')"><span class="caDot"></span>${label}</button>`;
+    return `<button class="mainCaBtn ${cls} ${caHien===c?"active":""} ${locked?"caLocked":""}" onclick="chonCaGan('${c}','all')"><span class="caDot ${dot}"></span>${label}</button>`;
   }).join("");
 
   if(!caHien || caHien==="tatca"){
@@ -3995,17 +4118,17 @@ function veBoNutGanCa(){
     const opts=[["DT","Đội Trưởng"],["DP1","Đội Phó 1"],["DP2","Đội Phó 2"],["DP3","Đội Phó 3"],["CB1","Cán bộ Ca 1"],["CB2","Cán bộ Ca 2"],["CB3","Cán bộ Ca 3"]];
     elSub.innerHTML=`<button class="subCaBtn trucColor ${String(state.caGan?.nhanh||"all")==="all"?"active":""}" onclick="chonCaGan('TRUC','all')"><span class="caDot truc"></span>Tất cả cán bộ</button>`+opts.map(([n,label])=>{
       const active=String(state.caGan?.nhanh||"DT")===n;
-      return `<button class="subCaBtn trucColor ${active?"active":""}" onclick="chonCaGan('TRUC','${n}')"><span class="caDot truc"></span>${label}</button>`;
+      return `<button class="subCaBtn trucColor ${active?"active":""}" onclick="chonCaGan('TRUC','${active?"all":n}')"><span class="caDot truc"></span>${label}</button>`;
     }).join("");
   }else if(caHien==="KD"){
     elSub.innerHTML=`<button class="subCaBtn kdColor ${String(state.caGan?.nhanh||"all")==="all"?"active":""}" onclick="chonCaGan('KD','all')"><span class="caDot kd"></span>Tất cả kéo đẩy</button>`+["1","2","3","4","5"].map(n=>{
       const active=String(state.caGan?.nhanh||"1")===n;
-      return `<button class="subCaBtn kdColor ${active?"active":""}" onclick="chonCaGan('KD','${n}')"><span class="caDot kd"></span>Kéo đẩy ${n}</button>`;
+      return `<button class="subCaBtn kdColor ${active?"active":""}" onclick="chonCaGan('KD','${active?"all":n}')"><span class="caDot kd"></span>Kéo đẩy ${n}</button>`;
     }).join("");
   }else{
     elSub.innerHTML=`<button class="subCaBtn ca${caHien}Color ${String(state.caGan?.nhanh||"all")==="all"?"active":""}" onclick="chonCaGan('${caHien}','all')"><span class="caDot ca${caHien}"></span>Tất cả ca ${caHien}</button>`+["1","2","3"].map(n=>{
       const active=String(state.caGan?.nhanh||"1")===n;
-      return `<button class="subCaBtn ca${caHien}Color ${active?"active":""}" onclick="chonCaGan('${caHien}','${n}')"><span class="caDot ca${caHien}"></span>${caHien}.${n}</button>`;
+      return `<button class="subCaBtn ca${caHien}Color ${active?"active":""}" onclick="chonCaGan('${caHien}','${active?"all":n}')"><span class="caDot ca${caHien}"></span>${caHien}.${n}</button>`;
     }).join("");
   }
 
@@ -4024,7 +4147,9 @@ function chonCaGan(ca,nhanh){
   if(ca==="tatca" && !isAdmin())return alert("Tài khoản thường không được chọn Tất cả.");
   if(!requireCaScope(ca,TEN_CA[ca]||ca))return;
   state.caGan={ca,nhanh:nhanh||(ca==="TRUC"?"all":ca==="KD"?"all":(["1","2","3","4","5"].includes(String(ca))?"all":"1"))};
-  luu();veTatCa();
+  // Chọn tab/nhánh chỉ là trạng thái màn hình, không đẩy Firebase để tránh giật.
+  localStorage.setItem(KHO_LUU,JSON.stringify(state));
+  veTatCa();
 }
 function hienGioCaDangChon(){
   const kh=$("khungGioCaGan"); if(!kh)return;
@@ -4909,7 +5034,6 @@ function veBangPhanCa(){
       return match && (isAdmin() || !ca.ca || String(ca.ca)===String(scopeCa));
     }
     if(scopeCa && scopeCa!=="tatca"){
-      // Khi đang chọn 1.1, chỉ hiện người chưa có ca hoặc đang đúng ca được quản lý.
       return !ca.ca || String(ca.ca)===String(scopeCa);
     }
     return true;
@@ -4917,9 +5041,10 @@ function veBangPhanCa(){
   if(!term){
     ds=ds.slice().sort((a,b)=>{
       const caA=state.phanCaHomNay[a.ma]||{}, caB=state.phanCaHomNay[b.ma]||{};
-      const aSel=!!caA.chon || !!caA.ca;
-      const bSel=!!caB.chon || !!caB.ca;
-      return Number(bSel)-Number(aSel);
+      const aSame=caGan&&caGan!=="tatca"&&String(caA.ca)===String(caGan)&&(String(nhanhGan)==="all"||String(caA.nhanh||"1")===String(nhanhGan));
+      const bSame=caGan&&caGan!=="tatca"&&String(caB.ca)===String(caGan)&&(String(nhanhGan)==="all"||String(caB.nhanh||"1")===String(nhanhGan));
+      const aEmpty=!caA.ca, bEmpty=!caB.ca;
+      return Number(bSame)-Number(aSame) || Number(bEmpty)-Number(aEmpty) || String(a.ten).localeCompare(String(b.ten),"vi");
     });
   }
   $("bangPhanCa").innerHTML=ds.map(ns=>{
@@ -4930,7 +5055,7 @@ function veBangPhanCa(){
     const checked=(caGan && caGan!=="tatca") ? (String(ca.ca)===String(caGan)&&(String(nhanhGan)==="all"||String(ca.nhanh||"1")===String(nhanhGan))) : !!ca.chon;
     const selectedCa=caNhanSuValue(ns.ma);
     return `<tr class="${checked?"rowSelectedTop":""}">
-      <td><input type="checkbox" ${checked?"checked":""} onchange="${(caGan&&caGan!=="tatca"&&String(nhanhGan)!=="all")?`(this.checked?ganCaChoNhanSu('${ns.ma}'):boCaNhanSu('${ns.ma}'))`:`doiChon('${ns.ma}',this.checked)`}"></td>
+      <td><input type="checkbox" ${checked?"checked":""} ${caGan&&caGan!=="tatca"&&String(nhanhGan)==="all"?"disabled title='Chọn nhánh 1/2/3 cụ thể mới gán được'":""} onchange="${(caGan&&caGan!=="tatca"&&String(nhanhGan)!=="all")?`(this.checked?ganCaChoNhanSu('${ns.ma}'):boCaNhanSu('${ns.ma}'))`:(caGan&&caGan!=="tatca"&&String(nhanhGan)==="all"?`this.checked=${checked}`:`doiChon('${ns.ma}',this.checked)`)}"></td>
       <td>${ns.ten}</td><td>${ns.cap}</td><td><select class="caQuickSelect" onchange="chonCaNhanSuTuSelect('${ns.ma}',this.value)">${caNhanSuOptions(selectedCa)}</select></td>
       <td><input value="${ca.gioVao1}" onchange="doiGioCa('${ns.ma}','gioVao1',this.value)" style="width:90px"></td>
       <td><input value="${ca.gioRa1}" onchange="doiGioCa('${ns.ma}','gioRa1',this.value)" style="width:90px"></td>
@@ -5111,27 +5236,21 @@ function veDanhSachChon(){
           <span class="staffName">${ns.ten}</span>
           <span class="staffCap">Cấp ${ns.cap}</span>
         </div>
-        <div class="staffInfo">
-          <div>
-            <div class="staffLine"><span class="staffLabel">Trạng thái:</span><span class="staffValue ${statusClass}">${trangThaiHienThi}</span></div>
-            <div class="staffLine"><span class="staffLabel">Ca còn:</span><span class="staffValue">${ns.ct.caCon}</span></div>
-            <div class="staffLine"><span class="staffLabel">Sắp làm:</span><span class="staffValue">${sapLamHienThi}</span></div>
-            ${ranhGiua}
-          </div>
-          <div>
-            <div class="staffLine"><span class="staffLabel">Đã làm:</span><span class="staffValue">${ns.ct.daLam}</span></div>
-            <div class="staffLine"><span class="staffLabel">Lượt:</span><span class="staffValue">${ns.ct.luot}</span></div>
-            <div class="staffLine"><span class="staffLabel">Cảnh báo:</span><span class="staffValue ${ns.ct.mauCanhBao}">${ns.ct.canhBao}</span></div>${goiYText?`<div class="staffLine"><span class="staffLabel">Gợi ý:</span><span class="staffValue">${goiYText}</span></div>`:""}
-          </div>
+        <div class="staffInfo compact3">
+          <div class="staffLine"><span class="staffLabel">Trạng thái:</span><span class="staffValue ${statusClass}">${trangThaiHienThi}</span></div>
+          <div class="staffLine"><span class="staffLabel">Ca còn:</span><span class="staffValue">${ns.ct.caCon}</span></div>
+          <div class="staffLine"><span class="staffLabel">Sắp làm:</span><span class="staffValue">${sapLamHienThi}</span></div>
+          <div class="staffLine"><span class="staffLabel">Đã làm:</span><span class="staffValue">${ns.ct.daLam}</span></div>
+          <div class="staffLine"><span class="staffLabel">Cảnh báo:</span><span class="staffValue ${ns.ct.mauCanhBao}">${ns.ct.canhBao}</span></div>
+          ${goiYText?`<div class="staffLine"><span class="staffLabel">Gợi ý:</span><span class="staffValue">${goiYText}</span></div>`:""}
         </div>
       </div>`;
   }).join("");
 }
 
-function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"Bỏ tìm / tìm mới":"Tìm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
-function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa();
-setTimeout(canhTheoVachHienTai,100); }
+function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa(); if(liveFollow)setTimeout(canhTheoVachHienTai,100); }
 function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); setVal("soNguoiToiThieu",2); setVal("caPhuTrachChuyen",""); veTatCa(); }
 
 function xoaChuyenDangChon(){
@@ -5571,27 +5690,37 @@ function slotYeuCauChuyen(cb){
   const reqs=yeuCauCuaChuyen(cb);
   const ids=[...new Set(reqs.map(r=>r.value).filter(Boolean))];
   const slots=[];
-
   const raBai=!ycBaiDo(cb)?.coThang;
-  if(raBai) slots.push({ten:"THANG", ids:["thang"]});
 
-  const kyThuat=["gpu","acu","asu"].filter(x=>ids.includes(x));
-  if(kyThuat.length) slots.push({ten:kyThuat.map(tenChungChiNgan).join(" + "), ids:kyThuat});
+  if(raBai) slots.push({ten:"THANG", ids:["thang"], loai:"batbuoc"});
+  const kyThuat=["gpu","acu"].filter(x=>ids.includes(x)); // ASU không tự tăng thêm người khi ra bãi
+  if(kyThuat.length) slots.push({ten:kyThuat.map(tenChungChiNgan).join(" + "), ids:kyThuat, loai:"batbuoc"});
+  if(ids.includes("highloader")) slots.push({ten:tenChungChiNgan("highloader"), ids:["highloader"], loai:"batbuoc"});
 
-  ["vesinh","nuocsach","pvdb","highloader","pushback"].forEach(id=>{
-    if(ids.includes(id)) slots.push({ten:tenChungChiNgan(id), ids:[id]});
-  });
-
+  // VS/Nước sạch/PVĐB/Pushback chỉ để cảnh báo/ghi chú, không tự tạo slot bắt buộc trong gợi ý chính.
   return slots;
 }
 function soNguoiCanGoiY(cb){
   const reqs=yeuCauCuaChuyen(cb);
   const ids=new Set(reqs.map(r=>r.value).filter(Boolean));
   const raBai=!ycBaiDo(cb)?.coThang;
-  const coKyThuat=ids.has("gpu")||ids.has("acu")||ids.has("asu");
   let n=soNguoiCan(cb.ma);
-  if(raBai && coKyThuat) n=Math.max(n,3);
+  if(raBai && (ids.has("gpu")||ids.has("acu"))) n=Math.max(n,3);
   return n;
+}
+function capNheDiem(ns){
+  // Càng thấp càng nhẹ: dùng để giữ người cấp cao/đa chứng chỉ cho chuyến sau.
+  const cc=ns.chungChi||{};
+  const count=tongSoChungChi(ns);
+  const nang=soChungChiNang(ns);
+  if(chiCoDauKeo(ns))return 0;
+  const coBangChuyen=!!cc.bangchuyen;
+  const coDauKeo=!!cc.daukeo;
+  if(coDauKeo&&coBangChuyen&&count<=2)return 1;
+  return count*10+nang*20;
+}
+function soCap2DuPhong(pool,used){
+  return pool.filter(ns=>!used.has(ns.ma)&&soChungChiNang(ns)>0).length;
 }
 function nsCoTatCaChungChi(ns,ids){
   return ids.every(id=>nsCoChungChi(ns,id)||nsCoChungChiId(ns,id));
@@ -5633,7 +5762,7 @@ function chonGoiYNhanSu(cb){
   const used=new Set();
   const slots=slotYeuCauChuyen(cb);
 
-  // 1) Chọn người đúng chứng chỉ bắt buộc trước.
+  // 1) Slot bắt buộc: chọn người vừa đủ chứng chỉ nhưng vẫn ưu tiên người rảnh/hợp lý.
   slots.forEach(slot=>{
     const cand=pool
       .filter(ns=>!used.has(ns.ma))
@@ -5642,9 +5771,9 @@ function chonGoiYNhanSu(cb){
         const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
         return da.p.nhom-db.p.nhom ||
           da.p.diem-db.p.diem ||
+          capNheDiem(a)-capNheDiem(b) ||
           da.tk.so-db.tk.so ||
-          da.tk.tg-db.tk.tg ||
-          tongSoChungChi(a)-tongSoChungChi(b);
+          da.tk.tg-db.tk.tg;
       })[0];
     if(cand){
       used.add(cand.ma);
@@ -5652,16 +5781,33 @@ function chonGoiYNhanSu(cb){
     }
   });
 
-  // 2) Người còn lại là người bổ sung: ưu tiên người ít chứng chỉ nhất để giữ người đa năng dự phòng.
+  // 2) Người bổ sung: tiết kiệm nhân sự có chứng chỉ cao.
   while(selected.length<need){
+    const duPhongCap2=soCap2DuPhong(pool,used);
     const remaining=pool
       .filter(ns=>!used.has(ns.ma))
       .filter(ns=>duocLamNguoiBoSung(ns,cb,need))
       .sort((a,b)=>{
         const da=diemGoiY(a,cb), db=diemGoiY(b,cb);
+        const diffRanh=Math.abs((da.p.sub||0)-(db.p.sub||0));
+        // Nếu đều cùng trạng thái rảnh và chênh thời gian rảnh dưới 20 phút: ưu tiên cấp/chứng chỉ thấp hơn.
+        if(da.p.nhom===0 && db.p.nhom===0 && diffRanh<20){
+          return capNheDiem(a)-capNheDiem(b) || da.tk.so-db.tk.so || da.tk.tg-db.tk.tg;
+        }
+        // Nếu số chuyến ngang nhau: ưu tiên cấp thấp/chứng chỉ ít.
+        if(da.tk.so===db.tk.so){
+          return capNheDiem(a)-capNheDiem(b) || da.tk.tg-db.tk.tg || da.p.nhom-db.p.nhom;
+        }
+        // Chấp nhận chọn cấp 1 dù cấp 2 ít hơn 1 chuyến để giữ chiều sâu nhân sự.
+        if(Math.abs(da.tk.so-db.tk.so)<=1){
+          return capNheDiem(a)-capNheDiem(b) || da.tk.so-db.tk.so || da.tk.tg-db.tk.tg;
+        }
+        // Nếu vẫn còn dư cấp 2 bên ngoài, có thể dùng cấp 2 thoải mái hơn.
+        if(duPhongCap2>=1){
+          return da.p.nhom-db.p.nhom || da.tk.so-db.tk.so || da.tk.tg-db.tk.tg || capNheDiem(a)-capNheDiem(b);
+        }
         return da.p.nhom-db.p.nhom ||
-          tongSoChungChi(a)-tongSoChungChi(b) ||
-          soChungChiNang(a)-soChungChiNang(b) ||
+          capNheDiem(a)-capNheDiem(b) ||
           da.tk.so-db.tk.so ||
           da.tk.tg-db.tk.tg ||
           da.p.diem-db.p.diem;
@@ -6079,14 +6225,20 @@ setInterval(()=>{
     veBangPhanCa();
 
     const b=document.getElementById("khungTimelineNhanSu");
-    if(a)a.scrollLeft=viTriCu;
-    if(b)b.scrollLeft=viTriCu;
-    dongBoKeoTimeline();
+    if(liveFollow){
+      dongBoKeoTimeline();
+      canhTheoVachHienTai();
+    }else{
+      if(a)a.scrollLeft=viTriCu;
+      if(b)b.scrollLeft=viTriCu;
+      dongBoKeoTimeline();
+    }
   }
 },20000);
 
 
 let timelineScrollLeftMemory=null;
+let liveFollow=false;
 
 function dongBoKeoTimeline(){
   const a=document.getElementById("khungTimelineChuyenBay");
@@ -6183,12 +6335,23 @@ function canhTheoVachHienTai(){
   });
 }
 
+function capNhatNutLive(){
+  const btn=$("nutLiveTimeline"); if(!btn)return;
+  btn.classList.toggle("liveOn",!!liveFollow);
+  btn.innerHTML=liveFollow?'<span class="liveDot"></span>LIVE':'LIVE';
+}
+function toggleLiveFollow(){
+  liveFollow=!liveFollow;
+  capNhatNutLive();
+  if(liveFollow)canhTheoVachHienTai();
+}
+
 suaDieuDongCu();
 document.body.classList.add("dashboardOnly");
 veTatCa();
 khoiDongFirebase();
 dongBoKeoTimeline();
-setTimeout(canhTheoVachHienTai,100);
+capNhatNutLive();
 </script>
 </body>
 </html>
