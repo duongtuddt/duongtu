@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v0.88 Auto Suggest Dispatch</title>
+<title>Dương Tú v0.89 Menu Layer Search Fix</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1786,6 +1786,29 @@ body.taskOnly #khoiYeuCau .scroll{
 /* v0.88 - gợi ý chia lịch / điều động dịch vụ */
 #soNguoiToiThieu{background:#0b1b31!important;color:#facc15!important;border-color:#7c5c16!important;font-weight:900!important}
 
+
+/* v0.89 - task menu luôn nằm trên timeline */
+body.menuOpen{
+  overflow:hidden!important;
+}
+body.menuOpen::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.48);
+  z-index:199990;
+}
+.taskMenu{
+  z-index:200000!important;
+  top:54px!important;
+  max-height:calc(100vh - 64px)!important;
+  overflow:auto!important;
+  box-shadow:0 20px 70px rgba(0,0,0,.75)!important;
+}
+.taskMenu.hidden{
+  display:none!important;
+}
+
 </style>
 </head>
 <body>
@@ -1862,6 +1885,7 @@ body.taskOnly #khoiYeuCau .scroll{
 <input id="eta" placeholder="ETA (có thể trống)">
 <input id="std" placeholder="STD (có thể trống)">
 <input id="baiDo" placeholder="Bãi đỗ">
+<input id="soNguoiToiThieu" type="number" min="1" value="2" title="Số người tối thiểu" placeholder="Số người tối thiểu" style="width:130px">
 <input id="ghiChuChuyen" placeholder="Ghi chú: GPU, VS, 3 xe..." style="min-width:210px">
 <button class="primary" id="nutChuyenBay">Thêm chuyến</button>
 <button class="ghost" id="nutTimChuyen">Tìm chuyến</button>
@@ -3318,6 +3342,11 @@ async function khoiDongFirebase(){
 }
 
 function $(id){return document.getElementById(id);}
+
+function val(id){const el=$(id);return el?el.value:"";}
+function setVal(id,v){const el=$(id);if(el)el.value=v;}
+function clearTimChuyenNoRender(){state.timChuyen="";}
+
 
 
 const ACCOUNT_ADMIN_ID="tudd";
@@ -4859,9 +4888,9 @@ function veDanhSachChon(){
 
 function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"Bỏ tìm / tìm mới":"Tìm chuyến"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
-function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; $("soNguoiToiThieu").value=cb.soNguoiToiThieu||2; if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa();
+function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa();
 setTimeout(canhTheoVachHienTai,100); }
-function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); $("soNguoiToiThieu").value=2; veTatCa(); }
+function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); setVal("soNguoiToiThieu",2); veTatCa(); }
 
 function xoaChuyenDangChon(){
   if(!requirePerm("dashboard","xóa chuyến bay"))return;
@@ -4888,12 +4917,17 @@ function xoaChuyenDangChon(){
   state.danhSachChuyenBay=state.danhSachChuyenBay.filter(x=>x.ma!==chuyenDangChon);
   state.phanCong=state.phanCong.filter(pc=>pc.maChuyen!==chuyenDangChon && pc.dieuDongTu!==chuyenDangChon);
   chuyenDangChon=null;
-  ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); $("soNguoiToiThieu").value=2;
+  ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); setVal("soNguoiToiThieu",2);
   luu();
   veTatCa();
 }
 
 function timChuyenTheoO(){
+  // Nếu đang ở chế độ tìm, bấm lại là bỏ tìm để nhập chuyến mới.
+  if(state.timChuyen){
+    boTimChuyen();
+    return;
+  }
   const q=$("flight").value.trim();
   if(!q){
     state.timChuyen="";
@@ -4905,7 +4939,12 @@ function timChuyenTheoO(){
   if(ds.length===1){
     chuyenDangChon=ds[0].ma;
     const cb=ds[0];
-    $("flight").value=cb.flight;$("eta").value=cb.eta;$("std").value=cb.std;$("baiDo").value=cb.baiDo;$("soNguoiToiThieu").value=cb.soNguoiToiThieu||2;
+    $("flight").value=cb.flight;
+    $("eta").value=cb.eta;
+    $("std").value=cb.std;
+    $("baiDo").value=cb.baiDo;
+    $("ghiChuChuyen").value=cb.ghiChu||"";
+    setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2);
   }else if(ds.length===0){
     alert("Không tìm thấy chuyến phù hợp.");
   }
@@ -4918,6 +4957,7 @@ function boTimChuyen(){
 
 function themSuaChuyen(){
   if(!requirePerm("dashboard","thêm/sửa chuyến bay"))return;
+  clearTimChuyenNoRender();
   const flight=$("flight").value.trim();
   const etaRaw=$("eta").value.trim();
   const stdRaw=$("std").value.trim();
@@ -4925,7 +4965,7 @@ function themSuaChuyen(){
   const std=stdRaw?chuanHoaGio(stdRaw):"";
   const baiDo=$("baiDo").value.trim();
   const ghiChu=$("ghiChuChuyen").value.trim();
-  const soNguoiToiThieu=Math.max(1,parseInt($("soNguoiToiThieu").value||"2",10)||2);
+  const soNguoiToiThieu=Math.max(1,parseInt(val("soNguoiToiThieu")||"2",10)||2);
 
   if(!flight||!baiDo)return alert("Nhập Chuyến bay và Bãi đỗ.");
   if(etaRaw&&!eta)return alert("ETA sai định dạng. Nhập 2300 hoặc 23:00.");
@@ -4942,7 +4982,7 @@ function themSuaChuyen(){
       $("std").value=trung.std;
       $("baiDo").value=trung.baiDo;
       $("ghiChuChuyen").value=trung.ghiChu||"";
-      $("soNguoiToiThieu").value=trung.soNguoiToiThieu||2;
+      setVal("soNguoiToiThieu",trung.soNguoiToiThieu||2);
       veTatCa();
     }
     return;
@@ -5466,7 +5506,7 @@ function showDashboard(){
   setVisible(DASHBOARD_IDS,true);
   setVisible(TASK_IDS,false);
   enforcedDashboardForAccount();
-  $("menuTacVu").classList.add("hidden");
+  dongMenuTacVu();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function openTask(panelId){
@@ -5480,7 +5520,7 @@ function openTask(panelId){
     panel.classList.remove("hidden");
     panel.classList.add("activeTask");
   }
-  $("menuTacVu").classList.add("hidden");
+  dongMenuTacVu();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function moTacVu(key){
@@ -5491,14 +5531,24 @@ function moTacVu(key){
   if(key==="log"){ if(!requirePerm("log","Log / Nhật ký thao tác"))return; openTask("panelLog"); }
   if(key==="quanLy"){ if(!isAdmin())return alert("Chỉ Admin được vào Quản lý."); openTask("panelQuanLy"); }
 }
-$("nutMenuTacVu").onclick=()=>{$("menuTacVu").classList.toggle("hidden");};
-$("dongMenuTacVu").onclick=()=>{$("menuTacVu").classList.add("hidden");};
+function moMenuTacVu(){
+  const menu=$("menuTacVu");
+  menu.classList.remove("hidden");
+  document.body.classList.add("menuOpen");
+}
+function dongMenuTacVu(){
+  const menu=$("menuTacVu");
+  menu.classList.add("hidden");
+  document.body.classList.remove("menuOpen");
+}
+$("nutMenuTacVu").onclick=()=>{const menu=$("menuTacVu"); menu.classList.contains("hidden")?moMenuTacVu():dongMenuTacVu();};
+$("dongMenuTacVu").onclick=dongMenuTacVu;
 document.querySelectorAll(".taskItem").forEach(btn=>btn.onclick=()=>moTacVu(btn.dataset.openPanel));
 document.addEventListener("click",(e)=>{
   const menu=$("menuTacVu"), nut=$("nutMenuTacVu");
   if(!menu || menu.classList.contains("hidden"))return;
   if(menu.contains(e.target) || nut.contains(e.target))return;
-  menu.classList.add("hidden");
+  dongMenuTacVu();
 });
 $("nutAnYeuCauHang").onclick=()=>{showDashboard();};
 $("nutAnPhanCa").onclick=()=>{showDashboard();};
