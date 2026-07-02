@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.16 Unified Modal Actions</title>
+<title>Dương Tú v1.17 On-Duty Filter Live Scroll</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2490,7 +2490,7 @@ button:hover,.taskItem:hover{
 <h2>Chọn nhân sự cho chuyến đang chọn</h2>
 <div class="body">
 <div class="row">
-<select id="locCap"><option value="tatca">Cấp cần: Tất cả</option><option value="1">Cấp 1 trở lên</option><option value="2">Cấp 2 trở lên</option><option value="3">Cấp 3 trở lên</option></select>
+<select id="locCap"><option value="tatca">Cấp cần: Tất cả</option><option value="dangtruc">Đang trực / còn giờ</option><option value="1">Cấp 1 trở lên</option><option value="2">Cấp 2 trở lên</option><option value="3">Cấp 3 trở lên</option></select>
 <select id="sapXep"><option value="goiY">Gợi ý thông minh</option><option value="itChuyen">Ít chuyến nhất</option><option value="itThoiGian">Ít thời gian nhất</option><option value="ranhLau">Rảnh / sắp rảnh</option></select>
 </div>
 <div class="hint" id="chuyenDangChonText">Đang chọn: chưa có</div>
@@ -5213,7 +5213,7 @@ function veTimelineNhanSu(){
     const dangDoiCho=nhanSuDoiCho===ns.ma;
     const sapXepText=!chuyenDangChon&&dangDoiCho?`<br><span class="sapXepHint">Đang chọn để đổi vị trí</span>`:"";
     const handle=!chuyenDangChon?`<span class="dragHandle ${caCls}" title="Kéo để chèn vị trí" onpointerdown="batDauKeoNhanSuPointer(event,'${ns.ma}')"></span>`:"";
-    el.innerHTML+=`<div class="tlRow ${dangDoiCho?"reorderSelected":""}" data-ma-nv="${ns.ma}"><div class="tlLabel ${caCls} ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${handle}<b>${ns.ten}</b>${standBadgeNhanSu(ns.ma,now)}<br><span class="muted">Cấp ${ns.cap}</span>${sapXepText}</div><div class="tlLane ${daChon?"selected":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
+    el.innerHTML+=`<div class="tlRow ${dang?"activeNowStaff":""} ${dangDoiCho?"reorderSelected":""}" data-ma-nv="${ns.ma}"><div class="tlLabel ${caCls} ${daChon?"selected":""} ${dang?"activeNow":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${handle}<b>${ns.ten}</b>${standBadgeNhanSu(ns.ma,now)}<br><span class="muted">Cấp ${ns.cap}</span>${sapXepText}</div><div class="tlLane ${daChon?"selected":""} ${dang?"activeNowLane":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
   });
 }
 
@@ -5492,7 +5492,13 @@ function veDanhSachChon(){
   const loc=$("locCap").value, sx=$("sapXep").value;  let ds=state.danhSachNhanSu
     .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
     .filter(ns=>cb&&cb.caPhuTrach?nsTrongPhamViCaChuyen(ns,cb):dungBoLocCaNV(ns.ma))
-    .filter(ns=>datCap(ns.cap,loc))
+    .filter(ns=>{
+      if(loc!=="dangtruc")return datCap(ns.cap,loc);
+      const tt=trangThaiCa(ns.ma);
+      // Đang trực / còn giờ = đang trong ca, sắp hết ca hoặc OT vì còn việc.
+      // Không lấy người chưa vào ca / hết ca / không trong ca.
+      return tt.loai==="green" || tt.loai==="orange" || tt.loai==="red";
+    })
     .map(ns=>{
       const ct=chiTietNhanSu(ns.ma);
       const chon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma&&pcDangHieuLuc(pc));
@@ -7170,11 +7176,20 @@ function canhTheoVachHienTai(){
   b.scrollLeft=mucTieu;
 
   requestAnimationFrame(()=>{
-    const active=[...a.querySelectorAll(".tlLabel.activeNow")];
-    if(active.length){
-      const last=active[active.length-1];
-      const top=Math.max(0,last.offsetTop - 34 - (a.clientHeight-last.offsetHeight-18));
+    // Realtime chuyến bay: kéo xuống chuyến đang phục vụ dưới cùng.
+    const activeFlights=[...a.querySelectorAll(".tlLabel.activeNow")];
+    if(activeFlights.length){
+      const last=activeFlights[activeFlights.length-1];
+      const top=Math.max(0,last.offsetTop - 34 - Math.max(0,a.clientHeight-last.offsetHeight-18));
       a.scrollTop=top;
+    }
+
+    // Realtime nhân sự: kéo tới nhóm nhân sự đang phục vụ / đang được chọn gần mốc live.
+    const activeStaff=[...b.querySelectorAll(".tlLabel.activeNow,.tlLabel.selected")];
+    if(activeStaff.length){
+      const first=activeStaff[0];
+      const top=Math.max(0,first.offsetTop - 44);
+      b.scrollTop=top;
     }
   });
 }
