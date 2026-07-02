@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.24 Live Toggle Report Polish</title>
+<title>Dương Tú v1.25 Login ID Password Admin Fix</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -3162,6 +3162,7 @@ function seedAdminAccount(){
   }
 }
 seedAdminAccount();
+migrateAccountIdsCaseInsensitive();
 if(state.autoNhanSuOn===undefined) state.autoNhanSuOn=false;
 
 const HANG_HANG_KHONG_MAC_DINH_V119=[
@@ -4123,12 +4124,32 @@ function timNhanSuTheoTen(fullName){
   const n=normNameForAccount(fullName);
   return (state.danhSachNhanSu||[]).find(ns=>normNameForAccount(ns.ten)===n);
 }
+function normAccountId(id){return String(id||"").trim().toLowerCase();}
+function getAccountById(id){
+  const key=normAccountId(id);
+  if(!key||!state.accounts)return null;
+  if(state.accounts[key])return state.accounts[key];
+  return Object.values(state.accounts).find(a=>normAccountId(a.id)===key)||null;
+}
+function migrateAccountIdsCaseInsensitive(){
+  if(!state.accounts)return;
+  const next={};
+  Object.entries(state.accounts).forEach(([k,acc])=>{
+    if(!acc)return;
+    const key=normAccountId(acc.id||k);
+    if(!key)return;
+    acc.id=key;
+    if(!next[key])next[key]=acc;
+    else next[key]={...next[key],...acc,permissions:{...(next[key].permissions||{}),...(acc.permissions||{})}};
+  });
+  state.accounts=next;
+}
 function getSession(){try{return JSON.parse(localStorage.getItem("ramp_session")||"null");}catch(e){return null;}}
 function setSession(acc,shift=""){
   localStorage.setItem("ramp_session",JSON.stringify({id:acc.id,fullName:acc.fullName,role:acc.role||"",permissions:acc.permissions||{},todayShift:shift,date:homNayLocal()}));
   localStorage.setItem("ramp_current_user",acc.fullName||acc.id);
 }
-function currentAccount(){const s=getSession(); return s?(state.accounts?.[s.id]||null):null;}
+function currentAccount(){const s=getSession(); return s?getAccountById(s.id):null;}
 function isAdmin(){const acc=currentAccount();return !!(acc&&(acc.role==="admin"||acc.permissions?.admin));}
 function canPerm(key){
   const acc=currentAccount();
@@ -4230,8 +4251,8 @@ function updateAccountUI(){
   capNhatThongBaoTacVu();
 }
 function dangNhap(){
-  const id=$("loginId").value.trim(), pass=$("loginPass").value;
-  const acc=state.accounts?.[id];
+  const rawId=$("loginId").value.trim(), id=normAccountId(rawId), pass=$("loginPass").value;
+  const acc=getAccountById(rawId);
   if(!acc||acc.pass!==pass){loginMessage("Sai ID hoặc Password.","bad");return;}
   if(acc.status!=="approved"){loginMessage("Tài khoản chưa được Admin duyệt hoặc đã bị khóa.","wait");return;}
   const ns=timNhanSuTheoTen(acc.fullName);
@@ -4245,11 +4266,12 @@ function dangNhap(){
   logAction("ĐĂNG NHẬP",`${acc.fullName||id}${shift?(" · Ca hôm nay: "+shift):""}`);
   luu(); updateAccountUI(); veTatCa();
 }
+
 function dangKy(){
-  const id=$("regId").value.trim(), fullName=$("regFullName").value.trim(), pass=$("regPass").value, pass2=val("regPass2");
+  const rawId=$("regId").value.trim(), id=normAccountId(rawId), fullName=$("regFullName").value.trim(), pass=$("regPass").value, pass2=val("regPass2");
   if(!id||!fullName||!pass||!pass2){loginMessage("Điền đủ ID, Họ tên, Password và nhập lại Password.","wait");return;}
   if(pass!==pass2){loginMessage("Password nhập lại không khớp.","bad");return;}
-  if(state.accounts[id]){loginMessage("ID này đã tồn tại.","bad");return;}
+  if(getAccountById(id)){loginMessage("ID này đã tồn tại.","bad");return;}
   const ns=timNhanSuTheoTen(fullName);
   if(!ns){loginMessage("Họ tên không trùng danh sách nhân sự. Không thể đăng ký.","bad");return;}
   state.accounts[id]={id,pass,fullName,status:"pending",role:"user",staffMa:ns.ma,permissions:{dashboard:true}};
@@ -4286,7 +4308,7 @@ function veBangTaiKhoan(){
   }).join("");
 }
 function doiQuyen(id,key,val){
-  const acc=state.accounts[id]; if(!acc)return;
+  const acc=getAccountById(id); if(!acc)return;
   if(!acc.permissions)acc.permissions={};
   acc.permissions[key]=val;
   if(key==="admin")acc.role=val?"admin":"user";
@@ -4294,15 +4316,15 @@ function doiQuyen(id,key,val){
   luu();veTatCa();
 }
 function duyetTaiKhoan(id){
-  const acc=state.accounts[id]; if(!acc)return;
+  const acc=getAccountById(id); if(!acc)return;
   acc.status="approved";
   if(!acc.permissions)acc.permissions={dashboard:true};
   logAction("DUYỆT TÀI KHOẢN",`${acc.fullName||id}`);
   luu();veTatCa();
 }
 function khoaTaiKhoan(id){
-  if(id==="tudd")return alert("Không khóa tài khoản admin mặc định.");
-  const acc=state.accounts[id]; if(!acc)return;
+  if(normAccountId(id)==="tudd")return alert("Không khóa tài khoản admin mặc định.");
+  const acc=getAccountById(id); if(!acc)return;
   acc.status="locked";
   logAction("KHÓA TÀI KHOẢN",`${acc.fullName||id}`);
   luu();veTatCa();
@@ -4311,13 +4333,33 @@ function khoaTaiKhoan(id){
 
 function adminDoiMatKhau(id){
   if(!isAdmin())return alert("Chỉ Admin được đổi mật khẩu tài khoản khác.");
-  const acc=state.accounts[id]; if(!acc)return;
-  const p=prompt(`Nhập mật khẩu mới cho ${acc.fullName||id}:`,"");
-  if(p===null)return;
-  if(!p.trim())return alert("Mật khẩu không được để trống.");
-  acc.pass=p;
-  logAction("ADMIN ĐỔI MẬT KHẨU",`${acc.fullName||id}`);
-  luu();veTatCa();
+  const acc=getAccountById(id); if(!acc)return;
+
+  moActionModal({
+    title:"Admin đổi mật khẩu",
+    htmlBody:`
+      <div><b>Tài khoản:</b> ${escHtml(acc.fullName||acc.id)} <span class="muted">(${escHtml(acc.id)})</span></div>
+      <div class="muted" style="margin-top:6px">Admin đổi thẳng, không cần mật khẩu cũ.</div>
+      <div class="loginLabel" style="margin-top:10px">Mật khẩu mới
+        <input id="adminNewPass1" type="password" autocomplete="new-password" style="width:100%;margin-top:6px">
+      </div>
+      <div class="loginLabel" style="margin-top:10px">Nhập lại mật khẩu mới
+        <input id="adminNewPass2" type="password" autocomplete="new-password" style="width:100%;margin-top:6px">
+      </div>
+    `,
+    buttons:[
+      {label:"Đổi mật khẩu",desc:"Cập nhật mật khẩu cho user này.",className:"goodChoice",onClick:()=>{
+        const p1=val("adminNewPass1"), p2=val("adminNewPass2");
+        if(!p1.trim())return moActionModal({title:"Không đổi được",htmlBody:"Mật khẩu mới không được để trống.",buttons:[]});
+        if(p1!==p2)return moActionModal({title:"Không đổi được",htmlBody:"Mật khẩu nhập lại không khớp.",buttons:[]});
+        acc.pass=p1;
+        logAction("ADMIN ĐỔI MẬT KHẨU",`${acc.fullName||acc.id}`);
+        luu(); veTatCa();
+        moActionModal({title:"Đã đổi mật khẩu",htmlBody:`Đã đổi mật khẩu cho <b>${escHtml(acc.fullName||acc.id)}</b>.`,buttons:[]});
+      }},
+      {label:"Hủy",desc:"Không thay đổi mật khẩu.",onClick:()=>{}}
+    ]
+  });
 }
 function doiMatKhauCuaToi(){
   const acc=currentAccount();
