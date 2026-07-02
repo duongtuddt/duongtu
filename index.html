@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.28 Workload Fairness by Shift Presence</title>
+<title>Dương Tú v1.29 Password Logout Fix</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4299,6 +4299,15 @@ function apDungGioiHanCaTheoDangNhap(){
 }
 
 function loginMessage(msg,cls="muted"){const el=$("loginMessage"); if(el){el.className="status "+cls+(msg?"":" hidden");el.textContent=msg||"";}}
+function clearLoginFields(){
+  ["loginId","loginPass","regId","regFullName","regPass","regPass2"].forEach(id=>{
+    const el=$(id);
+    if(el)el.value="";
+  });
+  loginMessage("");
+  showLoginTab("login");
+}
+
 function showLoginTab(mode){$("loginForm").classList.toggle("hidden",mode!=="login");$("registerForm").classList.toggle("hidden",mode!=="register");}
 function updateAccountUI(){
   const gate=$("loginGate"), menu=$("menuQuanLyGroup"), info=$("menuAccountInfo");
@@ -4383,11 +4392,15 @@ function dangKy(){
 function dangXuat(){
   const acc=currentAccount(); if(acc)logAction("ĐĂNG XUẤT",`${acc.fullName||acc.id}`);
   localStorage.removeItem("ramp_session");
+  localStorage.removeItem("ramp_current_user");
+  sessionStorage.removeItem("ramp_session");
   clearActiveEdit();
+  clearLoginFields();
   luu();
   if(typeof dongMenuTacVu==="function")dongMenuTacVu();
   updateAccountUI();
   showDashboard();
+  setTimeout(clearLoginFields,30);
 }
 function statusBadgeAccount(st){
   if(st==="approved")return '<span class="approvedBadge">Đã duyệt</span>';
@@ -4459,23 +4472,30 @@ function adminDoiMatKhau(id){
   if(!isAdmin())return alert("Chỉ Admin được đổi mật khẩu tài khoản khác.");
   const acc=getAccountById(id); if(!acc)return;
 
+  const input1Id="adminResetPass1_"+String(acc.id).replace(/[^a-zA-Z0-9_]/g,"_");
+  const input2Id="adminResetPass2_"+String(acc.id).replace(/[^a-zA-Z0-9_]/g,"_");
+
   moActionModal({
     title:"Admin đổi mật khẩu",
     htmlBody:`
       <div><b>Tài khoản:</b> ${escHtml(acc.fullName||acc.id)} <span class="muted">(${escHtml(acc.id)})</span></div>
       <div class="muted" style="margin-top:6px">Admin đổi thẳng, không cần mật khẩu cũ.</div>
       <div class="loginLabel" style="margin-top:10px">Mật khẩu mới
-        <input id="adminNewPass1" type="password" autocomplete="new-password" style="width:100%;margin-top:6px">
+        <input id="${input1Id}" type="password" autocomplete="new-password" style="width:100%;margin-top:6px">
       </div>
       <div class="loginLabel" style="margin-top:10px">Nhập lại mật khẩu mới
-        <input id="adminNewPass2" type="password" autocomplete="new-password" style="width:100%;margin-top:6px">
+        <input id="${input2Id}" type="password" autocomplete="new-password" style="width:100%;margin-top:6px">
       </div>
     `,
     buttons:[
       {label:"Đổi mật khẩu",desc:"Cập nhật mật khẩu cho user này.",className:"goodChoice",onClick:()=>{
-        const p1=val("adminNewPass1"), p2=val("adminNewPass2");
-        if(!p1.trim())return moActionModal({title:"Không đổi được",htmlBody:"Mật khẩu mới không được để trống.",buttons:[]});
+        const overlay=document.getElementById("actionOverlay");
+        const p1=(overlay?.querySelector("#"+CSS.escape(input1Id))?.value || "").trim();
+        const p2=(overlay?.querySelector("#"+CSS.escape(input2Id))?.value || "").trim();
+
+        if(!p1)return moActionModal({title:"Không đổi được",htmlBody:"Mật khẩu mới không được để trống.",buttons:[]});
         if(p1!==p2)return moActionModal({title:"Không đổi được",htmlBody:"Mật khẩu nhập lại không khớp.",buttons:[]});
+
         acc.pass=p1;
         logAction("ADMIN ĐỔI MẬT KHẨU",`${acc.fullName||acc.id}`);
         luu(); veTatCa();
