@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.19 Airline Requirements + Service Chips</title>
+<title>Dương Tú v1.20 Transfer Ends Old Assignment</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -6118,14 +6118,36 @@ function moModalDichVuDieuDong(cb,ma,trungPc,onChoose){
 function apDungDichVuChoPC(pc,service,cb,trungPc,now){
   pc.dichVuDieuDong=service;
   pc.isDieuDongDichVu=true;
-  if(dichVuTam15Phut(service)){
+
+  const laTamThoi=dichVuTam15Phut(service);
+
+  if(laTamThoi){
+    // Vệ sinh / nước sạch: làm 15 phút.
+    // Nếu đang làm chuyến cũ thì sau 15 phút xem như quay lại chuyến cũ nếu chuyến cũ còn.
     pc.ketThucAbs=Math.min(pc.batDauAbs+15, ketThucAbs(cb));
     pc.tuQuayVe=true;
   }else{
+    // Bổ sung người / GPU / ASU / ACU / khác:
+    // Khi đã điều động ở lại đến hết chuyến mới thì nhân sự ngưng hẳn chuyến cũ.
+    // Không tự quay lại chuyến cũ dù chuyến mới xong sớm hơn chuyến cũ.
     pc.ketThucAbs=ketThucAbs(cb);
     pc.tuQuayVe=false;
   }
-  if(trungPc) pc.dieuDongTu=trungPc.maChuyen;
+
+  if(trungPc){
+    pc.dieuDongTu=trungPc.maChuyen;
+
+    if(!laTamThoi){
+      // v1.20: cắt chuyến cũ ngay tại mốc điều động.
+      // Chuyến cũ sẽ giữ tên dạng gạch chéo xanh-xám để ghi nhận đã từng phục vụ nhưng đã rời đi.
+      trungPc.thuHoi=true;
+      trungPc.thuHoiAbs=pc.batDauAbs;
+      trungPc.ketThucGocAbs=trungPc.ketThucAbs;
+      trungPc.ketThucAbs=pc.batDauAbs;
+      trungPc.ghiChuThuHoi=`Rời sang ${cb.flight} lúc ${gioTuPhut(pc.batDauAbs)} - ${service}`;
+    }
+  }
+
   return pc;
 }
 function viTriSoBai(bai){
