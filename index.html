@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.17 On-Duty Filter Live Scroll</title>
+<title>Dương Tú v1.18 Staff Stats Live Account Fix</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4095,7 +4095,12 @@ function dangKy(){
 }
 function dangXuat(){
   const acc=currentAccount(); if(acc)logAction("ĐĂNG XUẤT",`${acc.fullName||acc.id}`);
-  localStorage.removeItem("ramp_session"); clearActiveEdit(); luu(); updateAccountUI();
+  localStorage.removeItem("ramp_session");
+  clearActiveEdit();
+  luu();
+  if(typeof dongMenuTacVu==="function")dongMenuTacVu();
+  updateAccountUI();
+  showDashboard();
 }
 function statusBadgeAccount(st){
   if(st==="approved")return '<span class="approvedBadge">Đã duyệt</span>';
@@ -4152,19 +4157,39 @@ function adminDoiMatKhau(id){
   luu();veTatCa();
 }
 function doiMatKhauCuaToi(){
-  const acc=currentAccount(); if(!acc)return alert("Chưa đăng nhập.");
-  const old=prompt("Nhập mật khẩu cũ:","");
-  if(old===null)return;
-  if(old!==acc.pass)return alert("Mật khẩu cũ không đúng.");
-  const p1=prompt("Nhập mật khẩu mới:","");
-  if(p1===null)return;
-  if(!p1.trim())return alert("Mật khẩu mới không được để trống.");
-  const p2=prompt("Nhập lại mật khẩu mới:","");
-  if(p2===null)return;
-  if(p1!==p2)return alert("Mật khẩu nhập lại không khớp.");
-  acc.pass=p1;
-  logAction("ĐỔI MẬT KHẨU",`${acc.fullName||acc.id}`);
-  luu();alert("Đã đổi mật khẩu.");
+  const acc=currentAccount();
+  if(!acc){
+    moActionModal({title:"Chưa đăng nhập",htmlBody:"Bạn cần đăng nhập trước khi đổi mật khẩu.",buttons:[]});
+    return;
+  }
+
+  moActionModal({
+    title:"Đổi mật khẩu của tôi",
+    htmlBody:`
+      <div class="loginLabel">Mật khẩu cũ
+        <input id="pwdOldSelf" type="password" autocomplete="current-password" style="width:100%;margin-top:6px">
+      </div>
+      <div class="loginLabel" style="margin-top:10px">Mật khẩu mới
+        <input id="pwdNewSelf1" type="password" autocomplete="new-password" style="width:100%;margin-top:6px">
+      </div>
+      <div class="loginLabel" style="margin-top:10px">Nhập lại mật khẩu mới
+        <input id="pwdNewSelf2" type="password" autocomplete="new-password" style="width:100%;margin-top:6px">
+      </div>
+    `,
+    buttons:[
+      {label:"Lưu mật khẩu",desc:"Cập nhật mật khẩu đăng nhập của tài khoản hiện tại.",className:"goodChoice",onClick:()=>{
+        const old=val("pwdOldSelf"), p1=val("pwdNewSelf1"), p2=val("pwdNewSelf2");
+        if(old!==acc.pass)return moActionModal({title:"Không đổi được",htmlBody:"Mật khẩu cũ không đúng.",buttons:[]});
+        if(!p1.trim())return moActionModal({title:"Không đổi được",htmlBody:"Mật khẩu mới không được để trống.",buttons:[]});
+        if(p1!==p2)return moActionModal({title:"Không đổi được",htmlBody:"Mật khẩu nhập lại không khớp.",buttons:[]});
+        acc.pass=p1;
+        logAction("ĐỔI MẬT KHẨU",`${acc.fullName||acc.id}`);
+        luu();
+        moActionModal({title:"Đã đổi mật khẩu",htmlBody:"Mật khẩu đã được cập nhật.",buttons:[]});
+      }},
+      {label:"Hủy",desc:"Không thay đổi mật khẩu.",onClick:()=>{}}
+    ]
+  });
 }
 
 const LOG_PASSWORD="SAGS2026"; // <- ĐỔI MẬT KHẨU LOG Ở ĐÂY nếu cần
@@ -4922,24 +4947,22 @@ function trangThaiCa(ma){
   for(const s of segs){
     if(now>=s.vao && now<=s.ra){
       const con=Math.round(s.ra-now);
-      return con<=15?{text:`${s.ten} sắp hết ${con}'`,loai:"orange"}:{text:`${s.ten} còn ${con}'`,loai:"green"};
+      return con<=15?{text:`${s.ten} sắp hết ${fmtPhutDai(con)}`,loai:"orange"}:{text:`Còn ${fmtPhutDai(con)}`,loai:"green"};
     }
     if(now<s.vao){
-      return {text:`Chưa vào ${s.ten} ${Math.round(s.vao-now)}'`,loai:"blue"};
+      return {text:`Chưa vào ${s.ten} ${fmtPhutDai(s.vao-now)}`,loai:"blue"};
     }
   }
 
   const last=segs[segs.length-1];
   const ketThucCongViec = congViecLienQuanOT(ma, last.ra);
 
-  // Không có việc bị giữ lại sau giờ ca thì không tính OT nữa, coi như đã hết ca/về rồi.
-  if(!ketThucCongViec) return {text:"Hết ca",loai:"gray"};
+  if(!ketThucCongViec) return {text:"Hết thời gian làm việc",loai:"gray"};
 
-  // Có việc kéo qua giờ ca mới tính OT.
   const otDen = Math.min(now, ketThucCongViec);
-  if(otDen > last.ra) return {text:`OT ${Math.round(otDen-last.ra)}'`,loai:"red"};
+  if(otDen > last.ra) return {text:`OT ${fmtPhutDai(otDen-last.ra)}`,loai:"red"};
 
-  return {text:"Hết ca",loai:"gray"};
+  return {text:"Hết thời gian làm việc",loai:"gray"};
 }
 function thongKeNV(ma,moc=hienTaiAbs()){
   // v1.07: thống kê phải tính theo MỐC THỜI GIAN, không đếm toàn bộ phân công cả ngày.
@@ -5373,22 +5396,45 @@ function fmtPhut(min){
   }
   return `${min}'`;
 }
+function fmtPhutDai(min){
+  if(min===null || min===undefined || !isFinite(min)) return "--";
+  min=Math.max(0,Math.round(min));
+  const h=Math.floor(min/60), m=min%60;
+  if(h>0 && m>0)return `${h} tiếng ${m} phút`;
+  if(h>0)return `${h} tiếng`;
+  return `${m} phút`;
+}
+function pcTrongNgayKhaiThac(pc){
+  const cb=chuyen(pc.maChuyen);
+  return !cb || cb.ngay===state.ngayKhaiThac;
+}
 function tenChuyenTuPC(pc){
   const cb=chuyen(pc.maChuyen);
   return cb?cb.flight:pc.maChuyen;
 }
 function chiTietNhanSu(ma){
   const now=hienTaiAbs();
-  const pcs=state.phanCong.filter(pc=>pc.maNV===ma).sort((a,b)=>a.batDauAbs-b.batDauAbs);
+
+  // Chỉ thống kê và tìm trạng thái theo ngày khai thác hiện tại.
+  // Không lấy chuyến hôm qua để tính "rảnh 21h".
+  const pcs=state.phanCong
+    .filter(pc=>pc.maNV===ma && pcTrongNgayKhaiThac(pc))
+    .sort((a,b)=>a.batDauAbs-b.batDauAbs);
+
   const dang=pcs.find(pc=>!pc.thuHoi && pc.batDauAbs<=now && now<=pc.ketThucAbs);
   const truoc=[...pcs].filter(pc=>pc.ketThucAbs<=now).sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0]||null;
   const tiep=pcs.find(pc=>!pc.thuHoi && pc.batDauAbs>now)||null;
   const ttCa=trangThaiCa(ma);
   const tk=thongKeNV(ma);
 
+  const segNow=caSegments(ma).find(s=>s.vao<=now && now<=s.ra);
+  const caDaVao=!!segNow;
+  const mocRanhMacDinh=segNow?segNow.vao:null;
+
   let dongTrangThai="", dongTiep="", dongRanhGiua="", mau="green", canhBao="Không", mauCanhBao="staffWarnGreen";
   let coChuyenTiepNguyCo=false;
   let textChuyenTiepNguyCo="";
+
   if(dang){
     const ten=tenChuyenTuPC(dang);
     dongTrangThai=`Đang làm ${ten} | Còn ${fmtPhut(dang.ketThucAbs-now)}`;
@@ -5401,8 +5447,6 @@ function chiTietNhanSu(ma){
       const sau=tiep.batDauAbs-now;
       const giua=tiep.batDauAbs-dang.ketThucAbs;
 
-      // Chỉ cảnh báo đỏ khi chuyến tiếp thật sự trùng với chuyến đang làm.
-      // Nếu chuyến tiếp bắt đầu sau khi chuyến hiện tại xong thì chỉ là lịch nối tiếp bình thường.
       if(tiep.batDauAbs < dang.ketThucAbs){
         coChuyenTiepNguyCo=true;
         textChuyenTiepNguyCo=`🚨 TIẾP: ${tenTiep} sau ${fmtPhut(sau)}`;
@@ -5424,8 +5468,11 @@ function chiTietNhanSu(ma){
     if(truoc){
       const tenTruoc=tenChuyenTuPC(truoc);
       dongTrangThai=`Vừa làm ${tenTruoc} | RẢNH ${fmtPhut(now-truoc.ketThucAbs)}`;
+    }else if(caDaVao){
+      dongTrangThai=`RẢNH ${fmtPhut(now-mocRanhMacDinh)}`;
     }else{
-      dongTrangThai="RẢNH cả ca";
+      dongTrangThai=ttCa.text;
+      if(ttCa.loai==="gray") dongTrangThai="Hết thời gian làm việc";
     }
 
     if(tiep){
@@ -5435,6 +5482,9 @@ function chiTietNhanSu(ma){
       if(truoc){
         const giua=tiep.batDauAbs-truoc.ketThucAbs;
         if(giua>0) dongRanhGiua=`Rảnh giữa 2 chuyến: ${fmtPhut(giua)}`;
+      }else if(caDaVao){
+        const giua=tiep.batDauAbs-now;
+        if(giua>0) dongRanhGiua=`Rảnh đến chuyến sau: ${fmtPhut(giua)}`;
       }
     }else{
       dongTiep="Sắp làm: chưa có";
@@ -5449,6 +5499,14 @@ function chiTietNhanSu(ma){
     mau="orange";
     canhBao=ttCa.text;
     mauCanhBao="staffWarnOrange";
+  }else if(ttCa.loai==="blue" && canhBao==="Không"){
+    mau="blue";
+    canhBao=ttCa.text;
+    mauCanhBao="staffWarnOrange";
+  }else if(ttCa.loai==="gray" && canhBao==="Không"){
+    mau="gray";
+    canhBao=ttCa.text;
+    mauCanhBao="staffWarnRed";
   }
 
   return {
@@ -5467,7 +5525,6 @@ function chiTietNhanSu(ma){
     dangLam:!!dang
   };
 }
-
 
 function uuTienRanh(ns){
   const now=hienTaiAbs();
@@ -7008,7 +7065,7 @@ function dongMenuTacVu(){
 }
 $("nutMenuTacVu").onclick=()=>{const menu=$("menuTacVu"); menu.classList.contains("hidden")?moMenuTacVu():dongMenuTacVu();};
 $("dongMenuTacVu").onclick=dongMenuTacVu;
-document.querySelectorAll(".taskItem").forEach(btn=>btn.onclick=()=>moTacVu(btn.dataset.openPanel));
+document.querySelectorAll(".taskItem[data-open-panel]").forEach(btn=>btn.onclick=()=>moTacVu(btn.dataset.openPanel));
 document.addEventListener("click",(e)=>{
   const menu=$("menuTacVu"), nut=$("nutMenuTacVu");
   if(!menu || menu.classList.contains("hidden"))return;
@@ -7167,29 +7224,31 @@ function canhTheoVachHienTai(){
 
   const x=parseFloat(nowLine.style.left||"0");
   const viTriLive=Math.max(0,x-TIMELINE_LABEL_WIDTH);
-
-  // Mép trái cửa sổ = LIVE - 30 phút.
   const mucTieu=Math.max(0,viTriLive-(RONG_GIO*0.5));
 
   timelineScrollLeftMemory=mucTieu;
-  a.scrollLeft=mucTieu;
-  b.scrollLeft=mucTieu;
+
+  function setBoth(){
+    a.scrollLeft=mucTieu;
+    b.scrollLeft=mucTieu;
+  }
+
+  // Set nhiều nhịp để không bị scroll sync ghi đè sau render.
+  setBoth();
+  requestAnimationFrame(setBoth);
+  setTimeout(setBoth,60);
 
   requestAnimationFrame(()=>{
-    // Realtime chuyến bay: kéo xuống chuyến đang phục vụ dưới cùng.
     const activeFlights=[...a.querySelectorAll(".tlLabel.activeNow")];
     if(activeFlights.length){
       const last=activeFlights[activeFlights.length-1];
-      const top=Math.max(0,last.offsetTop - 34 - Math.max(0,a.clientHeight-last.offsetHeight-18));
-      a.scrollTop=top;
+      a.scrollTop=Math.max(0,last.offsetTop - 44);
     }
 
-    // Realtime nhân sự: kéo tới nhóm nhân sự đang phục vụ / đang được chọn gần mốc live.
     const activeStaff=[...b.querySelectorAll(".tlLabel.activeNow,.tlLabel.selected")];
     if(activeStaff.length){
       const first=activeStaff[0];
-      const top=Math.max(0,first.offsetTop - 44);
-      b.scrollTop=top;
+      b.scrollTop=Math.max(0,first.offsetTop - 44);
     }
   });
 }
@@ -7200,9 +7259,9 @@ function capNhatNutLive(){
   btn.innerHTML=liveFollow?'<span class="liveDot"></span>LIVE':'LIVE';
 }
 function toggleLiveFollow(){
-  liveFollow=!liveFollow;
+  if(!liveFollow)liveFollow=true;
   capNhatNutLive();
-  if(liveFollow)canhTheoVachHienTai();
+  canhTheoVachHienTai();
 }
 
 suaDieuDongCu();
