@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.18 Staff Stats Live Account Fix</title>
+<title>Dương Tú v1.19 Airline Requirements + Service Chips</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2380,6 +2380,36 @@ button:hover,.taskItem:hover{
 .choiceBtn.dangerChoice{border-color:#ef4444}
 .choiceBtn.goodChoice{border-color:#22c55e}
 
+
+/* v1.19 - Yêu cầu riêng hãng + trạng thái chip điều động */
+.airlineLogo{
+  width:44px;height:44px;object-fit:contain;border-radius:8px;
+  background:#fff;padding:4px;border:1px solid #25476b;
+}
+.airlineTable th,.airlineTable td{vertical-align:middle}
+.airlineTable input[type="checkbox"]{width:18px;height:18px}
+.airlineTable .airName{font-weight:900;color:#eaf3ff}
+.airlineTable .iataCode{
+  display:inline-block;min-width:38px;text-align:center;
+  border:1px solid var(--line);border-radius:8px;padding:5px 8px;
+  background:#081a2f;color:#facc15;font-weight:900;
+}
+.airlineNote{
+  width:100%;min-width:220px;min-height:34px;
+}
+.staffChip.leftAway{
+  text-decoration:line-through;
+  opacity:.78;
+  border-left-color:#7f9fb8!important;
+  background:repeating-linear-gradient(135deg,#0b1f36 0 7px,#163247 7px 12px);
+  color:#b8cad8;
+}
+.staffChip.transferredIn{
+  border-left-color:#22c55e!important;
+  background:repeating-linear-gradient(135deg,#062617 0 7px,#0d3b24 7px 12px);
+  color:#d9ffe8;
+}
+
 </style>
 </head>
 <body>
@@ -2490,7 +2520,7 @@ button:hover,.taskItem:hover{
 <h2>Chọn nhân sự cho chuyến đang chọn</h2>
 <div class="body">
 <div class="row">
-<select id="locCap"><option value="tatca">Cấp cần: Tất cả</option><option value="dangtruc">Đang trực / còn giờ</option><option value="1">Cấp 1 trở lên</option><option value="2">Cấp 2 trở lên</option><option value="3">Cấp 3 trở lên</option></select>
+<select id="locCap"><option value="tatca">Cấp cần: Tất cả</option><option value="dangtruc" selected>Đang trực / còn giờ</option><option value="1">Cấp 1 trở lên</option><option value="2">Cấp 2 trở lên</option><option value="3">Cấp 3 trở lên</option></select>
 <select id="sapXep"><option value="goiY">Gợi ý thông minh</option><option value="itChuyen">Ít chuyến nhất</option><option value="itThoiGian">Ít thời gian nhất</option><option value="ranhLau">Rảnh / sắp rảnh</option></select>
 </div>
 <div class="hint" id="chuyenDangChonText">Đang chọn: chưa có</div>
@@ -2560,9 +2590,24 @@ button:hover,.taskItem:hover{
 
 <section class="panel hidden" id="panelYeuCauHang"><h2><span><button class="small ghost screenBack" onclick="showDashboard()">← Dashboard</button>Yêu cầu hãng</span><button class="small ghost" id="nutAnYeuCauHang">Ẩn</button></h2>
 <div class="body" id="khoiYeuCauHang">
-  <div class="blankBox">
-    Trang này đang để trống để bổ sung sau.
-    <br><span class="hint">Dự kiến dùng để ghi yêu cầu riêng theo hãng bay.</span>
+  <div class="hint">Tick dịch vụ tại đây có giá trị ngang với ô nhập dịch vụ/ghi chú chuyến bay. Khi chuyến có mã hãng tương ứng, hệ thống sẽ tự hiểu GPU / ACU / ASU / Lavatory / Water là yêu cầu của chuyến.</div>
+  <div class="scroll" style="margin-top:8px">
+    <table class="airlineTable">
+      <thead>
+        <tr>
+          <th>Logo</th>
+          <th>Tên hãng</th>
+          <th>IATA</th>
+          <th>GPU</th>
+          <th>ACU</th>
+          <th>ASU</th>
+          <th>Lavatory</th>
+          <th>Water</th>
+          <th>Yêu cầu riêng với TTB</th>
+        </tr>
+      </thead>
+      <tbody id="bangYeuCauHang"></tbody>
+    </table>
   </div>
 </div>
 </section>
@@ -3052,6 +3097,58 @@ function seedAdminAccount(){
   }
 }
 seedAdminAccount();
+
+const HANG_HANG_KHONG_MAC_DINH_V119=[
+  {iata:"VJ",ten:"VietJet Air",domain:"vietjetair.com"},
+  {iata:"VU",ten:"Vietravel Airlines",domain:"vietravelairlines.com"},
+  {iata:"9G",ten:"9 Air",domain:"9air.com"},
+  {iata:"EK",ten:"Emirates",domain:"emirates.com"},
+  {iata:"VZ",ten:"Thai VietJet Air",domain:"vietjetair.com"},
+  {iata:"YP",ten:"Air Premia",domain:"airpremia.com"},
+  {iata:"HX",ten:"Hong Kong Airlines",domain:"hongkongairlines.com"},
+  {iata:"TW",ten:"T'way Air",domain:"twayair.com"},
+  {iata:"LJ",ten:"Jin Air",domain:"jinair.com"},
+  {iata:"BX",ten:"Air Busan",domain:"airbusan.com"},
+  {iata:"RS",ten:"Air Seoul",domain:"flyairseoul.com"},
+  {iata:"RF",ten:"Aero K",domain:"aerok.com"},
+  {iata:"MH",ten:"Malaysia Airlines",domain:"malaysiaairlines.com"},
+  {iata:"WE",ten:"Thai Smile",domain:"thaismileair.com"},
+  {iata:"TR",ten:"Scoot",domain:"flyscoot.com"},
+  {iata:"KC",ten:"Air Astana",domain:"airastana.com"},
+  {iata:"DV",ten:"SCAT Airlines",domain:"scat.kz"},
+  {iata:"AK",ten:"AirAsia Malaysia",domain:"airasia.com"},
+  {iata:"FD",ten:"Thai AirAsia",domain:"airasia.com"},
+  {iata:"Z2",ten:"Philippines AirAsia",domain:"airasia.com"},
+  {iata:"QZ",ten:"Indonesia AirAsia",domain:"airasia.com"},
+  {iata:"HB",ten:"Greater Bay Airlines",domain:"greaterbay-airlines.com"}
+];
+function logoHangUrl(domain){
+  return `https://logo.clearbit.com/${domain}`;
+}
+function taoHangHangKhongMacDinh(){
+  return HANG_HANG_KHONG_MAC_DINH_V119.map(x=>({
+    ...x,
+    logo:logoHangUrl(x.domain),
+    gpu:false,acu:false,asu:false,lavatory:false,water:false,
+    note:""
+  }));
+}
+if(!Array.isArray(state.yeuCauHang) || !state.yeuCauHang.length){
+  state.yeuCauHang=taoHangHangKhongMacDinh();
+}else{
+  const cur=new Map(state.yeuCauHang.map(x=>[String(x.iata||"").toUpperCase(),x]));
+  HANG_HANG_KHONG_MAC_DINH_V119.forEach(x=>{
+    const k=x.iata.toUpperCase();
+    if(!cur.has(k)){
+      state.yeuCauHang.push({...x,logo:logoHangUrl(x.domain),gpu:false,acu:false,asu:false,lavatory:false,water:false,note:""});
+    }else{
+      const row=cur.get(k);
+      row.ten=row.ten||x.ten; row.domain=row.domain||x.domain; row.logo=row.logo||logoHangUrl(row.domain);
+      ["gpu","acu","asu","lavatory","water"].forEach(s=>{row[s]=!!row[s];});
+      row.note=row.note||"";
+    }
+  });
+}
 
 function chuanHoaCa(ca){
   if(!ca) ca={chon:false};
@@ -4805,6 +4902,67 @@ function nhanYeuCauLabel(yc){
   };
   return map[String(yc)]||String(yc||"");
 }
+function maHangTuChuyenBay(flight){
+  const m=String(flight||"").trim().toUpperCase().match(/^([A-Z0-9]{2})/);
+  return m?m[1]:"";
+}
+function cauHinhHangCuaChuyen(cb){
+  const code=maHangTuChuyenBay(cb?.flight);
+  return (state.yeuCauHang||[]).find(x=>String(x.iata||"").toUpperCase()===code)||null;
+}
+function dichVuHangThanhReqs(cb){
+  const hang=cauHinhHangCuaChuyen(cb);
+  if(!hang)return [];
+  const map=[
+    ["gpu","gpu","CẤP ĐIỆN TÀU BAY"],
+    ["acu","acu","CẤP KHÍ ĐIỀU HÒA TÀU BAY"],
+    ["asu","asu","CẤP KHÍ KHỞI ĐỘNG TÀU BAY"],
+    ["lavatory","vesinh","VỆ SINH"],
+    ["water","nuocsach","NƯỚC SẠCH"]
+  ];
+  return map.filter(([field])=>!!hang[field]).map(([field,id,label])=>({
+    id:`airline-${String(hang.iata).toUpperCase()}-${id}`,
+    type:"certId",
+    value:id,
+    label,
+    source:`Yêu cầu riêng hãng ${hang.iata} - ${hang.ten}`
+  }));
+}
+function veBangYeuCauHang(){
+  const el=$("bangYeuCauHang"); if(!el)return;
+  const ds=(state.yeuCauHang||[]).slice().sort((a,b)=>String(a.iata).localeCompare(String(b.iata)));
+  el.innerHTML=ds.map(row=>{
+    const code=String(row.iata||"").toUpperCase();
+    const logo=row.logo||logoHangUrl(row.domain||"");
+    const ck=(field)=>`<input type="checkbox" ${row[field]?"checked":""} onchange="doiYeuCauHang('${code}','${field}',this.checked)">`;
+    return `<tr>
+      <td><img class="airlineLogo" src="${logo}" alt="${code}" onerror="this.style.display='none';this.parentNode.innerHTML='<span class=&quot;iataCode&quot;>${code}</span>'"></td>
+      <td><div class="airName">${row.ten||""}</div></td>
+      <td><span class="iataCode">${code}</span></td>
+      <td>${ck("gpu")}</td>
+      <td>${ck("acu")}</td>
+      <td>${ck("asu")}</td>
+      <td>${ck("lavatory")}</td>
+      <td>${ck("water")}</td>
+      <td><textarea class="airlineNote" oninput="doiGhiChuHang('${code}',this.value)" placeholder="Nhập yêu cầu TTB riêng...">${row.note||""}</textarea></td>
+    </tr>`;
+  }).join("");
+}
+function doiYeuCauHang(code,field,val){
+  const row=(state.yeuCauHang||[]).find(x=>String(x.iata||"").toUpperCase()===String(code).toUpperCase());
+  if(!row)return;
+  row[field]=!!val;
+  logAction("SỬA YÊU CẦU HÃNG",`${code}: ${field} = ${val?"ON":"OFF"}`);
+  luu(); veTatCa();
+}
+function doiGhiChuHang(code,text){
+  const row=(state.yeuCauHang||[]).find(x=>String(x.iata||"").toUpperCase()===String(code).toUpperCase());
+  if(!row)return;
+  row.note=text;
+  clearTimeout(window._saveAirlineNoteTimer);
+  window._saveAirlineNoteTimer=setTimeout(()=>{luu();},350);
+}
+
 function yeuCauCuaChuyen(cb){
   const reqs=[];
 
@@ -4828,6 +4986,15 @@ function yeuCauCuaChuyen(cb){
       }
     });
   }
+
+  const daCoReq=new Set(reqs.map(r=>r.value||r.id));
+  dichVuHangThanhReqs(cb).forEach(r=>{
+    const key=r.value||r.id;
+    if(!daCoReq.has(key)){
+      daCoReq.add(key);
+      reqs.push(r);
+    }
+  });
 
   return reqs;
 }
@@ -5131,9 +5298,14 @@ function veTimelineChuyen(){
     })
     .sort((a,b)=>batDauAbs(a)-batDauAbs(b))
     .forEach(cb=>{
-      const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)&&(state.caDangLoc==="tatca"||caCuaNV(pc.maNV)===state.caDangLoc));
+      const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcTrongNgayKhaiThac(pc)&&(pcDangHieuLuc(pc)||pc.thuHoi)&&(state.caDangLoc==="tatca"||caCuaNV(pc.maNV)===state.caDangLoc));
+      const activePcs=pcs.filter(pc=>pcDangHieuLuc(pc));
       const names=pcs.length
-        ? pcs.map(pc=>`<span class="staffChip ${caClass(caCuaNV(pc.maNV))}">${tenNV(pc.maNV)}</span>`).join("")
+        ? pcs.map(pc=>{
+            const cls=pc.thuHoi?"leftAway":(pc.dieuDongTu?"transferredIn":"");
+            const title=pc.thuHoi?"Đã rời/thu hồi khỏi chuyến":(pc.dieuDongTu?"Nhân sự điều động bổ sung":"");
+            return `<span class="staffChip ${caClass(caCuaNV(pc.maNV))} ${cls}" title="${title}">${tenNV(pc.maNV)}</span>`;
+          }).join("")
         : `<span class="muted">chưa chọn nhân sự</span>`;
       const bdCB=batDauAbs(cb), ktCB=ketThucAbs(cb);
       const dangLive=bdCB<=nowLive && nowLive<=ktCB;
@@ -5608,7 +5780,7 @@ function veDanhSachChon(){
   }).join("");
 }
 
-function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); veBangYeuCauHang(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
 function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa(); if(liveFollow)setTimeout(canhTheoVachHienTai,100); }
 function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); setVal("soNguoiToiThieu",2); setVal("caPhuTrachChuyen",""); veTatCa(); }
