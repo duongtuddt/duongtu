@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.14c Service Need + Shift Search Fix</title>
+<title>Dương Tú v1.16 Unified Modal Actions</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2295,6 +2295,90 @@ button:hover,.taskItem:hover{
 .flightScopeRow .bar.flight.ok{background:#16a34a!important}
 .flightScopeRow .bar.flight.warn{background:#f59e0b!important}
 .flightScopeRow .bar.flight.miss{background:#dc2626!important}
+
+
+/* v1.15 - Modal gợi ý nhân sự */
+.suggestOverlay{
+  position:fixed; inset:0; z-index:10020;
+  background:rgba(0,0,0,.62);
+  display:flex; align-items:center; justify-content:center;
+  padding:14px;
+}
+.suggestBox{
+  width:min(560px,calc(100vw - 24px));
+  max-height:min(84vh,720px);
+  overflow:auto;
+  background:linear-gradient(180deg,#0b1b31,#071426);
+  border:1px solid #3b82f6;
+  border-radius:14px;
+  box-shadow:0 20px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.suggestHead{
+  padding:12px 14px;
+  border-bottom:1px solid var(--line);
+  font-weight:900;
+  font-size:15px;
+  color:#eaf3ff;
+}
+.suggestBody{padding:12px 14px;display:grid;gap:10px}
+.suggestInfo{
+  border:1px solid var(--line);
+  background:#081a2f;
+  border-radius:10px;
+  padding:10px;
+  line-height:1.45;
+}
+.suggestList{display:grid;gap:8px}
+.suggestPerson{
+  display:flex; gap:10px; align-items:flex-start;
+  border:1px solid #2b5f9f;
+  background:#0b2039;
+  border-radius:10px;
+  padding:10px;
+}
+.suggestPerson input{width:18px;height:18px;margin-top:2px}
+.suggestPerson b{font-size:14px}
+.suggestRole{color:#facc15;font-weight:900}
+.suggestMeta{color:#9fc5ef;font-size:12px;margin-top:3px}
+.suggestWarn{
+  border:1px solid #f59e0b;
+  background:rgba(245,158,11,.12);
+  color:#ffe8a3;
+  border-radius:10px;
+  padding:9px 10px;
+  font-weight:800;
+}
+.suggestActions{
+  padding:12px 14px;
+  border-top:1px solid var(--line);
+  display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;
+  background:#071426;
+  position:sticky; bottom:0;
+}
+.suggestActions button{min-width:100px}
+
+
+/* v1.16 - Modal thao tác chung */
+.actionText{line-height:1.55;color:#dbeafe}
+.actionText .muted{color:#9fc5ef}
+.choiceGrid{display:grid;gap:8px}
+.choiceBtn{
+  width:100%;
+  text-align:left;
+  border:1px solid #2b5f9f;
+  background:#0b2039;
+  color:#eaf3ff;
+  border-radius:10px;
+  padding:10px 12px;
+  cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+.choiceBtn:hover{border-color:#38bdf8;background:#102b4d}
+.choiceBtn b{display:block;font-size:14px}
+.choiceBtn span{display:block;color:#9fc5ef;font-size:12px;margin-top:3px;line-height:1.35}
+.choiceBtn.warnChoice{border-color:#f59e0b}
+.choiceBtn.dangerChoice{border-color:#ef4444}
+.choiceBtn.goodChoice{border-color:#22c55e}
 
 </style>
 </head>
@@ -5726,29 +5810,75 @@ function dichVuTam15Phut(service){
   const s=normTextSearch(service);
   return s==="vs"||s.includes("ve sinh")||s==="ns"||s.includes("nuoc sach");
 }
-function promptDichVuDieuDong(cb,ma,trungPc){
-  const dangLam=trungPc?`\n\n${tenNV(ma)} đang làm ${tenChuyenTuPC(trungPc)}.`:"";
-  const base=`Điều động ${tenNV(ma)} sang ${cb.flight} để làm gì?${dangLam}\n\n`;
+function moActionModal({title,htmlBody="",buttons=[]}){
+  const old=document.getElementById("actionOverlay");
+  if(old)old.remove();
 
-  if(confirm(base+
-    `Bấm OK: BỔ SUNG NGƯỜI - ở đến hết chuyến.\n`+
-    `Bấm HỦY: chọn dịch vụ khác.`)){
-    return "bo sung";
-  }
+  const overlay=document.createElement("div");
+  overlay.id="actionOverlay";
+  overlay.className="suggestOverlay";
 
-  if(confirm(base+
-    `Bấm OK: VỆ SINH / NƯỚC SẠCH - làm 15 phút rồi rảnh/quay lại chuyến cũ.\n`+
-    `Bấm HỦY: GPU / ASU / ACU hoặc dịch vụ giữ chuyến.`)){
-    return confirm(base+`Bấm OK: VỆ SINH\nBấm HỦY: NƯỚC SẠCH`) ? "vs" : "ns";
-  }
+  const btnHtml=buttons.map((b,i)=>`
+    <button class="choiceBtn ${b.className||""}" data-idx="${i}">
+      <b>${escHtml(b.label||"Chọn")}</b>
+      ${b.desc?`<span>${escHtml(b.desc)}</span>`:""}
+    </button>`).join("");
 
-  if(confirm(base+
-    `Bấm OK: GPU / ASU / ACU - ở đến hết chuyến.\n`+
-    `Bấm HỦY: DỊCH VỤ KHÁC - ở đến hết chuyến.`)){
-    return "gpu asu acu";
-  }
+  overlay.innerHTML=`
+    <div class="suggestBox" role="dialog" aria-modal="true">
+      <div class="suggestHead">${escHtml(title||"Xác nhận")}</div>
+      <div class="suggestBody">
+        <div class="suggestInfo actionText">${htmlBody}</div>
+        ${btnHtml?`<div class="choiceGrid">${btnHtml}</div>`:""}
+      </div>
+      <div class="suggestActions">
+        <button class="ghost" id="actionClose">Đóng</button>
+      </div>
+    </div>`;
 
-  return "khac";
+  document.body.appendChild(overlay);
+
+  function close(){overlay.remove();}
+  overlay.addEventListener("click",e=>{if(e.target===overlay)close();});
+  overlay.querySelector("#actionClose").onclick=close;
+  overlay.querySelectorAll(".choiceBtn").forEach(btn=>{
+    btn.onclick=()=>{
+      const idx=Number(btn.dataset.idx);
+      const b=buttons[idx];
+      close();
+      if(b&&typeof b.onClick==="function")b.onClick();
+    };
+  });
+}
+function moConfirmModal(title,body,onOk,okLabel="Đồng ý",cancelLabel="Hủy"){
+  moActionModal({
+    title,
+    htmlBody:body,
+    buttons:[
+      {label:okLabel,desc:"Thực hiện thao tác này.",className:"goodChoice",onClick:onOk},
+      {label:cancelLabel,desc:"Không thay đổi dữ liệu.",className:"",onClick:()=>{}}
+    ]
+  });
+}
+function moModalDichVuDieuDong(cb,ma,trungPc,onChoose){
+  const dangLam=trungPc?`<div class="suggestWarn">${escHtml(tenNV(ma))} đang làm ${escHtml(tenChuyenTuPC(trungPc))}.</div>`:"";
+  const body=`
+    <div><b>Nhân sự:</b> ${escHtml(tenNV(ma))}</div>
+    <div><b>Điều động sang:</b> ${escHtml(cb.flight)} - Bãi ${escHtml(cb.baiDo||"--")}</div>
+    <div><b>ETA / STD:</b> ${escHtml(gioHienThi(cb.eta))} / ${escHtml(gioHienThi(cb.std))}</div>
+    ${dangLam}
+    <div class="muted">Chọn loại điều động. Hệ thống sẽ tự tính ở lại đến hết chuyến hoặc làm 15 phút rồi rảnh/quay lại chuyến cũ.</div>`;
+  moActionModal({
+    title:"Điều động nhân sự",
+    htmlBody:body,
+    buttons:[
+      {label:"Bổ sung người",desc:"Ở lại đến hết chuyến.",className:"goodChoice",onClick:()=>onChoose("bo sung")},
+      {label:"Vệ sinh",desc:"Làm 15 phút rồi rảnh hoặc quay lại chuyến cũ nếu chuyến cũ chưa xong.",onClick:()=>onChoose("vs")},
+      {label:"Nước sạch",desc:"Làm 15 phút rồi rảnh hoặc quay lại chuyến cũ nếu chuyến cũ chưa xong.",onClick:()=>onChoose("ns")},
+      {label:"GPU / ASU / ACU",desc:"Ở lại đến hết chuyến.",className:"warnChoice",onClick:()=>onChoose("gpu asu acu")},
+      {label:"Dịch vụ khác",desc:"Ở lại đến hết chuyến.",onClick:()=>onChoose("khac")}
+    ]
+  });
 }
 function apDungDichVuChoPC(pc,service,cb,trungPc,now){
   pc.dichVuDieuDong=service;
@@ -6445,68 +6575,102 @@ function slotsConThieu(selected,cb){
   return miss;
 }
 
+function escHtml(s){
+  return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+function dongModalGoiY(){
+  const old=document.getElementById("suggestOverlay");
+  if(old)old.remove();
+}
+function moModalGoiYNhanSu(cb,selected,missSlots,dieuDong,need,dichVu){
+  dongModalGoiY();
+
+  const overlay=document.createElement("div");
+  overlay.id="suggestOverlay";
+  overlay.className="suggestOverlay";
+
+  const serviceLine=dichVu?`<div><b>Dịch vụ:</b> ${escHtml(dichVu)}</div>`:"";
+  const typeLine=laChuyenNamSanDi(cb)?`<div><b>Loại chuyến:</b> nằm sân đi</div>`:"";
+  const missLine=missSlots.length?`<div class="suggestWarn">Thiếu chứng chỉ/dịch vụ: ${escHtml(missSlots.map(s=>s.ten).join(", "))}</div>`:"";
+  const lackLine=selected.length<need?`<div class="suggestWarn">Còn thiếu ${need-selected.length} người. Có thể áp dụng trước những người đã gợi ý, phần còn lại bổ sung tay.</div>`:"";
+  const transferLine=(!selected.length && dieuDong.length)
+    ? `<div class="suggestWarn">Không có người rảnh phù hợp. Có thể xem gợi ý điều động ở danh sách realtime.</div>`
+    : "";
+
+  const peopleHtml=selected.length ? selected.map((item,i)=>{
+    const tk=thongKeNV(item.ns.ma,thoiDiemXetGoiY(cb));
+    const role=item.vaiTro&&item.vaiTro!=="Bổ sung người" ? item.vaiTro : "";
+    return `<label class="suggestPerson">
+      <input type="checkbox" class="suggestPick" data-idx="${i}" checked>
+      <div>
+        <b>${i+1}. ${escHtml(item.ns.ten)}</b>
+        ${role?` <span class="suggestRole">(${escHtml(role)})</span>`:""}
+        <div class="suggestMeta">${tk.so} chuyến / ${tk.tg}'</div>
+      </div>
+    </label>`;
+  }).join("") : `<div class="suggestWarn">Chưa chọn được nhân sự phù hợp.</div>`;
+
+  overlay.innerHTML=`
+    <div class="suggestBox" role="dialog" aria-modal="true">
+      <div class="suggestHead">Gợi ý nhân sự - ${escHtml(cb.flight)}</div>
+      <div class="suggestBody">
+        <div class="suggestInfo">
+          <div><b>Bãi:</b> ${escHtml(cb.baiDo||"--")}</div>
+          <div><b>ETA / STD:</b> ${escHtml(gioHienThi(cb.eta))} / ${escHtml(gioHienThi(cb.std))}</div>
+          <div><b>Cần tối thiểu:</b> ${need} người</div>
+          ${serviceLine}
+          ${typeLine}
+        </div>
+        ${missLine}
+        ${lackLine}
+        ${transferLine}
+        <div class="suggestList">${peopleHtml}</div>
+      </div>
+      <div class="suggestActions">
+        <button class="ghost" id="suggestCancel">Hủy</button>
+        <button class="primary" id="suggestApply">Áp dụng đã chọn</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener("click",e=>{
+    if(e.target===overlay)dongModalGoiY();
+  });
+  document.getElementById("suggestCancel").onclick=dongModalGoiY;
+  document.getElementById("suggestApply").onclick=()=>{
+    const picked=[...overlay.querySelectorAll(".suggestPick")]
+      .filter(x=>x.checked)
+      .map(x=>selected[Number(x.dataset.idx)])
+      .filter(Boolean);
+    if(!picked.length){
+      alert("Chưa chọn nhân sự nào để áp dụng.");
+      return;
+    }
+    dongModalGoiY();
+    apDungGoiYNhanSu(cb,picked);
+  };
+}
 function hienGoiYNhanSu(){
   const cb=chuyen(chuyenDangChon);
   if(!cb)return alert("Chọn chuyến bay trước.");
 
   const dichVu=dichVuChuyenText(cb);
-  const yc=yeuCauChungChiText(cb);
   const need=soNguoiCanGoiY(cb);
   const selected=chonGoiYNhanSu(cb);
   const dieuDong=ungVienDieuDong(cb);
   const missSlots=slotsConThieu(selected,cb);
 
-  const lines=[];
-  lines.push(`GỢI Ý NHÂN SỰ CHO ${cb.flight}`);
-  lines.push(`Bãi: ${cb.baiDo}`);
-  lines.push(`ETA: ${gioHienThi(cb.eta)} / STD: ${gioHienThi(cb.std)}`);
-  if(dichVu) lines.push(`Dịch vụ: ${dichVu}`);
-  if(laChuyenNamSanDi(cb)) lines.push("Loại chuyến: nằm sân đi - ưu tiên VS/Nước sạch nếu phù hợp");
-  lines.push(`Cần tối thiểu: ${need} người`);
-  lines.push(`Cần chứng chỉ: ${yc}`);
-  lines.push("");
-  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - nhân sự phải đã vào ca tại mốc này`);
-  lines.push("Rule Engine v1.14c: đúng ca → có mặt tại mốc phục vụ → ít chuyến/phút → cân bằng cấp 1/cấp 2 → slot bắt buộc.");
-  lines.push("");
-  lines.push("Đề xuất:");
-
-  if(selected.length){
-    selected.forEach((item,i)=>{
-      const tk=thongKeNV(item.ns.ma,thoiDiemXetGoiY(cb));
-      const p=phanLoaiGoiY(item.ns,cb);
-      const giu=diemChienLuocChungChi(item.ns,ungVienChinh(cb)).toFixed(1);
-      lines.push(`${i+1}. ${item.ns.ten}${item.vaiTro&&item.vaiTro!=="Bổ sung người" ? ` (${item.vaiTro})` : ""} - ${tk.so} chuyến / ${tk.tg}' - ${p.lyDo} - GTCC ${giu}`);
-    });
-  }else{
-    lines.push("Chưa chọn được nhân sự phù hợp.");
-  }
-
-  if(selected.length<need || missSlots.length){
-    lines.push("");
-    if(selected.length<need) lines.push(`Còn thiếu: ${need-selected.length} người.`);
-    if(missSlots.length) lines.push(`Thiếu chứng chỉ/dịch vụ: ${missSlots.map(s=>s.ten).join(", ")}.`);
-    lines.push("Nếu đồng ý, hệ thống chỉ phân những người đã gợi ý vào chuyến; phần còn thiếu để người điều hành bổ sung đúng người.");
-    if(dieuDong.length){
-      lines.push("Gợi ý điều động, không tự chia:");
-      dieuDong.forEach((x)=>lines.push(`- ${x.ns.ten}: ${x.p.lyDo}`));
-    }
-  }else{
-    lines.push("");
-    lines.push("Đủ người và đủ yêu cầu chứng chỉ.");
-  }
-
-  lines.push("");
-  lines.push("Bấm OK để áp dụng gợi ý vào chuyến.");
-  lines.push("Bấm Hủy để chỉ xem gợi ý, không thay đổi phân công.");
-
-  if(confirm(lines.join("\\n"))){
-    apDungGoiYNhanSu(cb,selected);
-  }
+  moModalGoiYNhanSu(cb,selected,missSlots,dieuDong,need,dichVu);
 }
 
 function ganBoNV(ma){
   if(!requirePerm("dashboard","phân công nhân sự"))return;
-  if(!isAdmin() && caCuaNV(ma)!==caQuanLyTheoDangNhap())return alert("Bạn chỉ được phân công nhân sự thuộc "+moTaCaQuanLy()+".");
+  if(!isAdmin() && caCuaNV(ma)!==caQuanLyTheoDangNhap()){
+    moActionModal({title:"Không đủ quyền",htmlBody:`Tài khoản chỉ được phân công nhân sự thuộc ${escHtml(moTaCaQuanLy())}.`,buttons:[]});
+    return;
+  }
+
   const cb=chuyen(chuyenDangChon);
   if(!cb){
     xuLySapXepNhanSu(ma);
@@ -6519,28 +6683,50 @@ function ganBoNV(ma){
   if(co){
     if(co.dieuDongTu){
       if(now < co.batDauAbs){
-        if(confirm(`${tenNV(ma)} đang được DỰ KIẾN điều động sang chuyến này từ ${gioTuPhut(co.batDauAbs)}.\n\nBấm OK để BỎ PHÂN CÔNG ĐIỀU ĐỘNG này vì chọn nhầm / đổi ý.`)){
-          logAction("BỎ PHÂN CÔNG",`${tenNV(ma)} khỏi ${cb.flight}`);
-          state.phanCong=state.phanCong.filter(pc=>pc.id!==co.id);
-          luu(); veTatCa(); return;
-        }
+        moConfirmModal(
+          "Bỏ phân công điều động?",
+          `<div><b>${escHtml(tenNV(ma))}</b> đang được dự kiến điều động sang chuyến này từ <b>${escHtml(gioTuPhut(co.batDauAbs))}</b>.</div>
+           <div class="muted">Chọn đồng ý nếu đây là chọn nhầm hoặc đổi ý.</div>`,
+          ()=>{
+            logAction("BỎ PHÂN CÔNG",`${tenNV(ma)} khỏi ${cb.flight}`);
+            state.phanCong=state.phanCong.filter(pc=>pc.id!==co.id);
+            luu(); veTatCa();
+          },
+          "Bỏ điều động"
+        );
         return;
       }
-      if(confirm(`${tenNV(ma)} đang được điều động sang chuyến này.\n\nBấm OK để THU HỒI tại thời điểm hiện tại và vẫn ghi nhận đã làm.`)){
-        logAction("THU HỒI ĐIỀU ĐỘNG",`${tenNV(ma)} khỏi ${cb.flight}`);
-        co.thuHoi=true; co.thuHoiAbs=now; co.ketThucGocAbs=co.ketThucAbs; co.ketThucAbs=now; co.ghiChuThuHoi=`Thu hồi điều động lúc ${gioTuPhut(now)}`;
-        luu(); veTatCa(); return;
-      }
+
+      moConfirmModal(
+        "Thu hồi điều động?",
+        `<div><b>${escHtml(tenNV(ma))}</b> đang được điều động sang chuyến này.</div>
+         <div class="muted">Thu hồi tại thời điểm hiện tại và vẫn ghi nhận thời gian đã làm.</div>`,
+        ()=>{
+          logAction("THU HỒI ĐIỀU ĐỘNG",`${tenNV(ma)} khỏi ${cb.flight}`);
+          co.thuHoi=true; co.thuHoiAbs=now; co.ketThucGocAbs=co.ketThucAbs; co.ketThucAbs=now; co.ghiChuThuHoi=`Thu hồi điều động lúc ${gioTuPhut(now)}`;
+          luu(); veTatCa();
+        },
+        "Thu hồi"
+      );
       return;
     }
+
     if(now < co.batDauAbs){
       state.phanCong=state.phanCong.filter(pc=>pc.id!==co.id);
-      luu(); veTatCa(); return;
+      luu(); veTatCa();
+      return;
     }
-    if(confirm(`${tenNV(ma)} đã được phân công cho chuyến này.\n\nBấm OK để THU HỒI và ghi nhận đã làm từ ${gioTuPhut(co.batDauAbs)} đến ${gioTuPhut(now)}.`)){
-      co.thuHoi=true; co.thuHoiAbs=now; co.ketThucGocAbs=co.ketThucAbs; co.ketThucAbs=now; co.ghiChuThuHoi=`Thu hồi lúc ${gioTuPhut(now)}`;
-      luu(); veTatCa(); return;
-    }
+
+    moConfirmModal(
+      "Thu hồi phân công?",
+      `<div><b>${escHtml(tenNV(ma))}</b> đã được phân công cho chuyến này.</div>
+       <div class="muted">Ghi nhận đã làm từ ${escHtml(gioTuPhut(co.batDauAbs))} đến ${escHtml(gioTuPhut(now))}.</div>`,
+      ()=>{
+        co.thuHoi=true; co.thuHoiAbs=now; co.ketThucGocAbs=co.ketThucAbs; co.ketThucAbs=now; co.ghiChuThuHoi=`Thu hồi lúc ${gioTuPhut(now)}`;
+        luu(); veTatCa();
+      },
+      "Thu hồi"
+    );
     return;
   }
 
@@ -6553,39 +6739,50 @@ function ganBoNV(ma){
     !(x.ketThucAbs<=pc.batDauAbs || x.batDauAbs>=pc.ketThucAbs)
   );
 
+  function hoanTatPhanCong(){
+    const cbWarn=canhBaoYeuCauChuyen(cb,[pc]);
+    const gioWarn=canhBaoGioLamViec(ma,cb);
+    const tiep=()=>{
+      state.phanCong.push(pc);
+      logAction(pc.isDieuDongDichVu?"ĐIỀU ĐỘNG DỊCH VỤ":"PHÂN CÔNG NHÂN SỰ",`${tenNV(ma)} → ${cb.flight} - Bãi ${cb.baiDo}${pc.dichVuDieuDong?(" · "+pc.dichVuDieuDong):""}`);
+      luu(); veTatCa();
+    };
+
+    if(cbWarn || gioWarn){
+      const msg=taoThongBaoPhanCong(cb,ma,cbWarn,gioWarn).replace(/\n/g,"<br>");
+      moConfirmModal("Cảnh báo phân công",msg,tiep,"Vẫn phân công");
+      return;
+    }
+
+    tiep();
+  }
+
+  function chonDichVuVaHoanTat(trung,batDau){
+    moModalDichVuDieuDong(cb,ma,trung,(dv)=>{
+      pc.batDauAbs=batDau;
+      apDungDichVuChoPC(pc,dv,cb,trung,now);
+      if(pc.ketThucAbs<=pc.batDauAbs) pc.ketThucAbs=ketThucAbs(cb);
+      hoanTatPhanCong();
+    });
+  }
+
   if(trungPc){
     const bdDieuDong=thoiDiemDieuDong(cb,pc,now);
     if(trungPc.ketThucAbs <= bdDieuDong){
       if(cbDangLam){
-        const dv=promptDichVuDieuDong(cb,ma,null);
-        if(dv===null)return;
-        pc.batDauAbs=now;
-        apDungDichVuChoPC(pc,dv,cb,null,now);
+        chonDichVuVaHoanTat(null,now);
+        return;
       }
     }else{
-      const dv=promptDichVuDieuDong(cb,ma,trungPc);
-      if(dv===null)return;
-      pc.batDauAbs=bdDieuDong;
-      apDungDichVuChoPC(pc,dv,cb,trungPc,now);
-      if(pc.ketThucAbs<=pc.batDauAbs) pc.ketThucAbs=ketThucAbs(cb);
+      chonDichVuVaHoanTat(trungPc,bdDieuDong);
+      return;
     }
   }else if(cbDangLam){
-    const dv=promptDichVuDieuDong(cb,ma,null);
-    if(dv===null)return;
-    pc.batDauAbs=now;
-    apDungDichVuChoPC(pc,dv,cb,null,now);
+    chonDichVuVaHoanTat(null,now);
+    return;
   }
 
-  const cbWarn=canhBaoYeuCauChuyen(cb,[pc]);
-  const gioWarn=canhBaoGioLamViec(ma,cb);
-  if(cbWarn || gioWarn){
-    const msg=taoThongBaoPhanCong(cb,ma,cbWarn,gioWarn);
-    if(!confirm(msg)) return;
-  }
-
-  state.phanCong.push(pc);
-  logAction(pc.isDieuDongDichVu?"ĐIỀU ĐỘNG DỊCH VỤ":"PHÂN CÔNG NHÂN SỰ",`${tenNV(ma)} → ${cb.flight} - Bãi ${cb.baiDo}${pc.dichVuDieuDong?(" · "+pc.dichVuDieuDong):""}`);
-  luu(); veTatCa();
+  hoanTatPhanCong();
 }
 
 function doiNgay(){doiNgayLamViecMoi($("ngayKhaiThac").value);boChon();}
