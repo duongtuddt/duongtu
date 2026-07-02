@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.20 Transfer Ends Old Assignment</title>
+<title>Dương Tú v1.21 Auto Staff Planning</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2410,6 +2410,40 @@ button:hover,.taskItem:hover{
   color:#d9ffe8;
 }
 
+
+/* v1.21 - Auto nhân sự */
+#nutAutoNhanSu.autoOn{
+  border-color:#22c55e!important;
+  color:#22c55e!important;
+  background:#052e1a!important;
+  box-shadow:0 0 0 1px rgba(34,197,94,.25),0 0 18px rgba(34,197,94,.18);
+}
+.staffChip.autoTemp{
+  color:#ff6b6b!important;
+  border-color:#ef4444!important;
+  border-left-color:#ef4444!important;
+  background:#2a0b14!important;
+}
+.bar.staff.autoTemp{
+  color:#ff6b6b!important;
+  border-color:#ef4444!important;
+  background:#2a0b14!important;
+}
+.autoSummary{
+  display:grid;
+  gap:7px;
+  margin-top:8px;
+}
+.autoLine{
+  border:1px solid #173150;
+  border-radius:8px;
+  padding:7px 9px;
+  background:#081a2f;
+}
+.autoLine.ok{border-color:#166534;color:#bbf7d0}
+.autoLine.warn{border-color:#f59e0b;color:#ffe8a3}
+.autoLine.bad{border-color:#ef4444;color:#fecaca}
+
 </style>
 </head>
 <body>
@@ -2512,7 +2546,7 @@ button:hover,.taskItem:hover{
 </div>
 </section>
 
-<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span>Realtime chuyến bay</span><span id="editNotice" class="editNotice hidden"></span><span class="rtActions"><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
+<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span>Realtime chuyến bay</span><span id="editNotice" class="editNotice hidden"></span><span class="rtActions"><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small ghost" id="nutAutoNhanSu" onclick="toggleAutoNhanSu()">Tự động nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
 
 <div class="grid2" id="gridRealtime">
 <section class="panel realtimeCompact"><h2>Realtime nhân sự hôm nay</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
@@ -3097,6 +3131,7 @@ function seedAdminAccount(){
   }
 }
 seedAdminAccount();
+if(state.autoNhanSuOn===undefined) state.autoNhanSuOn=false;
 
 const HANG_HANG_KHONG_MAC_DINH_V119=[
   {iata:"VJ",ten:"VietJet Air",domain:"vietjetair.com"},
@@ -5302,8 +5337,8 @@ function veTimelineChuyen(){
       const activePcs=pcs.filter(pc=>pcDangHieuLuc(pc));
       const names=pcs.length
         ? pcs.map(pc=>{
-            const cls=pc.thuHoi?"leftAway":(pc.dieuDongTu?"transferredIn":"");
-            const title=pc.thuHoi?"Đã rời/thu hồi khỏi chuyến":(pc.dieuDongTu?"Nhân sự điều động bổ sung":"");
+            const cls=pc.thuHoi?"leftAway":(pc.dieuDongTu?"transferredIn":((pc.autoNhanSu&&!pc.autoLocked)?"autoTemp":""));
+            const title=pc.thuHoi?"Đã rời/thu hồi khỏi chuyến":(pc.dieuDongTu?"Nhân sự điều động bổ sung":((pc.autoNhanSu&&!pc.autoLocked)?"Auto tạm - có thể đổi trước khi khóa":""));
             return `<span class="staffChip ${caClass(caCuaNV(pc.maNV))} ${cls}" title="${title}">${tenNV(pc.maNV)}</span>`;
           }).join("")
         : `<span class="muted">chưa chọn nhân sự</span>`;
@@ -5395,7 +5430,7 @@ function veTimelineNhanSu(){
     }
     pcs.forEach(pc=>{
       const cb=chuyen(pc.maChuyen),cut=biDieuDongDi(pc),kt=cut||pc.ketThucAbs;
-      const cls=pc.thuHoi?"withdraw":pc.dieuDongTu?"transfer":cut?"cut":"staff";
+      const cls=pc.thuHoi?"withdraw":pc.dieuDongTu?"transfer":cut?"cut":((pc.autoNhanSu&&!pc.autoLocked)?"autoTemp":"staff");
       const txt=pc.thuHoi?`THU HỒI ${cb?cb.flight:pc.maChuyen}`:pc.dieuDongTu?`${pc.batDauAbs>now?"DỰ KIẾN ":"ĐIỀU ĐỘNG "}${cb?cb.flight:pc.maChuyen} từ ${gioTuPhut(pc.batDauAbs)}`:`${cb?cb.flight:pc.maChuyen} - Bãi ${cb?cb.baiDo:""}`;
       if(kt>pc.batDauAbs)bars+=`<div class="bar staff ${cls} ${caCls}" style="left:${viTri(pc.batDauAbs)}px;width:${rong(pc.batDauAbs,kt)}px">${txt}</div>`;
     });
@@ -5780,7 +5815,170 @@ function veDanhSachChon(){
   }).join("");
 }
 
-function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); veBangYeuCauHang(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+
+function pcAutoTam(pc){
+  return !!(pc.autoNhanSu && !pc.autoLocked && !pc.thuHoi);
+}
+function khoaAutoDenHan(){
+  const now=hienTaiAbs();
+  let changed=false;
+  (state.phanCong||[]).forEach(pc=>{
+    if(pc.autoNhanSu && !pc.autoLocked && !pc.thuHoi && now>=pc.batDauAbs-20){
+      pc.autoLocked=true;
+      pc.autoTemp=false;
+      pc.ghiChuAuto="Auto đã chốt vì còn dưới 20 phút đến giờ làm việc";
+      changed=true;
+    }
+  });
+  return changed;
+}
+function xoaAutoTam(){
+  const before=state.phanCong.length;
+  state.phanCong=state.phanCong.filter(pc=>!pcAutoTam(pc));
+  return before-state.phanCong.length;
+}
+function chuyenCanAuto(){
+  const now=hienTaiAbs();
+  const den=now+4*60;
+  return state.danhSachChuyenBay
+    .filter(cb=>cb.ngay===state.ngayKhaiThac)
+    .filter(cb=>ketThucAbs(cb)>now && batDauAbs(cb)<=den)
+    .filter(cb=>String(cb.caPhuTrach||"").trim()) // phải chọn ca/tất cả mới cho auto
+    .sort((a,b)=>batDauAbs(a)-batDauAbs(b));
+}
+function pcCoDinhCuaChuyen(cb){
+  return state.phanCong.filter(pc=>pc.maChuyen===cb.ma && pcDangHieuLuc(pc) && !pcAutoTam(pc));
+}
+function daCoTrongChuyen(cb,maNV){
+  return state.phanCong.some(pc=>pc.maChuyen===cb.ma && pc.maNV===maNV && pcDangHieuLuc(pc));
+}
+function thieuSlotAuto(cb){
+  const selected=state.phanCong
+    .filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc))
+    .map(pc=>({ns:state.danhSachNhanSu.find(x=>x.ma===pc.maNV)}))
+    .filter(x=>x.ns);
+  if(typeof slotsConThieu==="function") return slotsConThieu(selected,cb);
+  const miss=[];
+  const used=new Set();
+  slotYeuCauChuyen(cb).forEach(slot=>{
+    const found=selected.find(it=>!used.has(it.ns.ma)&&nsCoTatCaChungChi(it.ns,slot.ids));
+    if(found)used.add(found.ns.ma); else miss.push(slot);
+  });
+  return miss;
+}
+function taoPcAuto(cb,item){
+  const now=hienTaiAbs();
+  const bd=batDauAbs(cb), kt=ketThucAbs(cb);
+  const locked=now>=bd-20;
+  return {
+    id:"AUTO"+Date.now()+"_"+Math.random().toString(16).slice(2),
+    maChuyen:cb.ma,
+    maNV:item.ns.ma,
+    batDauAbs:bd,
+    ketThucAbs:kt,
+    dieuDongTu:null,
+    autoNhanSu:true,
+    autoLocked:locked,
+    autoTemp:!locked,
+    vaiTroAuto:item.vaiTro||"",
+    ghiChuAuto:locked?"Auto đã chốt":"Auto tạm - có thể đổi trước khi còn 20 phút"
+  };
+}
+function chonGoiYAutoChoChuyen(cb,missing){
+  const goi=chonGoiYNhanSu(cb)||[];
+  const ds=[];
+  const used=new Set(state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)).map(pc=>pc.maNV));
+
+  for(const item of goi){
+    if(!item||!item.ns)continue;
+    if(used.has(item.ns.ma))continue;
+    if(pcTrungChuyenCuaNV(item.ns.ma,cb))continue; // auto không tự điều động người đang bận
+    ds.push(item);
+    used.add(item.ns.ma);
+    if(ds.length>=missing)break;
+  }
+  return ds;
+}
+function chayAutoNhanSu({silent=false}={}){
+  khoaAutoDenHan();
+  const now=hienTaiAbs();
+  const den=now+4*60;
+  const xoa=xoaAutoTam();
+  const ds=chuyenCanAuto();
+  const baoCao=[];
+
+  ds.forEach(cb=>{
+    const need=soNguoiCanGoiY(cb);
+    const hienCo=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)).length;
+    let missing=Math.max(0,need-hienCo);
+
+    if(missing<=0){
+      const miss=thieuSlotAuto(cb);
+      if(miss.length)baoCao.push({type:"warn",text:`${cb.flight}: đủ số người nhưng thiếu ${miss.map(x=>x.ten||x.label).join(", ")}`});
+      return;
+    }
+
+    const picks=chonGoiYAutoChoChuyen(cb,missing);
+    picks.forEach(item=>state.phanCong.push(taoPcAuto(cb,item)));
+
+    const sau=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)).length;
+    const miss=thieuSlotAuto(cb);
+    if(picks.length){
+      baoCao.push({type:"ok",text:`${cb.flight}: auto thêm ${picks.map(x=>x.ns.ten).join(", ")}`});
+    }
+    if(sau<need){
+      baoCao.push({type:"bad",text:`${cb.flight}: còn thiếu ${need-sau} người`});
+    }
+    if(miss.length){
+      baoCao.push({type:"warn",text:`${cb.flight}: thiếu ${miss.map(x=>x.ten||x.label).join(", ")}`});
+    }
+  });
+
+  logAction("AUTO NHÂN SỰ",`Từ ${gioTuPhut(now)} đến ${gioTuPhut(den)} · xóa auto tạm ${xoa} · xử lý ${ds.length} chuyến`);
+  luu(); veTatCa();
+
+  if(!silent){
+    const body=`
+      <div><b>Khung chạy:</b> ${escHtml(gioTuPhut(now))} → ${escHtml(gioTuPhut(den))}</div>
+      <div><b>Số chuyến xét:</b> ${ds.length}</div>
+      <div><b>Auto tạm đã tính lại:</b> ${xoa}</div>
+      <div class="autoSummary">
+        ${(baoCao.length?baoCao:[{type:"ok",text:"Không có chuyến nào cần bổ sung trong khung này."}]).map(x=>`<div class="autoLine ${x.type}">${escHtml(x.text)}</div>`).join("")}
+      </div>`;
+    moActionModal({title:"Kết quả tự động nhân sự",htmlBody:body,buttons:[]});
+  }
+}
+function capNhatNutAutoNhanSu(){
+  const btn=$("nutAutoNhanSu"); if(!btn)return;
+  btn.classList.toggle("autoOn",!!state.autoNhanSuOn);
+  btn.textContent=state.autoNhanSuOn?"Tự động nhân sự":"Tự động nhân sự";
+}
+function toggleAutoNhanSu(){
+  const bat=!state.autoNhanSuOn;
+  if(!bat){
+    state.autoNhanSuOn=false;
+    luu(); capNhatNutAutoNhanSu();
+    return;
+  }
+  const now=hienTaiAbs(), den=now+4*60;
+  moConfirmModal(
+    "Tự động chia nhân sự?",
+    `<div>Tự động chia nhân sự cho các chuyến từ <b>${escHtml(gioTuPhut(now))}</b> đến <b>${escHtml(gioTuPhut(den))}</b>?</div>
+     <div class="muted" style="margin-top:8px">- Chỉ chia chuyến chưa đủ người.<br>- Không xóa phân công tay.<br>- Phân công tay và auto đã chốt được giữ nguyên.<br>- Auto tạm màu đỏ có thể được tính lại khi nhập thêm chuyến.<br>- Không tự điều động người đang bận.</div>`,
+    ()=>{
+      state.autoNhanSuOn=true;
+      luu(); capNhatNutAutoNhanSu();
+      chayAutoNhanSu({silent:false});
+    },
+    "Chạy tự động"
+  );
+}
+function autoSauKhiNhapChuyen(){
+  if(!state.autoNhanSuOn)return;
+  setTimeout(()=>chayAutoNhanSu({silent:true}),80);
+}
+
+function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); khoaAutoDenHan(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); veBangYeuCauHang(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); capNhatNutAutoNhanSu(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
 function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa(); if(liveFollow)setTimeout(canhTheoVachHienTai,100); }
 function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); setVal("soNguoiToiThieu",2); setVal("caPhuTrachChuyen",""); veTatCa(); }
@@ -5891,7 +6089,7 @@ function themSuaChuyen(){
     state.danhSachChuyenBay.push({ma:chuyenDangChon,ngay:state.ngayKhaiThac,flight,eta,std,baiDo,ghiChu,soNguoiToiThieu,caPhuTrach});
     logAction("THÊM CHUYẾN",`${flight} - Bãi ${baiDo} · ETA ${eta||"--"} / STD ${std||"--"}`);
   }
-  luu(); veTatCa();
+  luu(); veTatCa(); autoSauKhiNhapChuyen();
 }
 function thoiDiemDieuDong(cb, pcMoi, now){
   // v1.12:
@@ -7464,6 +7662,7 @@ veTatCa();
 khoiDongFirebase();
 dongBoKeoTimeline();
 capNhatNutLive();
+capNhatNutAutoNhanSu();
 </script>
 </body>
 </html>
