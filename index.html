@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.23 Live Vertical Align Fix</title>
+<title>Dương Tú v1.24 Live Toggle Report Polish</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -6020,6 +6020,21 @@ function autoSauKhiNhapChuyen(){
 }
 
 
+if(CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    r=Math.min(r,w/2,h/2);
+    this.moveTo(x+r,y);
+    this.lineTo(x+w-r,y);
+    this.quadraticCurveTo(x+w,y,x+w,y+r);
+    this.lineTo(x+w,y+h-r);
+    this.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    this.lineTo(x+r,y+h);
+    this.quadraticCurveTo(x,y+h,x,y+h-r);
+    this.lineTo(x,y+r);
+    this.quadraticCurveTo(x,y,x+r,y);
+    return this;
+  };
+}
 function caDuocThongKe(){
   if(isAdmin())return ["tatca","1","2","3","4","5","TRUC","KD"];
   const c=caQuanLyTheoDangNhap();
@@ -6081,7 +6096,14 @@ function mauCaCanvas(scope){
   return map[String(scope)]||"#7dd3fc";
 }
 function xuatAnhThongKe(scope){
-  const ds=sapXepNhanSuTimeline(dsNhanSuTheoCaThongKe(scope));
+  const ds=dsNhanSuTheoCaThongKe(scope).slice().sort((a,b)=>{
+    const da=diemChienLuocChungChi(a,state.danhSachNhanSu);
+    const db=diemChienLuocChungChi(b,state.danhSachNhanSu);
+    if(db!==da)return db-da;
+    const ca=capLonNhat(a.cap), cb=capLonNhat(b.cap);
+    if(cb!==ca)return cb-ca;
+    return String(a.ten||"").localeCompare(String(b.ten||""),"vi");
+  });
   if(!ds.length){
     moActionModal({title:"Không có dữ liệu",htmlBody:"Không có nhân sự trong phạm vi ca này.",buttons:[]});
     return;
@@ -6110,8 +6132,8 @@ function xuatAnhThongKe(scope){
   const label={tatca:"TẤT CẢ",TRUC:"CÁN BỘ",KD:"KÉO ĐẨY",1:"CA 1",2:"CA 2",3:"CA 3",4:"CA 4",5:"CA 5"}[scope]||("CA "+scope);
   const now=hienTaiAbs();
 
-  ctx.fillStyle="#eaf3ff"; ctx.font="bold 24px Arial"; ctx.fillText("SAGS RAMP DISPATCH",20,32);
-  ctx.fillStyle=mauCaCanvas(scope); ctx.font="bold 18px Arial"; ctx.fillText(`${label} · ${fmtNgayVN(state.ngayKhaiThac)} · ${gioTuPhut(now)}`,20,58);
+  ctx.fillStyle="#eaf3ff"; ctx.font="bold 24px Arial"; ctx.fillText("SAGS Ramp Dispatch",20,32);
+  ctx.fillStyle=mauCaCanvas(scope); ctx.font="bold 18px Arial"; ctx.fillText(`${label.replace("CA ","Ca ")} - ${fmtNgayVN(state.ngayKhaiThac)}`,20,58);
 
   const flights=state.danhSachChuyenBay.filter(cb=>cb.ngay===state.ngayKhaiThac).filter(cb=>{
     if(scope==="tatca")return true;
@@ -6121,8 +6143,11 @@ function xuatAnhThongKe(scope){
   }).filter(cb=>segs.some(s=>ketThucAbs(cb)>s.vao && batDauAbs(cb)<s.ra));
 
   const busy=ds.filter(ns=>state.phanCong.some(pc=>pc.maNV===ns.ma&&pcDangHieuLuc(pc)&&pc.batDauAbs<=now&&now<=pc.ketThucAbs)).length;
+  const cap3=ds.filter(ns=>capLonNhat(ns.cap)>=3).length;
+  const cap2=ds.filter(ns=>capLonNhat(ns.cap)>=2 && capLonNhat(ns.cap)<3).length;
+  const cap1=ds.filter(ns=>capLonNhat(ns.cap)<2).length;
   ctx.textAlign="right"; ctx.fillStyle="#9fc5ef"; ctx.font="bold 14px Arial";
-  ctx.fillText(`Chuyến: ${flights.length} · Nhân sự: ${ds.length} · Bận: ${busy} · Rảnh: ${ds.length-busy}`,W-20,36);
+  ctx.fillText(`Chuyến: ${flights.length} - Nhân sự: ${ds.length} - Nhân sự cấp 3: ${cap3} - Nhân sự cấp 2: ${cap2} - Nhân sự cấp 1: ${cap1}`,W-20,36);
   ctx.textAlign="left";
 
   ctx.fillStyle="#0a182b"; ctx.fillRect(0,top,W,headerH);
@@ -6152,10 +6177,8 @@ function xuatAnhThongKe(scope){
     ctx.strokeStyle="#132946"; ctx.beginPath(); ctx.moveTo(0,y+rowH); ctx.lineTo(W,y+rowH); ctx.stroke();
 
     const tk=thongKeNV(ns.ma,now);
-    const bai=baiDoHienTaiHoacSapLam(ns.ma,now)||"--";
-    ctx.fillStyle="#facc15"; ctx.font="bold 13px Arial"; ctx.fillText(bai,8,y+21);
-    ctx.fillStyle="#eaf3ff"; ctx.font="bold 13px Arial"; ctx.fillText(ns.ten,50,y+14);
-    ctx.fillStyle="#9fc5ef"; ctx.font="bold 11px Arial"; ctx.fillText(`${tk.so} chuyến · ${fmtPhut(tk.tg)}`,50,y+28);
+    ctx.fillStyle="#eaf3ff"; ctx.font="bold 13px Arial"; ctx.fillText(ns.ten,12,y+14);
+    ctx.fillStyle="#9fc5ef"; ctx.font="bold 11px Arial"; ctx.fillText(`${tk.so} chuyến · ${fmtPhut(tk.tg)}`,12,y+28);
 
     state.phanCong.filter(pc=>pc.maNV===ns.ma && pcTrongNgayKhaiThac(pc) && (pcDangHieuLuc(pc)||pc.thuHoi)).forEach(pc=>{
       const cb=chuyen(pc.maChuyen); if(!cb)return;
@@ -6164,9 +6187,9 @@ function xuatAnhThongKe(scope){
         if(b<=a)return;
         const x=mapXTheoSegments(a,segs,left,scale,gap), w=Math.max(3,(b-a)*scale);
         ctx.fillStyle=pc.thuHoi?"#294a5e":(pc.dieuDongTu?"#166534":((pc.autoNhanSu&&!pc.autoLocked)?"#7f1d1d":"#1d4ed8"));
-        ctx.fillRect(x,y+6,w,rowH-12);
+        ctx.beginPath(); ctx.roundRect(x,y+6,w,rowH-12,6); ctx.fill();
         ctx.strokeStyle=pc.thuHoi?"#7f9fb8":(pc.dieuDongTu?"#22c55e":"#60a5fa");
-        ctx.strokeRect(x,y+6,w,rowH-12);
+        ctx.beginPath(); ctx.roundRect(x,y+6,w,rowH-12,6); ctx.stroke();
         ctx.fillStyle="#ffffff"; ctx.font="bold 11px Arial";
         const txt=`${cb.flight} ${cb.baiDo||""}`;
         ctx.save(); ctx.beginPath(); ctx.rect(x+2,y+6,w-4,rowH-12); ctx.clip(); ctx.fillText(txt,x+5,y+22); ctx.restore();
@@ -7836,17 +7859,16 @@ function canhTheoVachHienTai(){
   setTimeout(setBoth,60);
 
   requestAnimationFrame(()=>{
-    const activeFlights=[...a.querySelectorAll(".tlLabel.activeNow")];
-    if(activeFlights.length){
-      // v1.23: LIVE phải đưa chuyến đang phục vụ ở dưới cùng vào tầm nhìn,
-      // không ghim nó lên sát đầu màn hình. Như vậy khi để lâu sẽ không bị kéo
-      // về chuyến đầu tiên và vẫn thấy được chuyến phía dưới cùng đang làm.
-      const last=activeFlights[activeFlights.length-1];
-      const target=last.offsetTop - (a.clientHeight - last.offsetHeight - 56);
+    const activeRows=[...a.querySelectorAll(".tlRow")].filter(r=>r.querySelector(".tlLabel.activeNow"));
+    if(activeRows.length){
+      // LIVE: lấy chuyến đang phục vụ nằm dưới cùng và kéo nội dung LÊN
+      // để dòng đó hiện ở cuối khung nhìn, không bị nhảy về chuyến đầu tiên.
+      const last=activeRows[activeRows.length-1];
+      const target=last.offsetTop + last.offsetHeight - a.clientHeight + 18;
       a.scrollTop=Math.max(0,target);
     }
 
-    const activeStaff=[...b.querySelectorAll(".tlLabel.activeNow,.tlLabel.selected")];
+    const activeStaff=[...b.querySelectorAll(".tlRow")].filter(r=>r.querySelector(".tlLabel.activeNow,.tlLabel.selected"));
     if(activeStaff.length){
       const first=activeStaff[0];
       b.scrollTop=Math.max(0,first.offsetTop - 44);
@@ -7860,9 +7882,9 @@ function capNhatNutLive(){
   btn.innerHTML=liveFollow?'<span class="liveDot"></span>LIVE':'LIVE';
 }
 function toggleLiveFollow(){
-  if(!liveFollow)liveFollow=true;
+  liveFollow=!liveFollow;
   capNhatNutLive();
-  canhTheoVachHienTai();
+  if(liveFollow)canhTheoVachHienTai();
 }
 
 suaDieuDongCu();
