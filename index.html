@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v15</title>
+<title>Dương Tú index_v15_full_labels</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4052,6 +4052,86 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
     0 0 18px rgba(100,255,143,.68),
     inset 0 0 16px rgba(100,255,143,.14)!important;
   z-index:40!important;
+}
+
+
+/* v15 - không thu gọn thông tin quan trọng ở realtime */
+#timelineChuyenBay .flightLabelTop,
+#timelineChuyenBay .flightLabelNo,
+#timelineNhanSu .staffMiniTop,
+#timelineNhanSu .staffMiniName{
+  max-width:none!important;
+  width:auto!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:normal!important;
+  word-break:normal!important;
+  overflow-wrap:anywhere!important;
+}
+
+#timelineChuyenBay .flightLabelTop{
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  padding-right:42px!important;
+  line-height:1.15!important;
+}
+
+#timelineChuyenBay .flightLabelNo{
+  display:inline!important;
+  font-size:12px!important;
+  line-height:14px!important;
+}
+
+#timelineChuyenBay .flightLabelTime{
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  max-width:none!important;
+}
+
+#timelineChuyenBay .flightScopeLabel{
+  height:auto!important;
+  min-height:92px!important;
+  padding-top:7px!important;
+  padding-bottom:7px!important;
+}
+
+#timelineChuyenBay .tlRow,
+#timelineChuyenBay .tlLabel,
+#timelineChuyenBay .tlLane{
+  min-height:92px!important;
+}
+
+#timelineNhanSu .staffRtCard{
+  height:auto!important;
+  min-height:60px!important;
+  padding-top:8px!important;
+  padding-bottom:8px!important;
+}
+
+#timelineNhanSu .staffMiniTop{
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  line-height:1.15!important;
+  padding-right:40px!important;
+}
+
+#timelineNhanSu .staffMiniName{
+  display:inline!important;
+  font-size:12px!important;
+  line-height:14px!important;
+}
+
+#timelineNhanSu .staffMiniSub{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+
+#timelineNhanSu .tlRow,
+#timelineNhanSu .tlLabel,
+#timelineNhanSu .tlLane{
+  min-height:66px!important;
 }
 
 </style>
