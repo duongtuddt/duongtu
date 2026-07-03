@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.40b Fix Service Save</title>
+<title>Dương Tú v1.40c Attendance Override</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2638,6 +2638,9 @@ body.viewerFlightOnly #panelLog,
 body.viewerFlightOnly #panelQuanLy{display:none!important}
 body.viewerFlightOnly #panelTimelineChuyen{display:block!important}
 body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!important}
+
+
+/* v1.40c - chấm công ghi đè giờ ca */
 
 </style>
 </head>
@@ -5550,7 +5553,34 @@ function caSegments(ma){
       segs.push({vao,ra,ten:"Ca 2"});
     }
   }
-  return segs;
+
+  // v1.40c: Chấm công là ghi đè giờ ca trong ngày.
+  // Không bấm Vào/Ra ca thì giữ nguyên giờ ca mặc định.
+  const cc=state.chamCong?.[ma]||{};
+  if((cc.vao||cc.ra) && segs.length){
+    let vaoCC=cc.vao?absNgayGio(state.ngayPhanCa,cc.vao):null;
+    let raCC=cc.ra?absNgayGio(state.ngayPhanCa,cc.ra):null;
+
+    if(vaoCC!==null){
+      if(vaoCC<segs[0].vao-720)vaoCC+=1440;
+      segs.forEach(s=>{
+        if(vaoCC>=s.vao-60 && vaoCC<=s.ra+60){
+          s.vao=Math.max(s.vao,vaoCC);
+        }
+      });
+    }
+
+    if(raCC!==null){
+      if(raCC<segs[0].vao-720)raCC+=1440;
+      segs.forEach(s=>{
+        if(raCC>=s.vao-60 && raCC<=s.ra+240){
+          s.ra=Math.min(s.ra,raCC);
+        }
+      });
+    }
+  }
+
+  return segs.filter(s=>s.ra>s.vao);
 }
 function caAbs(ma){
   const segs=caSegments(ma);
@@ -6832,6 +6862,55 @@ function boTimChuyen(){
   luu();veTatCa();
 }
 
+function caSegmentsTuObj(caObj){
+  const ca=chuanHoaCa(caObj||{});
+  const segs=[];
+  const v1=String(ca.gioVao1||"").trim().toUpperCase()==="N"?null:chuanHoaGio(ca.gioVao1);
+  const r1=String(ca.gioRa1||"").trim().toUpperCase()==="N"?null:chuanHoaGio(ca.gioRa1);
+  if(v1&&r1){
+    let vao=absNgayGio(state.ngayPhanCa,v1),ra=absNgayGio(state.ngayPhanCa,r1);
+    if(ra<=vao)ra+=1440;
+    segs.push({vao,ra,ten:"Ca 1"});
+  }
+  const v2raw=String(ca.gioVao2||"N").trim().toUpperCase();
+  const r2raw=String(ca.gioRa2||"N").trim().toUpperCase();
+  if(v2raw!=="N"&&r2raw!=="N"&&v2raw!==""&&r2raw!==""){
+    const v2=chuanHoaGio(v2raw),r2=chuanHoaGio(r2raw);
+    if(v2&&r2){
+      let vao=absNgayGio(state.ngayPhanCa,v2),ra=absNgayGio(state.ngayPhanCa,r2);
+      if(segs.length&&vao<segs[0].ra)vao+=1440;
+      if(ra<=vao)ra+=1440;
+      segs.push({vao,ra,ten:"Ca 2"});
+    }
+  }
+  return segs;
+}
+function caLonSegmentsTheoCa(ca){
+  return Object.values(state.phanCaHomNay||{})
+    .filter(p=>p&&p.chon&&String(p.ca)===String(ca))
+    .flatMap(p=>caSegmentsTuObj(p));
+}
+function canhBaoGioChuyenTheoCa(cb){
+  const ca=String(cb?.caPhuTrach||"");
+  if(!ca||ca==="tatca")return "";
+  const segs=caLonSegmentsTheoCa(ca);
+  if(!segs.length)return `Ca ${ca} chưa có nhân sự/giờ ca để kiểm tra.`;
+  const start=batDauAbs(cb),end=ketThucAbs(cb);
+  const vaoMin=Math.min(...segs.map(s=>s.vao));
+  const raMax=Math.max(...segs.map(s=>s.ra));
+  if(start<vaoMin){
+    return `Chuyến ${cb.flight} bắt đầu phục vụ lúc ${gioTuPhut(start)}, trước giờ vào sớm nhất của Ca ${ca} (${gioTuPhut(vaoMin)}).`;
+  }
+  if(end>raMax){
+    return `Chuyến ${cb.flight} kết thúc phục vụ lúc ${gioTuPhut(end)}, vượt giờ ra muộn nhất của Ca ${ca} (${gioTuPhut(raMax)}).`;
+  }
+  return "";
+}
+function baoGioChuyenTheoCaNeuCan(cb){
+  const msg=canhBaoGioChuyenTheoCa(cb);
+  if(msg)moActionModal({title:"Cảnh báo giờ phục vụ chuyến",htmlBody:msg,buttons:[]});
+}
+
 function themSuaChuyen(){
   if(!(canPerm("dashboard")||canPerm("nhapChuyen"))){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
   clearTimChuyenNoRender();
@@ -6878,13 +6957,13 @@ function themSuaChuyen(){
     if(i>=0){
       const oldData={...state.danhSachChuyenBay[i]};
       state.danhSachChuyenBay[i]={...state.danhSachChuyenBay[i],...newData};
-      logAction("SỬA CHUYẾN BAY",`${moTaChuyenLog(state.danhSachChuyenBay[i])}\nThay đổi: ${diffChuyenLog(oldData,state.danhSachChuyenBay[i])}`);
+      logAction("SỬA CHUYẾN BAY",`${moTaChuyenLog(state.danhSachChuyenBay[i])}\nThay đổi: ${diffChuyenLog(oldData,state.danhSachChuyenBay[i])}`); if(typeof baoGioChuyenTheoCaNeuCan==="function")baoGioChuyenTheoCaNeuCan(state.danhSachChuyenBay[i]);
     }
   }else{
     chuyenDangChon="CB"+Date.now();
     const cbMoi={ma:chuyenDangChon,...newData};
     state.danhSachChuyenBay.push(cbMoi);
-    logAction("NHẬP CHUYẾN BAY",`Tạo mới: ${moTaChuyenLog(cbMoi)}`);
+    logAction("NHẬP CHUYẾN BAY",`Tạo mới: ${moTaChuyenLog(cbMoi)}`); if(typeof baoGioChuyenTheoCaNeuCan==="function")baoGioChuyenTheoCaNeuCan(cbMoi);
     setTimeout(()=>{chuyenDangChon=null; clearFormChuyen(); veTatCa();},0);
   }
   luu(); veTatCa(); autoSauKhiNhapChuyen();
@@ -8204,8 +8283,31 @@ function doiGioCa(ma,field,val){
   state.phanCaHomNay[ma]={...(state.phanCaHomNay[ma]||{}),[field]:g};
   luuPhanCaNgayHienTai();luu();veTatCa();
 }
-function vaoCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),vao:gioTuPhut(hienTaiAbs())};luuPhanCaNgayHienTai();luu();veTatCa();}
-function raCa(ma){state.chamCong[ma]={...(state.chamCong[ma]||{}),ra:gioTuPhut(hienTaiAbs())};luuPhanCaNgayHienTai();luu();veTatCa();}
+function vaoCa(ma){
+  const gio=gioTuPhut(hienTaiAbs());
+  state.chamCong[ma]={...(state.chamCong[ma]||{}),vao:gio};
+  logAction("CHẤM CÔNG VÀO CA",`${tenNV(ma)} vào ca lúc ${gio}`);
+  luuPhanCaNgayHienTai();luu();veTatCa();
+}
+function thucHienRaCa(ma){
+  const gio=gioTuPhut(hienTaiAbs());
+  state.chamCong[ma]={...(state.chamCong[ma]||{}),ra:gio};
+  logAction("CHẤM CÔNG RA CA",`${tenNV(ma)} ra ca lúc ${gio}`);
+  luuPhanCaNgayHienTai();luu();veTatCa();
+}
+function raCa(ma){
+  const now=hienTaiAbs();
+  const ds=state.phanCong
+    .filter(pc=>pc.maNV===ma&&pcDangHieuLuc(pc)&&pc.ketThucAbs>now)
+    .sort((a,b)=>a.batDauAbs-b.batDauAbs);
+  if(ds.length){
+    const first=ds[0],cb=chuyen(first.maChuyen);
+    const body=`${tenNV(ma)} vẫn còn phân công ${cb?cb.flight:first.maChuyen} đến ${gioTuPhut(first.ketThucAbs)}.<br><br>Nếu xác nhận ra ca, từ thời điểm này nhân sự sẽ không còn được hệ thống tự động chia cho các chuyến sau.`;
+    moConfirmModal("Cảnh báo ra ca",body,()=>thucHienRaCa(ma),"Xác nhận ra ca","Hủy");
+    return;
+  }
+  thucHienRaCa(ma);
+}
 function suaNV(ma){const ns=state.danhSachNhanSu.find(x=>x.ma===ma);$("maNV").value=ns.ma;$("hoTen").value=ns.ten;$("cap").value=capTuChungChi(ns);}
 function xoaNV(ma){if(!requirePerm("nhanSu","xóa nhân sự"))return;if(!confirm("Xóa nhân sự này?"))return;state.danhSachNhanSu=state.danhSachNhanSu.filter(x=>x.ma!==ma);delete state.phanCaHomNay[ma];delete state.chamCong[ma];state.phanCong=state.phanCong.filter(x=>x.maNV!==ma);luu();veTatCa();}
 
