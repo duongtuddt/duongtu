@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.29 Password Logout Fix</title>
+<title>Dương Tú v1.32 Tow Only Fallback Confirm</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -6108,6 +6108,7 @@ function chonGoiYAutoChoChuyen(cb,missing){
 
   for(const item of goi){
     if(!item||!item.ns)continue;
+    if(item.fallbackDauKeo)continue; // fallback đầu kéo phải do người dùng xác nhận trong bảng gợi ý
     if(used.has(item.ns.ma))continue;
     if(pcTrungChuyenCuaNV(item.ns.ma,cb))continue; // auto không tự điều động người đang bận
     ds.push(item);
@@ -7099,8 +7100,28 @@ function ungVienDieuDong(cb){
 }
 function thongKeTaiMoc(ns,cb){return thongKeNV(ns.ma,thoiDiemXetGoiY(cb));}
 function duocLamNguoiBoSung(ns,cb,need){
+  // Luật chính: chuyến ra bãi cần 2 người thì không tự ưu tiên nhân sự chỉ có đầu kéo.
+  // Ngoại lệ fallback xử lý riêng, có cảnh báo xác nhận.
   if(laChuyenRaBai(cb) && need<=2 && chiCoDauKeo(ns)) return false;
   return true;
+}
+function coTheDungDauKeoFallback(ns,cb,used){
+  if(!laChuyenRaBai(cb))return false;
+  if(!chiCoDauKeo(ns))return false;
+  if(used&&used.has(ns.ma))return false;
+  if(!gioChuyenCoGiaoVoiCa(ns,cb))return false;
+  if(!gioiHanTheoCaChuyen(ns,cb))return false;
+  const p=phanLoaiGoiY(ns,cb);
+  return p.nhom<90;
+}
+function ungVienDauKeoFallback(cb,selected,pool,need){
+  const used=new Set((selected||[]).map(it=>it.ns.ma));
+  if(!laChuyenRaBai(cb)||need>2||(selected||[]).length>=need)return [];
+  return pool
+    .filter(ns=>coTheDungDauKeoFallback(ns,cb,used))
+    .sort((a,b)=>cmpArray(diemUngVienThuong(a,cb,pool),diemUngVienThuong(b,cb,pool)))
+    .slice(0,need-selected.length)
+    .map(ns=>({ns,vaiTro:"Bổ sung người",fallbackDauKeo:true}));
 }
 function coVSNuocSach(ns){return !!(ns.chungChi&&(ns.chungChi.vesinh||ns.chungChi.nuocsach));}
 function minThongKePool(pool,cb){
@@ -7140,6 +7161,31 @@ function taiLamViecTaiMoc(ns,cb){
     moiVaoCa: coMat>0 && coMat<=30 && tk.so===0
   };
 }
+function phutRanhLienTucTaiMoc(ns,cb){
+  const moc=thoiDiemXetGoiY(cb);
+  const segs=caSegments(ns.ma).filter(s=>s.vao<=moc && moc<=s.ra);
+  if(!segs.length)return 0;
+  const seg=segs[0];
+
+  const pcs=(state.phanCong||[])
+    .filter(pc=>pc.maNV===ns.ma && pcDangHieuLuc(pc))
+    .sort((a,b)=>a.batDauAbs-b.batDauAbs);
+
+  // Nếu đang bận ở mốc xét thì idle = 0.
+  const dang=pcs.find(pc=>pc.batDauAbs<=moc && moc<pc.ketThucAbs);
+  if(dang)return 0;
+
+  const truoc=pcs
+    .filter(pc=>pc.ketThucAbs<=moc)
+    .sort((a,b)=>b.ketThucAbs-a.ketThucAbs)[0];
+
+  const batDauRanh=truoc?Math.max(seg.vao,truoc.ketThucAbs):seg.vao;
+  return Math.max(0,Math.round(moc-batDauRanh));
+}
+function diemRanhUuTien(ns,cb){
+  // Số nhỏ hơn là tốt hơn. Rảnh càng lâu càng phải được kéo ra làm trước.
+  return -phutRanhLienTucTaiMoc(ns,cb);
+}
 function minTaiPool(pool,cb){
   const ds=pool.map(ns=>taiLamViecTaiMoc(ns,cb));
   return {
@@ -7163,39 +7209,35 @@ function noCongBang(ns,cb,pool){
   };
 }
 function diemUngVienThuong(ns,cb,pool){
-  const tk=thongKeTaiMoc(ns,cb);
   const load=taiLamViecTaiMoc(ns,cb);
   const p=phanLoaiGoiY(ns,cb);
-  const debt=noCongBang(ns,cb,pool);
+  const idle=phutRanhLienTucTaiMoc(ns,cb);
 
-  // v1.28:
-  // Không cân bằng cứng theo số chuyến.
-  // Cân bằng theo tỷ lệ tải = phút đã làm / phút đã có mặt trong ca.
-  // Người vào sau không bị bắt làm dồn cho bằng người vào trước.
-  // Người mới vào ca và chưa làm chuyến nào vẫn được ưu tiên hợp lý.
+  // v1.31:
+  // 1. Đúng điều kiện / rảnh ở mốc chuyến.
+  // 2. Rảnh liên tục lâu hơn phải đi trước, tránh người ngồi chơi dài cổ.
+  // 3. Sau đó mới xét tải theo giờ có mặt, phút làm, số chuyến.
+  // 4. Cuối cùng mới xét giữ chứng chỉ/chiều sâu.
   return [
     p.nhom,
-    load.moiVaoCa ? 0 : 1,
+    diemRanhUuTien(ns,cb),
     Math.round(load.ratio*10000),
     load.tg,
     load.so,
     p.sub||0,
-    debt.dangItNhat ? 0 : 1,
-    debt.ganItNhat ? 0 : 1,
     bacChungChiVanHanh(ns,pool),
     diemChienLuocChungChi(ns,pool),
     String(ns.ten||"")
   ];
 }
 function diemUngVienSlot(ns,cb,pool){
-  const tk=thongKeTaiMoc(ns,cb);
   const load=taiLamViecTaiMoc(ns,cb);
   const p=phanLoaiGoiY(ns,cb);
 
-  // Slot bắt buộc: đúng chứng chỉ trước, sau đó vẫn cân bằng theo tải ca.
+  // Slot bắt buộc: đúng chứng chỉ trước rồi vẫn ưu tiên người rảnh lâu.
   return [
     p.nhom,
-    load.moiVaoCa ? 0 : 1,
+    diemRanhUuTien(ns,cb),
     Math.round(load.ratio*10000),
     load.tg,
     load.so,
@@ -7237,10 +7279,12 @@ function diemChieuSauConLai(all,selected){
   return score;
 }
 function diemCongBangNhom(selected,cb){
-  // Tổng tải nhóm theo tỷ lệ hiện diện. Nhỏ hơn = ít bị bào hơn.
+  // Nhóm tốt là nhóm kéo được người đã rảnh lâu ra làm,
+  // sau đó mới cân bằng theo tải trong giờ có mặt.
   return selected.reduce((s,it)=>{
     const load=taiLamViecTaiMoc(it.ns,cb);
-    return s + Math.round(load.ratio*1000000) + load.tg*40 + load.so*800;
+    const idle=phutRanhLienTucTaiMoc(it.ns,cb);
+    return s + (-idle*9000) + Math.round(load.ratio*600000) + load.tg*35 + load.so*700;
   },0);
 }
 function taoToHop(arr,k,limit=120){
@@ -7316,11 +7360,10 @@ function diemPhuongAn(selected,cb,pool,slots){
   // Nếu trong pool còn người ít chuyến nhất bị bỏ qua thì phạt,
   // nhưng không phạt quá mức để còn cân bằng cơ cấu đội.
   const selectedSet=new Set(selected.map(it=>it.ns.ma));
-  const minLoad=Math.min(...pool.map(ns=>taiLamViecTaiMoc(ns,cb).ratio));
+  const maxIdle=Math.max(...pool.map(ns=>phutRanhLienTucTaiMoc(ns,cb)));
   const skippedDebt=pool
     .filter(ns=>!selectedSet.has(ns.ma))
-    .map(ns=>taiLamViecTaiMoc(ns,cb))
-    .filter(load=>load.ratio<=minLoad+0.05)
+    .filter(ns=>phutRanhLienTucTaiMoc(ns,cb)>=Math.max(0,maxIdle-10))
     .length;
 
   const balance=diemCanBangCoCau(selected,cb,pool,slots);
@@ -7330,7 +7373,7 @@ function diemPhuongAn(selected,cb,pool,slots){
 
   return missing*100000000 +
     balance +
-    skippedDebt*120000 +
+    skippedDebt*180000 +
     fair +
     normalCost*60 +
     depth*5 +
@@ -7356,7 +7399,9 @@ function chonGoiYNhanSu(cb){
   const plans=combos.map(combo=>ganVaiTroChoToHop(combo,cb,slots))
     .sort((a,b)=>diemPhuongAn(a,cb,pool,slots)-diemPhuongAn(b,cb,pool,slots));
 
-  return plans[0]||[];
+  const best=plans[0]||[];
+  const fallback=ungVienDauKeoFallback(cb,best,pool,need);
+  return best.concat(fallback);
 }
 function hienGoiYNhanSu(){
   const cb=chuyen(chuyenDangChon);
@@ -7377,8 +7422,8 @@ function hienGoiYNhanSu(){
   lines.push(`Cần tối thiểu: ${need} người`);
   lines.push(`Cần chứng chỉ: ${yc}`);
   lines.push("");
-  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - tính tải theo thời gian đã có mặt trong ca`);
-  lines.push("Rule Engine v1.28: đúng ca → rảnh → tỷ lệ tải theo giờ có mặt → cân bằng cấp 1/cấp 2 → slot bắt buộc → giữ chiều sâu.");
+  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - ưu tiên người rảnh lâu, rồi tính tải theo giờ có mặt`);
+  lines.push("Rule Engine v1.32: đúng ca → rảnh lâu hơn → tải theo giờ có mặt → cân bằng cấp 1/cấp 2 → slot bắt buộc → fallback đầu kéo có xác nhận.");
   lines.push("");
   lines.push("Đề xuất:");
 
@@ -7459,6 +7504,12 @@ function apDungGoiYNhanSu(cb, selected){
     }
 
     const pc=taoPCTheoGoiY(cb,ma,item.vaiTro);
+    if(item.fallbackDauKeo){
+      pc.autoNhanSu=true;
+      pc.autoLocked=false;
+      pc.autoTemp=true;
+      pc.ghiChuAuto="Fallback chỉ đầu kéo - hệ thống chia tạm, có thể đổi lại";
+    }
     state.phanCong.push(pc);
     added++;
   });
@@ -7505,6 +7556,10 @@ function moModalGoiYNhanSu(cb,selected,missSlots,dieuDong,need,dichVu){
   const typeLine=laChuyenNamSanDi(cb)?`<div><b>Loại chuyến:</b> nằm sân đi</div>`:"";
   const missLine=missSlots.length?`<div class="suggestWarn">Thiếu chứng chỉ/dịch vụ: ${escHtml(missSlots.map(s=>s.ten).join(", "))}</div>`:"";
   const lackLine=selected.length<need?`<div class="suggestWarn">Còn thiếu ${need-selected.length} người. Có thể áp dụng trước những người đã gợi ý, phần còn lại bổ sung tay.</div>`:"";
+  const fallbackDauKeo=selected.filter(x=>x.fallbackDauKeo);
+  const fallbackLine=fallbackDauKeo.length
+    ? `<div class="suggestWarn">Không còn nhân sự phù hợp để chia đủ. Chỉ còn ${escHtml(fallbackDauKeo.map(x=>x.ns.ten).join(", "))} chỉ có chứng chỉ đầu kéo. Nếu áp dụng, nhân sự này sẽ là phân công auto màu đỏ để hệ thống còn có thể đổi lại khi có phương án tốt hơn.</div>`
+    : "";
   const transferLine=(!selected.length && dieuDong.length)
     ? `<div class="suggestWarn">Không có người rảnh phù hợp. Có thể xem gợi ý điều động ở danh sách realtime.</div>`
     : "";
@@ -7517,6 +7572,7 @@ function moModalGoiYNhanSu(cb,selected,missSlots,dieuDong,need,dichVu){
       <div>
         <b>${i+1}. ${escHtml(item.ns.ten)}</b>
         ${role?` <span class="suggestRole">(${escHtml(role)})</span>`:""}
+        ${item.fallbackDauKeo?` <span class="suggestRole" style="color:#ff6b6b">(chỉ đầu kéo - cần xác nhận)</span>`:""}
         <div class="suggestMeta">${tk.so} chuyến / ${tk.tg}'</div>
       </div>
     </label>`;
@@ -7535,6 +7591,7 @@ function moModalGoiYNhanSu(cb,selected,missSlots,dieuDong,need,dichVu){
         </div>
         ${missLine}
         ${lackLine}
+        ${fallbackLine}
         ${transferLine}
         <div class="suggestList">${peopleHtml}</div>
       </div>
