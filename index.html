@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.33 Tow Only Missing Blink</title>
+<title>Dương Tú v1.34 Detailed Logs Admin Presence</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4577,6 +4577,33 @@ function logAction(action, detail, extra={}){
   state.auditLogs.unshift(item);
   state.auditLogs=state.auditLogs.slice(0,MAX_LOGS);
 }
+function moTaChuyenLog(cb){
+  if(!cb)return "--";
+  const dv=String(cb.ghiChu||"").trim();
+  return `${cb.flight||"--"} | Bãi ${cb.baiDo||"--"} | ETA ${gioHienThi(cb.eta)||"--"} / STD ${gioHienThi(cb.std)||"--"} | Cần ${cb.soNguoiToiThieu||2} người | Ca ${cb.caPhuTrach||"tự động"}${dv?` | Ghi chú: ${dv}`:""}`;
+}
+function diffChuyenLog(oldCb,newCb){
+  if(!oldCb)return moTaChuyenLog(newCb);
+  const fields=[
+    ["flight","Chuyến bay"],
+    ["eta","ETA"],
+    ["std","STD"],
+    ["baiDo","Bãi"],
+    ["soNguoiToiThieu","Số người"],
+    ["caPhuTrach","Ca"],
+    ["ghiChu","Ghi chú"]
+  ];
+  const parts=[];
+  fields.forEach(([k,label])=>{
+    const a=String(oldCb[k]??"");
+    const b=String(newCb[k]??"");
+    if(a!==b)parts.push(`${label}: ${a||"--"} → ${b||"--"}`);
+  });
+  return parts.length?parts.join(" | "):"Không đổi nội dung chính";
+}
+function logSystemAction(action,detail,extra={}){
+  logAction(action,detail,{user:"Hệ thống tự động nhân sự",...extra});
+}
 function setActiveEdit(type,target,label){
   if(!state.activeEditors)state.activeEditors={};
   state.activeEditors[localStorage.getItem("ramp_device_id")||taoDeviceId()]={
@@ -4597,6 +4624,11 @@ function taoDeviceId(){
 }
 function veDangChinhSua(){
   const el=$("editNotice"); if(!el)return;
+  if(!isAdmin()){
+    el.classList.add("hidden");
+    el.textContent="";
+    return;
+  }
   const id=localStorage.getItem("ramp_device_id")||taoDeviceId();
   const now=Date.now();
   const ds=Object.entries(state.activeEditors||{})
@@ -6060,6 +6092,8 @@ function khoaAutoDenHan(){
       pc.autoLocked=true;
       pc.autoTemp=false;
       pc.ghiChuAuto="Auto đã chốt vì còn dưới 20 phút đến giờ làm việc";
+      const cb=chuyen(pc.maChuyen);
+      logSystemAction("AUTO CHỐT NHÂN SỰ",`Chữ đỏ chuyển trắng: ${tenNV(pc.maNV)} được chốt cho ${moTaChuyenLog(cb)} | Thời gian ${gioTuPhut(pc.batDauAbs)} → ${gioTuPhut(pc.ketThucAbs)}${pc.vaiTroAuto?` | Vai trò: ${pc.vaiTroAuto}`:""}`);
       changed=true;
     }
   });
@@ -6158,7 +6192,9 @@ function chayAutoNhanSu({silent=false}={}){
     const sau=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)).length;
     const miss=thieuSlotAuto(cb);
     if(picks.length){
-      baoCao.push({type:"ok",text:`${cb.flight}: auto thêm ${picks.map(x=>x.ns.ten).join(", ")}`});
+      const ten=picks.map(x=>x.ns.ten).join(", ");
+      baoCao.push({type:"ok",text:`${cb.flight}: auto thêm ${ten}`});
+      logSystemAction("AUTO GỢI Ý NHÂN SỰ ĐỎ",`${moTaChuyenLog(cb)}\nTạm chọn: ${ten}\nTrạng thái: chữ đỏ, còn có thể đổi trước khi chốt.`);
     }
     if(sau<need){
       baoCao.push({type:"bad",text:`${cb.flight}: còn thiếu ${need-sau} người`});
@@ -6512,14 +6548,19 @@ function themSuaChuyen(){
     return;
   }
 
+  const newData={ngay:state.ngayKhaiThac,flight,eta,std,baiDo,ghiChu,soNguoiToiThieu,caPhuTrach};
   if(chuyenDangChon){
     const i=state.danhSachChuyenBay.findIndex(x=>x.ma===chuyenDangChon);
-    if(i>=0)state.danhSachChuyenBay[i]={...state.danhSachChuyenBay[i],ngay:state.ngayKhaiThac,flight,eta,std,baiDo,ghiChu,soNguoiToiThieu,caPhuTrach};
-    logAction("SỬA CHUYẾN",`${flight} - Bãi ${baiDo} · ETA ${eta||"--"} / STD ${std||"--"}`);
+    if(i>=0){
+      const oldData={...state.danhSachChuyenBay[i]};
+      state.danhSachChuyenBay[i]={...state.danhSachChuyenBay[i],...newData};
+      logAction("SỬA CHUYẾN BAY",`${moTaChuyenLog(state.danhSachChuyenBay[i])}\nThay đổi: ${diffChuyenLog(oldData,state.danhSachChuyenBay[i])}`);
+    }
   }else{
     chuyenDangChon="CB"+Date.now();
-    state.danhSachChuyenBay.push({ma:chuyenDangChon,ngay:state.ngayKhaiThac,flight,eta,std,baiDo,ghiChu,soNguoiToiThieu,caPhuTrach});
-    logAction("THÊM CHUYẾN",`${flight} - Bãi ${baiDo} · ETA ${eta||"--"} / STD ${std||"--"}`);
+    const cbMoi={ma:chuyenDangChon,...newData};
+    state.danhSachChuyenBay.push(cbMoi);
+    logAction("NHẬP CHUYẾN BAY",`Tạo mới: ${moTaChuyenLog(cbMoi)}`);
   }
   luu(); veTatCa(); autoSauKhiNhapChuyen();
 }
@@ -7550,7 +7591,8 @@ function apDungGoiYNhanSu(cb, selected){
   });
 
   if(added>0){
-    logAction("ÁP DỤNG GỢI Ý NHÂN SỰ",`${cb.flight} - thêm ${added} người${skipped?`, bỏ qua ${skipped} người đã có`:""}`);
+    const dsTen=selected.map(item=>`${item.ns.ten}${item.vaiTro&&item.vaiTro!=="Bổ sung người"?` (${item.vaiTro})`:""}${item.fallbackDauKeo?" [fallback đầu kéo - auto đỏ]":""}`).join(", ");
+    logAction("ÁP DỤNG GỢI Ý NHÂN SỰ",`${moTaChuyenLog(cb)}\nĐã thêm: ${dsTen}${skipped?`\nBỏ qua ${skipped} người đã có trong chuyến`:""}`);
     luu();
     veTatCa();
   }else{
@@ -7748,7 +7790,9 @@ function ganBoNV(ma){
     const gioWarn=canhBaoGioLamViec(ma,cb);
     const tiep=()=>{
       state.phanCong.push(pc);
-      logAction(pc.isDieuDongDichVu?"ĐIỀU ĐỘNG DỊCH VỤ":"PHÂN CÔNG NHÂN SỰ",`${tenNV(ma)} → ${cb.flight} - Bãi ${cb.baiDo}${pc.dichVuDieuDong?(" · "+pc.dichVuDieuDong):""}`);
+      const tu=pc.dieuDongTu?` | Điều động từ ${chuyen(pc.dieuDongTu)?.flight||pc.dieuDongTu}`:"";
+      logAction(pc.isDieuDongDichVu?"ĐIỀU ĐỘNG NHÂN SỰ":"PHÂN CÔNG NHÂN SỰ",
+        `${tenNV(ma)} → ${moTaChuyenLog(cb)} | Thời gian ${gioTuPhut(pc.batDauAbs)} → ${gioTuPhut(pc.ketThucAbs)}${pc.dichVuDieuDong?` | Dịch vụ: ${pc.dichVuDieuDong}`:""}${tu}`);
       luu(); veTatCa();
     };
 
