@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.38 Layout Stats Roles Services</title>
+<title>Dương Tú v1.39 Service Modal Permissions Fix</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2589,6 +2589,37 @@ button:hover,.taskItem:hover{
 .accountRoleSelect{width:190px}
 #gridRealtime > section{min-width:0}
 
+
+/* v1.39 - dịch vụ modal + realtime cao hơn nhưng từng dòng giữ gọn */
+.serviceTicks{display:none!important}
+#nutDichVu{
+  min-width:74px;
+}
+#nutDichVu.hasService{
+  background:#16a34a!important;
+  border-color:#22c55e!important;
+  color:white!important;
+  box-shadow:0 0 12px rgba(34,197,94,.28);
+}
+.serviceModalGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.serviceModalGrid label{
+  border:1px solid #2b5f9f;background:#0b2039;border-radius:10px;padding:10px;
+  font-weight:900;color:#eaf3ff;display:flex;gap:8px;align-items:center;
+}
+.serviceModalGrid input{width:auto!important}
+#panelTimelineChuyen .timeline{max-height:720px!important;min-height:560px!important}
+#timelineChuyenBay .tlLabel{min-height:52px!important;border-radius:10px 0 0 10px!important;margin:1px 0!important;background:#0a2037!important;border:1px solid rgba(56,189,248,.25)!important;border-left-width:5px!important}
+#timelineChuyenBay .tlLane{height:52px!important;margin:1px 0!important;border-radius:0 10px 10px 0!important;background-color:#071829!important}
+#timelineChuyenBay .bar.flight{top:14px!important;height:24px!important;border-radius:10px!important}
+#timelineChuyenBay .flightMonitor,#timelineChuyenBay .flightNote,#timelineChuyenBay .requireWarn,#timelineChuyenBay .tenSau{top:15px!important}
+.bar.flight::before{
+  content:attr(data-flight);
+  position:absolute;left:8px;top:50%;transform:translateY(-50%);
+  font-size:11px;font-weight:900;color:#fff;opacity:.95;
+  text-shadow:0 1px 2px rgba(0,0,0,.55);
+}
+.panel.collapsed .hideBtn::after{content:""}
+
 </style>
 </head>
 <body>
@@ -2684,16 +2715,9 @@ button:hover,.taskItem:hover{
   <option value="4">Ca 4</option>
   <option value="5">Ca 5</option>
 </select>
-<div class="serviceTicks" title="Dịch vụ / yêu cầu đặc biệt">
-  <label><input type="checkbox" class="svcTick" value="GPU"> GPU</label>
-  <label><input type="checkbox" class="svcTick" value="ACU"> ACU</label>
-  <label><input type="checkbox" class="svcTick" value="ASU"> ASU</label>
-  <label><input type="checkbox" class="svcTick" value="VS"> Vệ sinh</label>
-  <label><input type="checkbox" class="svcTick" value="NS"> Nước sạch</label>
-  <label><input type="checkbox" class="svcTick" value="HIGHLIFT ĐẾN"> Highlift đến</label>
-  <label><input type="checkbox" class="svcTick" value="HIGHLIFT ĐI"> Highlift đi</label>
-</div>
+<button type="button" class="ghost" id="nutDichVu" onclick="moModalDichVu()">Dịch vụ</button>
 <input id="ghiChuChuyen" placeholder="Ghi chú khác" class="serviceInput hidden">
+<input id="dichVuChuyen" class="hidden" value="">
 <button class="primary" id="nutChuyenBay">Thêm chuyến</button>
 <button class="ghost" id="nutTimChuyen">🔍</button>
 <button class="danger" id="nutXoaChuyen">Xóa chuyến</button>
@@ -2702,12 +2726,12 @@ button:hover,.taskItem:hover{
 </div>
 </section>
 
-<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span class="panelHeadLine"><span>Realtime chuyến bay</span><span id="rtFlightInfo" class="rtInfo"></span></span><span id="editNotice" class="editNotice hidden"></span><span class="rtActions"><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelTimelineChuyen')">Ẩn/hiện</button><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small ghost" id="nutAutoNhanSu" onclick="toggleAutoNhanSu()">Tự động nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button><button class="small ghost" id="nutThongKeTimeline" onclick="moModalThongKe()">Thống kê</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
+<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span class="panelHeadLine"><span>Realtime chuyến bay</span><span id="rtFlightInfo" class="rtInfo"></span></span><span id="editNotice" class="editNotice hidden"></span><span class="rtActions"><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelTimelineChuyen')">Ẩn</button><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small ghost" id="nutAutoNhanSu" onclick="toggleAutoNhanSu()">Tự động nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button><button class="small ghost" id="nutThongKeTimeline" onclick="moModalThongKe()">Thống kê</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
 
 <div class="grid2" id="gridRealtime">
-<section class="panel realtimeCompact" id="panelTimelineNhanSu"><h2><span class="panelHeadLine"><span>Realtime nhân sự hôm nay</span><span id="rtStaffInfo" class="rtInfo"></span></span><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelTimelineNhanSu')">Ẩn/hiện</button></h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
+<section class="panel realtimeCompact" id="panelTimelineNhanSu"><h2><span class="panelHeadLine"><span>Realtime nhân sự hôm nay</span><span id="rtStaffInfo" class="rtInfo"></span></span><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelTimelineNhanSu')">Ẩn</button></h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
 <section class="panel" id="panelChonNhanSu">
-<h2><span class="panelHeadLine"><span>Chọn nhân sự cho chuyến đang chọn</span><span id="rtPickInfo" class="rtInfo"></span></span><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelChonNhanSu')">Ẩn/hiện</button></h2>
+<h2><span class="panelHeadLine"><span>Chọn nhân sự cho chuyến đang chọn</span><span id="rtPickInfo" class="rtInfo"></span></span><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelChonNhanSu')">Ẩn</button></h2>
 <div class="body">
 <div class="row">
 <select id="locCap"><option value="tatca">Cấp cần: Tất cả</option><option value="dangtruc" selected>Đang trực / còn giờ</option><option value="1">Cấp 1 trở lên</option><option value="2">Cấp 2 trở lên</option><option value="3">Cấp 3 trở lên</option></select>
@@ -4320,10 +4344,15 @@ function canPerm(key){
   const acc=currentAccount();
   if(!acc)return false;
   if(acc.role==="admin" || acc.permissions?.admin)return true;
+  if(key!=="dashboard" && biKhoaThaoTacTheoGio())return false;
   return !!acc.permissions?.[key];
 }
 function requirePerm(key,label){
   if(canPerm(key))return true;
+  if(biKhoaThaoTacTheoGio()){
+    alert("Tài khoản này chỉ được thao tác trong giờ ca đã chọn. Hiện tại chưa vào ca hoặc đã hết ca.");
+    return false;
+  }
   alert(`Tài khoản của bạn chưa được cấp quyền: ${label}.`);
   return false;
 }
@@ -4474,8 +4503,6 @@ function dangNhap(){
   const acc=getAccountById(rawId);
   if(!acc||acc.pass!==pass){loginMessage("Sai ID hoặc Password.","bad");return;}
   if(acc.status!=="approved"){loginMessage("Tài khoản chưa được Admin duyệt hoặc đã bị khóa.","wait");return;}
-  const ns=timNhanSuTheoTen(acc.fullName);
-  if(acc.role!=="admin"&&!ns&&!boQuaKiemTraNhanSu(acc.fullName)){loginMessage("Họ tên tài khoản không trùng danh sách nhân sự. Từ chối sử dụng.","bad");return;}
   moBangChonDangNhap(acc);
 }
 
@@ -4485,7 +4512,6 @@ function dangKy(){
   if(pass!==pass2){loginMessage("Password nhập lại không khớp.","bad");return;}
   if(getAccountById(id)){loginMessage("ID này đã tồn tại.","bad");return;}
   const ns=timNhanSuTheoTen(fullName);
-  if(!ns&&!boQuaKiemTraNhanSu(fullName)){loginMessage("Họ tên không trùng danh sách nhân sự. Không thể đăng ký.","bad");return;}
   state.accounts[id]={id,pass,fullName,status:"pending",role:"user",staffMa:ns?ns.ma:null,permissions:{dashboard:true}};
   logAction("ĐĂNG KÝ TÀI KHOẢN",`${fullName} (${id}) đang chờ duyệt`);
   luu(); loginMessage("Đã gửi đăng ký. Chờ Admin duyệt.","ok");
@@ -4532,7 +4558,7 @@ function adminTaoTaiKhoan(){
   if(!id||!fullName||!pass)return moActionModal({title:"Thiếu thông tin",htmlBody:"Nhập đủ ID, họ tên và mật khẩu.",buttons:[]});
   if(getAccountById(id))return moActionModal({title:"Không tạo được",htmlBody:"ID này đã tồn tại.",buttons:[]});
   const rp=rolePerms(role);
-  state.accounts[id]={id,pass,fullName,status:"approved",role:rp.role,accountRole:rp.accountRole||role,staffMa:(timNhanSuTheoTen(fullName)||{}).ma||null,permissions:rp.permissions};
+  state.accounts[id]={id,pass,fullName,status:"approved",role:rp.role,accountRole:rp.accountRole||role,timeLimited:!!rp.timeLimited,staffMa:(timNhanSuTheoTen(fullName)||{}).ma||null,permissions:rp.permissions};
   logAction("ADMIN TẠO TÀI KHOẢN",`${fullName} (${id}) · ${rp.label||role}`);
   ["newAccId","newAccName","newAccPass"].forEach(x=>{const el=$(x); if(el)el.value="";});
   if($("newAccRole"))$("newAccRole").value="doi_truong";
@@ -5583,6 +5609,7 @@ function ghiChu(ma){
   return"";
 }
 function biDieuDongDi(pc){
+  if(pc.autoNhanSu && !pc.autoLocked)return null;
   const ds=state.phanCong.filter(x=>
     pcDangHieuLuc(x) &&
     x.dieuDongTu===pc.maChuyen &&
@@ -5712,7 +5739,7 @@ function veTimelineChuyen(){
       const tenLeft=left+width+6+mon.rong+noteRong+warnRong;
       const noteHtml=noteText?`<div class="flightNote" style="left:${noteLeft}px;max-width:250px" title="${noteText.replace(/"/g,'&quot;')}">${noteText}</div>`:"";
       const warnHtml=warnText?`<div class="requireWarn ${fallbackTowWarn?"fallbackTowWarn":""}" style="left:${warnLeft}px;min-width:${warnRong}px">${warnText}</div>`:"";
-      el.innerHTML+=`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><select class="flightCaSelect" onclick="event.stopPropagation()" onchange="doiCaPhuTrachChuyen('${cb.ma}',this.value)">${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls} ${scopeCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
+      el.innerHTML+=`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><select class="flightCaSelect" onclick="event.stopPropagation()" onchange="doiCaPhuTrachChuyen('${cb.ma}',this.value)">${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls} ${scopeCls}" data-flight="${escHtml(cb.flight||'')}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
     });
 }
 
@@ -6568,22 +6595,56 @@ function xuatAnhThongKe(scope){
 function togglePanelCollapse(id){
   const el=$(id); if(!el)return;
   el.classList.toggle("collapsed");
+  const btn=el.querySelector(".hideBtn");
+  if(btn)btn.textContent=el.classList.contains("collapsed")?"Hiện":"Ẩn";
 }
+const DICH_VU_OPTIONS=[
+  ["GPU","GPU"],["ACU","ACU"],["ASU","ASU"],["VS","Vệ sinh"],["NS","Nước sạch"],["HIGHLIFT ĐẾN","Highlift đến"],["HIGHLIFT ĐI","Highlift đi"]
+];
 function dsDichVuTick(){
-  return [...document.querySelectorAll(".svcTick:checked")].map(x=>x.value);
+  return String(val("dichVuChuyen")||"").split(",").map(x=>x.trim()).filter(Boolean);
+}
+function capNhatNutDichVu(){
+  const btn=$("nutDichVu"); if(!btn)return;
+  const ds=dsDichVuTick();
+  btn.classList.toggle("hasService",ds.length>0);
+  btn.textContent=ds.length?`Dịch vụ (${ds.length})`:"Dịch vụ";
 }
 function setDichVuTickFromNote(note){
   const n=String(note||"").toUpperCase();
-  document.querySelectorAll(".svcTick").forEach(x=>{x.checked=n.includes(String(x.value).toUpperCase());});
+  const ds=DICH_VU_OPTIONS.filter(([v])=>n.includes(String(v).toUpperCase())).map(([v])=>v);
+  setVal("dichVuChuyen",ds.join(", "));
+  const other=String(note||"").split(",").map(x=>x.trim()).filter(x=>x && !ds.some(d=>x.toUpperCase()===d.toUpperCase())).join(", ");
+  setVal("ghiChuChuyen",other);
+  capNhatNutDichVu();
 }
 function ghiChuTuTick(){
   const ds=dsDichVuTick();
   const other=val("ghiChuChuyen").trim();
   return [...ds, other].filter(Boolean).join(", ");
 }
+function moModalDichVu(){
+  const current=new Set(dsDichVuTick());
+  moActionModal({
+    title:"Dịch vụ / yêu cầu đặc biệt",
+    htmlBody:`<div class="muted">Tick dịch vụ cần áp dụng cho chuyến bay. Các lựa chọn này có giá trị như ghi chú dịch vụ hiện tại.</div>
+      <div class="serviceModalGrid">
+        ${DICH_VU_OPTIONS.map(([v,label])=>`<label><input type="checkbox" class="svcModalTick" value="${v}" ${current.has(v)?"checked":""}> ${label}</label>`).join("")}
+      </div>`,
+    buttons:[
+      {label:"Lưu dịch vụ",className:"goodChoice",desc:"Áp dụng dịch vụ vào ô nhập chuyến.",onClick:()=>{
+        const ds=[...document.querySelectorAll(".svcModalTick:checked")].map(x=>x.value);
+        setVal("dichVuChuyen",ds.join(", "));
+        capNhatNutDichVu();
+      }},
+      {label:"Xóa dịch vụ",desc:"Bỏ hết các tick dịch vụ.",onClick:()=>{setVal("dichVuChuyen","");capNhatNutDichVu();}},
+      {label:"Hủy",desc:"Không thay đổi.",onClick:()=>{}}
+    ]
+  });
+}
 function clearFormChuyen(){
-  ["flight","sta","eta","std","etd","baiDo","ghiChuChuyen"].forEach(id=>{const el=$(id); if(el)el.value="";});
-  document.querySelectorAll(".svcTick").forEach(x=>x.checked=false);
+  ["flight","sta","eta","std","etd","baiDo","ghiChuChuyen","dichVuChuyen"].forEach(id=>{const el=$(id); if(el)el.value="";});
+  capNhatNutDichVu();
   setVal("soNguoiToiThieu",2); setVal("caPhuTrachChuyen","");
 }
 function updateRealtimeStats(){
@@ -6607,11 +6668,25 @@ function updateRealtimeStats(){
 }
 function rolePerms(role){
   if(role==="admin")return {role:"admin",permissions:{admin:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:"Admin"};
-  if(["doi_truong","doi_pho","ca_truong","ca_pho"].includes(role))return {role:"user",accountRole:role,permissions:{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:role};
-  if(role==="gse")return {role:"user",accountRole:role,permissions:{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true},label:"GSE"};
+  if(["doi_truong","doi_pho"].includes(role))return {role:"user",accountRole:role,permissions:{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:role};
+  if(["ca_truong","ca_pho"].includes(role))return {role:"user",accountRole:role,timeLimited:true,permissions:{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:role};
+  if(role==="gse")return {role:"user",accountRole:role,timeLimited:true,permissions:{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true},label:"GSE"};
   return {role:"user",accountRole:"nhap_lieu",permissions:{dashboard:true,flightOnly:true},label:"Nhập liệu"};
 }
-function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); khoaAutoDenHan(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); veBangYeuCauHang(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); capNhatNutAutoNhanSu(); updateRealtimeStats(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+function accountBiGioiHanThoiGian(acc=currentAccount()){
+  return !!(acc && (acc.timeLimited || ["ca_truong","ca_pho","gse"].includes(acc.accountRole)));
+}
+function dangTrongGioCaDangNhap(){
+  const ca=caQuanLyTheoDangNhap();
+  if(!ca || ca==="tatca" || ca==="TRUC" || ca==="KD")return true;
+  const now=hienTaiAbs();
+  return Object.values(state.phanCaHomNay||{}).some(p=>p&&p.chon&&String(p.ca)===String(ca)&&caSegmentsByObj(p).some(s=>s.vao<=now&&now<s.ra));
+}
+function biKhoaThaoTacTheoGio(){
+  const acc=currentAccount();
+  return accountBiGioiHanThoiGian(acc) && !dangTrongGioCaDangNhap();
+}
+function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); khoaAutoDenHan(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); veBangYeuCauHang(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); capNhatNutAutoNhanSu(); capNhatNutDichVu(); updateRealtimeStats(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
 function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; setVal("sta",cb.sta||""); $("eta").value=cb.eta; $("std").value=cb.std; setVal("etd",cb.etd||""); $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setDichVuTickFromNote(cb.ghiChu||""); setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa(); if(liveFollow)setTimeout(canhTheoVachHienTai,100); }
 function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; clearFormChuyen(); veTatCa(); }
@@ -7734,9 +7809,11 @@ function taoPCTheoGoiY(cb, ma, vaiTro){
     !(x.ketThucAbs<=pc.batDauAbs || x.batDauAbs>=pc.ketThucAbs)
   );
 
-  // Khi áp dụng gợi ý hàng loạt: không bật prompt để tránh thao tác chậm/lỗi xuống dòng.
-  // Nếu người này đang trùng chuyến, ghi nhận là điều động bổ sung và bắt đầu từ thời điểm hợp lý.
-  if(trungPc){
+  // Nếu người này đang trùng với một phân công AUTO ĐỎ chưa chốt,
+  // đó mới là dự kiến chứ chưa làm thật: gỡ dự kiến cũ, không gạch xám/thu hồi.
+  if(trungPc && trungPc.autoNhanSu && !trungPc.autoLocked){
+    state.phanCong=state.phanCong.filter(x=>x.id!==trungPc.id);
+  }else if(trungPc){
     pc.dieuDongTu=trungPc.maChuyen;
     pc.isDieuDongDichVu=true;
     pc.dichVuDieuDong=vaiTro&&vaiTro!=="Bổ sung người"?vaiTro:"bo sung";
