@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.32 Tow Only Fallback Confirm</title>
+<title>Dương Tú v1.33 Tow Only Missing Blink</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2505,6 +2505,20 @@ button:hover,.taskItem:hover{
 }
 .modeBtn:hover{border-color:#38bdf8;background:#102b4d}
 .modeBtn small{display:block;color:#9fc5ef;font-weight:800;margin-top:3px}
+
+
+/* v1.33 - cảnh báo thiếu + gợi ý đầu kéo nhấp nháy */
+.requireWarn.fallbackTowWarn{
+  color:#ff6b6b!important;
+  border:1px solid rgba(239,68,68,.75)!important;
+  background:#230812!important;
+  box-shadow:0 0 0 1px rgba(239,68,68,.28),0 0 14px rgba(239,68,68,.28)!important;
+  animation:fallbackTowBlink .8s infinite alternate;
+}
+@keyframes fallbackTowBlink{
+  from{opacity:.55;filter:brightness(.85)}
+  to{opacity:1;filter:brightness(1.45)}
+}
 
 </style>
 </head>
@@ -5565,15 +5579,17 @@ function veTimelineChuyen(){
       const ca=mauCaChuyen(cb.ma), caCls=caClass(ca), caScope=caScopeChuyen(cb), scopeCls=caScope?caClass(caScope):"";
       const mon=theoDoiChuyen(cb);
       const cbWarn=shortCanhBaoCap(cb);
+      const fallbackTowWarn=shortCanhBaoDauKeoFallback(cb);
+      const warnText=[cbWarn,fallbackTowWarn].filter(Boolean).join("  |  ");
       const noteText=String(cb.ghiChu||"").trim();
       const monLeft=left+width+6;
       const noteLeft=left+width+6+mon.rong;
       const noteRong=noteText?Math.min(260,Math.max(54,noteText.length*7+22)):0;
       const warnLeft=noteLeft+noteRong;
-      const warnRong=cbWarn?Math.min(170,Math.max(76,cbWarn.length*7+16)):0;
+      const warnRong=warnText?Math.min(360,Math.max(76,warnText.length*7+16)):0;
       const tenLeft=left+width+6+mon.rong+noteRong+warnRong;
       const noteHtml=noteText?`<div class="flightNote" style="left:${noteLeft}px;max-width:250px" title="${noteText.replace(/"/g,'&quot;')}">${noteText}</div>`:"";
-      const warnHtml=cbWarn?`<div class="requireWarn" style="left:${warnLeft}px;min-width:${warnRong}px">${cbWarn}</div>`:"";
+      const warnHtml=warnText?`<div class="requireWarn ${fallbackTowWarn?"fallbackTowWarn":""}" style="left:${warnLeft}px;min-width:${warnRong}px">${warnText}</div>`:"";
       el.innerHTML+=`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}" onclick="chonChuyen('${cb.ma}')"><b>${cb.flight} - Bãi ${cb.baiDo}</b><br><span class="muted">ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</span><br><select class="flightCaSelect" onclick="event.stopPropagation()" onchange="doiCaPhuTrachChuyen('${cb.ma}',this.value)">${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select><span class="${mau==="ok"?"greenText":mau==="warn"?"orangeText":"redText"}">${ghiChu(cb.ma)}</span></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${caCls} ${scopeCls}" style="left:${left}px;width:${width}px">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)} người</div>${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`;
     });
 }
@@ -7122,6 +7138,25 @@ function ungVienDauKeoFallback(cb,selected,pool,need){
     .sort((a,b)=>cmpArray(diemUngVienThuong(a,cb,pool),diemUngVienThuong(b,cb,pool)))
     .slice(0,need-selected.length)
     .map(ns=>({ns,vaiTro:"Bổ sung người",fallbackDauKeo:true}));
+}
+function shortCanhBaoDauKeoFallback(cb){
+  const need=soNguoiCanGoiY(cb);
+  if(!laChuyenRaBai(cb)||need>2)return "";
+  if(soHieuLuc(cb.ma)>=need)return "";
+
+  const daCo=new Set(state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc)).map(pc=>pc.maNV));
+  const pool=ungVienChinh(cb).filter(ns=>!daCo.has(ns.ma));
+  const nonTow=pool.filter(ns=>duocLamNguoiBoSung(ns,cb,need));
+  const active=soHieuLuc(cb.ma);
+
+  // Chỉ báo fallback khi không đủ người hợp lệ thông thường,
+  // nhưng vẫn còn người chỉ có đầu kéo có thể đưa vào tạm.
+  if(active + nonTow.length >= need)return "";
+
+  const fallback=ungVienDauKeoFallback(cb,[],pool,need-active);
+  if(!fallback.length)return "";
+
+  return `THIẾU - GỢI Ý ${fallback.map(x=>x.ns.ten).join(", ")} ĐẦU KÉO`;
 }
 function coVSNuocSach(ns){return !!(ns.chungChi&&(ns.chungChi.vesinh||ns.chungChi.nuocsach));}
 function minThongKePool(pool,cb){
