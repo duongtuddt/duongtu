@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.36 Staff Free Time Glow</title>
+<title>Dương Tú v1.38 Layout Stats Roles Services</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2521,13 +2521,24 @@ button:hover,.taskItem:hover{
 }
 
 
-/* v1.36 - realtime nhân sự: rảnh bao lâu + sáng cả dòng */
+/* v1.37 - realtime nhân sự gọn lại */
 .bar.free{
-  background:#166534!important;
-  border:1px solid #22c55e!important;
-  color:#dcfce7!important;
+  background:transparent!important;
+  border:0!important;
+  color:#66ff99!important;
   font-weight:900!important;
-  box-shadow:0 0 10px rgba(34,197,94,.24), inset 0 1px 0 rgba(255,255,255,.10)!important;
+  box-shadow:none!important;
+  min-width:0!important;
+  height:18px!important;
+  top:17px!important;
+  padding:0!important;
+  text-shadow:0 0 8px rgba(34,197,94,.45);
+}
+.bar.staff,
+.bar.flight,
+.staffChip{
+  border-radius:10px!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.12)!important;
 }
 .tlRow.staffSelectedRow .tlLabel,
 .tlRow.staffSelectedRow .tlLane{
@@ -2547,6 +2558,36 @@ button:hover,.taskItem:hover{
 .tlRow[data-ma-nv] .bar{
   pointer-events:none;
 }
+.tlLabel{
+  overflow:hidden!important;
+}
+.tlLabel.selected{
+  z-index:140!important;
+}
+.bar.staff{
+  z-index:7!important;
+}
+
+
+/* v1.38 polish */
+#timelineChuyenBay .tlLabel{min-height:130px!important;border-radius:12px 0 0 12px!important;margin:4px 0!important;background:#0a2037!important;border:1px solid rgba(56,189,248,.28)!important;border-left-width:5px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 4px 12px rgba(0,0,0,.18)}
+#timelineChuyenBay .tlLane{height:130px!important;margin:4px 0!important;border-radius:0 12px 12px 0!important;background-color:#071829!important}
+#timelineChuyenBay .bar.flight{top:52px!important;height:30px!important;border-radius:12px!important}
+#timelineChuyenBay .flightMonitor,#timelineChuyenBay .flightNote,#timelineChuyenBay .requireWarn,#timelineChuyenBay .tenSau{top:56px!important}
+#timelineNhanSu .tlLabel{border-radius:12px 0 0 12px!important;margin:3px 0!important;background:#0a2037!important;border:1px solid rgba(56,189,248,.22)!important;border-left-width:5px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+#timelineNhanSu .tlLane{border-radius:0 12px 12px 0!important;margin:3px 0!important}
+#timelineNhanSu .bar.staff,#timelineNhanSu .bar.free,#timelineNhanSu .bar.transfer,#timelineNhanSu .bar.cut,#timelineNhanSu .bar.withdraw{border-radius:10px!important}
+.rtInfo{color:#9fc5ef;font-size:12px;font-weight:900;margin-left:10px}
+.rtInfo b{color:#eaf3ff}
+.panelHeadLine{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hideBtn{border-color:#2b5f9f!important;color:#9fc5ef!important}
+.panel.collapsed .timeline,.panel.collapsed .body,.panel.collapsed #danhSachChonNhanSu,.panel.collapsed .staffHeader{display:none!important}
+.serviceTicks{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.serviceTicks label{border:1px solid #2b5f9f;background:#0b2039;border-radius:8px;padding:6px 8px;font-size:12px;font-weight:900;color:#d8ebff}
+.serviceTicks input{width:auto!important}
+#sta,#etd{width:72px}
+.accountRoleSelect{width:190px}
+#gridRealtime > section{min-width:0}
 
 </style>
 </head>
@@ -2628,8 +2669,10 @@ button:hover,.taskItem:hover{
 <div class="row">
 <label class="hidden">Ngày khai thác <input type="date" id="ngayKhaiThac"></label>
 <input id="flight" placeholder="Chuyến bay VD: RS511/512">
+<input id="sta" class="timeInput" placeholder="STA">
 <input id="eta" class="timeInput" placeholder="ETA">
 <input id="std" class="timeInput" placeholder="STD">
+<input id="etd" class="timeInput" placeholder="ETD">
 <input id="baiDo" class="standInput" placeholder="Bãi">
 <input id="soNguoiToiThieu" type="number" min="1" value="2" title="Số người tối thiểu" placeholder="Số người tối thiểu" class="minStaffInput">
 <select id="caPhuTrachChuyen" title="Ca thực hiện chuyến">
@@ -2641,7 +2684,16 @@ button:hover,.taskItem:hover{
   <option value="4">Ca 4</option>
   <option value="5">Ca 5</option>
 </select>
-<input id="ghiChuChuyen" placeholder="Ghi chú: GPU, VS, 3 xe..." class="serviceInput">
+<div class="serviceTicks" title="Dịch vụ / yêu cầu đặc biệt">
+  <label><input type="checkbox" class="svcTick" value="GPU"> GPU</label>
+  <label><input type="checkbox" class="svcTick" value="ACU"> ACU</label>
+  <label><input type="checkbox" class="svcTick" value="ASU"> ASU</label>
+  <label><input type="checkbox" class="svcTick" value="VS"> Vệ sinh</label>
+  <label><input type="checkbox" class="svcTick" value="NS"> Nước sạch</label>
+  <label><input type="checkbox" class="svcTick" value="HIGHLIFT ĐẾN"> Highlift đến</label>
+  <label><input type="checkbox" class="svcTick" value="HIGHLIFT ĐI"> Highlift đi</label>
+</div>
+<input id="ghiChuChuyen" placeholder="Ghi chú khác" class="serviceInput hidden">
 <button class="primary" id="nutChuyenBay">Thêm chuyến</button>
 <button class="ghost" id="nutTimChuyen">🔍</button>
 <button class="danger" id="nutXoaChuyen">Xóa chuyến</button>
@@ -2650,12 +2702,12 @@ button:hover,.taskItem:hover{
 </div>
 </section>
 
-<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span>Realtime chuyến bay</span><span id="editNotice" class="editNotice hidden"></span><span class="rtActions"><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small ghost" id="nutAutoNhanSu" onclick="toggleAutoNhanSu()">Tự động nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button><button class="small ghost" id="nutThongKeTimeline" onclick="moModalThongKe()">Thống kê</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
+<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span class="panelHeadLine"><span>Realtime chuyến bay</span><span id="rtFlightInfo" class="rtInfo"></span></span><span id="editNotice" class="editNotice hidden"></span><span class="rtActions"><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelTimelineChuyen')">Ẩn/hiện</button><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small ghost" id="nutAutoNhanSu" onclick="toggleAutoNhanSu()">Tự động nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button><button class="small ghost" id="nutThongKeTimeline" onclick="moModalThongKe()">Thống kê</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
 
 <div class="grid2" id="gridRealtime">
-<section class="panel realtimeCompact"><h2>Realtime nhân sự hôm nay</h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
-<section class="panel">
-<h2>Chọn nhân sự cho chuyến đang chọn</h2>
+<section class="panel realtimeCompact" id="panelTimelineNhanSu"><h2><span class="panelHeadLine"><span>Realtime nhân sự hôm nay</span><span id="rtStaffInfo" class="rtInfo"></span></span><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelTimelineNhanSu')">Ẩn/hiện</button></h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
+<section class="panel" id="panelChonNhanSu">
+<h2><span class="panelHeadLine"><span>Chọn nhân sự cho chuyến đang chọn</span><span id="rtPickInfo" class="rtInfo"></span></span><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelChonNhanSu')">Ẩn/hiện</button></h2>
 <div class="body">
 <div class="row">
 <select id="locCap"><option value="tatca">Cấp cần: Tất cả</option><option value="dangtruc" selected>Đang trực / còn giờ</option><option value="1">Cấp 1 trở lên</option><option value="2">Cấp 2 trở lên</option><option value="3">Cấp 3 trở lên</option></select>
@@ -2815,11 +2867,18 @@ button:hover,.taskItem:hover{
       <input id="newAccId" placeholder="ID đăng nhập" style="width:150px">
       <input id="newAccName" placeholder="Họ tên" style="width:220px">
       <input id="newAccPass" type="password" placeholder="Mật khẩu" style="width:150px">
-      <label><input type="checkbox" id="newAccAdmin"> Admin</label>
-      <label><input type="checkbox" id="newAccNhapChuyen" checked> Nhập chuyến</label>
+      <select id="newAccRole" class="accountRoleSelect">
+        <option value="doi_truong">Đội Trưởng</option>
+        <option value="doi_pho">Đội Phó</option>
+        <option value="ca_truong">Ca Trưởng</option>
+        <option value="ca_pho">Ca Phó</option>
+        <option value="gse">GSE</option>
+        <option value="nhap_lieu">Nhập liệu</option>
+        <option value="admin">Admin</option>
+      </select>
       <button class="primary" onclick="adminTaoTaiKhoan()">Tạo tài khoản</button>
     </div>
-    <div class="hint">Nếu tick Admin thì tài khoản có toàn quyền. Nếu không, có thể cấp thêm quyền bằng bảng phía dưới.</div>
+    <div class="hint">Chọn bộ phận để cấp quyền nhanh. Có thể chỉnh lại bằng bảng phân quyền phía dưới nếu cần.</div>
   </div>
 
   <div class="scroll" style="margin-top:8px">
@@ -4469,18 +4528,14 @@ function adminTaoTaiKhoan(){
   const id=normAccountId(val("newAccId"));
   const fullName=val("newAccName").trim();
   const pass=val("newAccPass");
-  const isAdm=$("newAccAdmin")?.checked;
-  const nhap=$("newAccNhapChuyen")?.checked;
+  const role=val("newAccRole")||"nhap_lieu";
   if(!id||!fullName||!pass)return moActionModal({title:"Thiếu thông tin",htmlBody:"Nhập đủ ID, họ tên và mật khẩu.",buttons:[]});
   if(getAccountById(id))return moActionModal({title:"Không tạo được",htmlBody:"ID này đã tồn tại.",buttons:[]});
-  const perms=isAdm
-    ? {admin:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true}
-    : {dashboard:true,nhapChuyen:!!nhap};
-  state.accounts[id]={id,pass,fullName,status:"approved",role:isAdm?"admin":"user",staffMa:(timNhanSuTheoTen(fullName)||{}).ma||null,permissions:perms};
-  logAction("ADMIN TẠO TÀI KHOẢN",`${fullName} (${id})${isAdm?" · Admin":""}`);
+  const rp=rolePerms(role);
+  state.accounts[id]={id,pass,fullName,status:"approved",role:rp.role,accountRole:rp.accountRole||role,staffMa:(timNhanSuTheoTen(fullName)||{}).ma||null,permissions:rp.permissions};
+  logAction("ADMIN TẠO TÀI KHOẢN",`${fullName} (${id}) · ${rp.label||role}`);
   ["newAccId","newAccName","newAccPass"].forEach(x=>{const el=$(x); if(el)el.value="";});
-  if($("newAccAdmin"))$("newAccAdmin").checked=false;
-  if($("newAccNhapChuyen"))$("newAccNhapChuyen").checked=true;
+  if($("newAccRole"))$("newAccRole").value="doi_truong";
   luu();veTatCa();
 }
 function doiQuyen(id,key,val){
@@ -4548,6 +4603,7 @@ function adminDoiMatKhau(id){
   });
 }
 function doiMatKhauCuaToi(){
+  if(typeof dongMenuTacVu==="function")dongMenuTacVu();
   const acc=currentAccount();
   if(!acc){
     moActionModal({title:"Chưa đăng nhập",htmlBody:"Bạn cần đăng nhập trước khi đổi mật khẩu.",buttons:[]});
@@ -5052,9 +5108,15 @@ function chuyenKhopTuKhoa(cb,q){
   q=String(q||"").trim().toUpperCase();
   if(!q)return true;
   const qNorm=q.replace(/[^A-Z0-9]+/g,"");
-  const flightNorm=String(cb.flight||"").toUpperCase().replace(/[^A-Z0-9]+/g,"");
+  const flightText=String(cb.flight||"").toUpperCase();
+  const flightNorm=flightText.replace(/[^A-Z0-9]+/g,"");
   const toks=tachTokenChuyen(cb.flight);
-  return flightNorm.includes(qNorm) || toks.some(t=>t.includes(qNorm)||qNorm.includes(t));
+  const prefix=(qNorm.match(/^[A-Z]+/)||[""])[0];
+  const num=(qNorm.match(/[0-9]+$/)||[""])[0];
+  const samePrefixNum = prefix && num && toks.some(t=>t===qNorm || (t.startsWith(prefix) && t.slice(prefix.length)===num));
+  const rawParts=flightText.split(/[^A-Z0-9]+/).filter(Boolean);
+  const paired = prefix && num && rawParts.some((p,idx)=>p===prefix+num || (idx>0 && rawParts[idx-1]===prefix && p===num) || (idx>0 && rawParts[idx-1]?.startsWith(prefix) && p===num));
+  return flightNorm.includes(qNorm) || samePrefixNum || paired || toks.some(t=>t.includes(qNorm)||qNorm.includes(t));
 }
 function timChuyenTrung(flight, boQuaMa){
   const can=new Set(tokenTrungChuyen(flight));
@@ -5723,9 +5785,11 @@ function textRanhTheoPhut(bd,kt){
 }
 function taoBarRanh(bd,kt,caCls,tt){
   if(kt<=bd)return "";
+  const w=rong(bd,kt);
   const txt=tt?.loai==="red"?tt.text:textRanhTheoPhut(bd,kt);
   const cls=tt?.loai==="red"?"ot":"free";
-  return `<div class="bar ${cls} ${caCls}" style="left:${viTri(bd)}px;width:${rong(bd,kt)}px">${txt}</div>`;
+  if(cls==="free" && w<34)return "";
+  return `<div class="bar ${cls} ${caCls}" style="left:${viTri(bd)}px;width:${w}px">${txt}</div>`;
 }
 function barsRanhTrongCa(ns,pcs,tt,caCls){
   let html="";
@@ -6500,10 +6564,57 @@ function xuatAnhThongKe(scope){
   a.remove();
 }
 
-function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); khoaAutoDenHan(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); veBangYeuCauHang(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); capNhatNutAutoNhanSu(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
-function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; $("eta").value=cb.eta; $("std").value=cb.std; $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa(); if(liveFollow)setTimeout(canhTheoVachHienTai,100); }
-function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); setVal("soNguoiToiThieu",2); setVal("caPhuTrachChuyen",""); veTatCa(); }
+function togglePanelCollapse(id){
+  const el=$(id); if(!el)return;
+  el.classList.toggle("collapsed");
+}
+function dsDichVuTick(){
+  return [...document.querySelectorAll(".svcTick:checked")].map(x=>x.value);
+}
+function setDichVuTickFromNote(note){
+  const n=String(note||"").toUpperCase();
+  document.querySelectorAll(".svcTick").forEach(x=>{x.checked=n.includes(String(x.value).toUpperCase());});
+}
+function ghiChuTuTick(){
+  const ds=dsDichVuTick();
+  const other=val("ghiChuChuyen").trim();
+  return [...ds, other].filter(Boolean).join(", ");
+}
+function clearFormChuyen(){
+  ["flight","sta","eta","std","etd","baiDo","ghiChuChuyen"].forEach(id=>{const el=$(id); if(el)el.value="";});
+  document.querySelectorAll(".svcTick").forEach(x=>x.checked=false);
+  setVal("soNguoiToiThieu",2); setVal("caPhuTrachChuyen","");
+}
+function updateRealtimeStats(){
+  const now=hienTaiAbs();
+  const flightsToday=state.danhSachChuyenBay.filter(cb=>cb.ngay===state.ngayKhaiThac);
+  const dang=flightsToday.filter(cb=>batDauAbs(cb)<=now && now<=ketThucAbs(cb)).length;
+  const sap=flightsToday.filter(cb=>{
+    const e=etaAbs(cb);
+    return e!==null && e>now && e-now<=120;
+  }).length;
+  const f=$("rtFlightInfo"); if(f)f.innerHTML=`Đang phục vụ <b>${dang}</b> chuyến bay | Có <b>${sap}</b> chuyến bay sắp đáp`;
+  const nsTrongCa=state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon && dungBoLocCaNV(ns.ma));
+  let ranh=0,busy=0;
+  nsTrongCa.forEach(ns=>{
+    const pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma&&pcDangHieuLuc(pc));
+    const b=pcs.some(pc=>pc.batDauAbs<=now&&now<=pc.ketThucAbs);
+    if(b)busy++; else ranh++;
+  });
+  const s=$("rtStaffInfo"); if(s)s.innerHTML=`Đang có <b>${ranh}</b> nhân sự rảnh | Có <b>${busy}</b> nhân sự đang phục vụ tàu`;
+  const p=$("rtPickInfo"); if(p)p.innerHTML=`Đang có <b>${ranh}</b> nhân sự rảnh | Có <b>${busy}</b> nhân sự đang phục vụ tàu`;
+}
+function rolePerms(role){
+  if(role==="admin")return {role:"admin",permissions:{admin:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:"Admin"};
+  if(["doi_truong","doi_pho","ca_truong","ca_pho"].includes(role))return {role:"user",accountRole:role,permissions:{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:role};
+  if(role==="gse")return {role:"user",accountRole:role,permissions:{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true},label:"GSE"};
+  return {role:"user",accountRole:"nhap_lieu",permissions:{dashboard:true,flightOnly:true},label:"Nhập liệu"};
+}
+function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); khoaAutoDenHan(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); veBangYeuCauHang(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); capNhatNutAutoNhanSu(); updateRealtimeStats(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
+
+function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; setVal("sta",cb.sta||""); $("eta").value=cb.eta; $("std").value=cb.std; setVal("etd",cb.etd||""); $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setDichVuTickFromNote(cb.ghiChu||""); setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa(); if(liveFollow)setTimeout(canhTheoVachHienTai,100); }
+function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; clearFormChuyen(); veTatCa(); }
 
 function xoaChuyenDangChon(){
   if(!requirePerm("dashboard","xóa chuyến bay"))return;
@@ -6530,7 +6641,7 @@ function xoaChuyenDangChon(){
   state.danhSachChuyenBay=state.danhSachChuyenBay.filter(x=>x.ma!==chuyenDangChon);
   state.phanCong=state.phanCong.filter(pc=>pc.maChuyen!==chuyenDangChon && pc.dieuDongTu!==chuyenDangChon);
   chuyenDangChon=null;
-  ["flight","eta","std","baiDo","ghiChuChuyen"].forEach(id=>$(id).value=""); setVal("soNguoiToiThieu",2); setVal("caPhuTrachChuyen","");
+  clearFormChuyen();
   luu();
   veTatCa();
 }
@@ -6553,10 +6664,10 @@ function timChuyenTheoO(){
     chuyenDangChon=ds[0].ma;
     const cb=ds[0];
     $("flight").value=cb.flight;
-    $("eta").value=cb.eta;
-    $("std").value=cb.std;
+    setVal("sta",cb.sta||""); $("eta").value=cb.eta;
+    $("std").value=cb.std; setVal("etd",cb.etd||"");
     $("baiDo").value=cb.baiDo;
-    $("ghiChuChuyen").value=cb.ghiChu||"";
+    $("ghiChuChuyen").value=cb.ghiChu||""; setDichVuTickFromNote(cb.ghiChu||"");
     setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2);
   }else if(ds.length===0){
     alert("Không tìm thấy chuyến phù hợp.");
@@ -6572,18 +6683,24 @@ function themSuaChuyen(){
   if(!(canPerm("dashboard")||canPerm("nhapChuyen"))){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
   clearTimChuyenNoRender();
   const flight=$("flight").value.trim();
+  const staRaw=val("sta").trim();
   const etaRaw=$("eta").value.trim();
   const stdRaw=$("std").value.trim();
+  const etdRaw=val("etd").trim();
+  const sta=staRaw?chuanHoaGio(staRaw):"";
   const eta=etaRaw?chuanHoaGio(etaRaw):"";
   const std=stdRaw?chuanHoaGio(stdRaw):"";
+  const etd=etdRaw?chuanHoaGio(etdRaw):"";
   const baiDo=$("baiDo").value.trim();
-  const ghiChu=$("ghiChuChuyen").value.trim();
+  const ghiChu=ghiChuTuTick();
   const soNguoiToiThieu=Math.max(1,parseInt(val("soNguoiToiThieu")||"2",10)||2);
   const caPhuTrach=val("caPhuTrachChuyen")||"";
 
   if(!flight||!baiDo)return alert("Nhập Chuyến bay và Bãi đỗ.");
+  if(staRaw&&!sta)return alert("STA sai định dạng. Nhập 2300 hoặc 23:00.");
   if(etaRaw&&!eta)return alert("ETA sai định dạng. Nhập 2300 hoặc 23:00.");
   if(stdRaw&&!std)return alert("STD sai định dạng. Nhập 0030 hoặc 00:30.");
+  if(etdRaw&&!etd)return alert("ETD sai định dạng. Nhập 2300 hoặc 23:00.");
   if(!eta&&!std)return alert("Phải có ETA hoặc STD.");
 
   const trung=timChuyenTrung(flight,chuyenDangChon);
@@ -6592,17 +6709,17 @@ function themSuaChuyen(){
     if(confirm(msg)){
       chuyenDangChon=trung.ma;
       $("flight").value=trung.flight;
-      $("eta").value=trung.eta;
-      $("std").value=trung.std;
+      setVal("sta",trung.sta||""); $("eta").value=trung.eta;
+      $("std").value=trung.std; setVal("etd",trung.etd||"");
       $("baiDo").value=trung.baiDo;
-      $("ghiChuChuyen").value=trung.ghiChu||"";
+      $("ghiChuChuyen").value=trung.ghiChu||""; setDichVuTickFromNote(trung.ghiChu||"");
       setVal("soNguoiToiThieu",trung.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",trung.caPhuTrach||"");
       veTatCa();
     }
     return;
   }
 
-  const newData={ngay:state.ngayKhaiThac,flight,eta,std,baiDo,ghiChu,soNguoiToiThieu,caPhuTrach};
+  const newData={ngay:state.ngayKhaiThac,flight,sta,eta,std,etd,baiDo,ghiChu,soNguoiToiThieu,caPhuTrach};
   if(chuyenDangChon){
     const i=state.danhSachChuyenBay.findIndex(x=>x.ma===chuyenDangChon);
     if(i>=0){
@@ -6615,6 +6732,7 @@ function themSuaChuyen(){
     const cbMoi={ma:chuyenDangChon,...newData};
     state.danhSachChuyenBay.push(cbMoi);
     logAction("NHẬP CHUYẾN BAY",`Tạo mới: ${moTaChuyenLog(cbMoi)}`);
+    setTimeout(()=>{chuyenDangChon=null; clearFormChuyen(); veTatCa();},0);
   }
   luu(); veTatCa(); autoSauKhiNhapChuyen();
 }
@@ -8345,6 +8463,7 @@ khoiDongFirebase();
 dongBoKeoTimeline();
 capNhatNutLive();
 capNhatNutAutoNhanSu();
+setTimeout(()=>{canhTheoVachHienTai(); liveFollow=false; capNhatNutLive();},120);
 </script>
 </body>
 </html>
