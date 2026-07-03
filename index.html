@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.40 Realtime Permission Roles</title>
+<title>Dương Tú v1.40b Fix Service Save</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2626,6 +2626,19 @@ body.dashboardOnly #panelNhapChuyen.hidden,
 body.dashboardOnly #panelTimelineChuyen.hidden,
 body.dashboardOnly #gridRealtime.hidden{display:none!important}
 
+
+/* v1.40a - phân quyền xem realtime riêng */
+body.viewerFlightOnly #panelNhapChuyen,
+body.viewerFlightOnly #gridRealtime,
+body.viewerFlightOnly #panelNhanSu,
+body.viewerFlightOnly #panelPhanCa,
+body.viewerFlightOnly #panelYeuCauHang,
+body.viewerFlightOnly #panelYeuCauVanHanh,
+body.viewerFlightOnly #panelLog,
+body.viewerFlightOnly #panelQuanLy{display:none!important}
+body.viewerFlightOnly #panelTimelineChuyen{display:block!important}
+body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!important}
+
 </style>
 </head>
 <body>
@@ -2917,7 +2930,7 @@ body.dashboardOnly #gridRealtime.hidden{display:none!important}
       <thead>
         <tr>
           <th>ID</th><th>Họ tên</th><th>Trạng thái</th><th>Admin</th>
-          <th>Xem Realtime</th><th>Dashboard</th><th>Nhập chuyến</th><th>Phân ca</th><th>Nhân sự</th><th>Yêu cầu hãng</th><th>Yêu cầu vận hành</th><th>Log</th><th>Đổi pass</th><th>Thao tác</th>
+          <th>Realtime chuyến</th><th>Realtime nhân sự</th><th>Chọn nhân sự</th><th>Dashboard</th><th>Nhập chuyến</th><th>Phân ca</th><th>Nhân sự</th><th>Yêu cầu hãng</th><th>Yêu cầu vận hành</th><th>Log</th><th>Đổi pass</th><th>Thao tác</th>
         </tr>
       </thead>
       <tbody id="bangTaiKhoan"></tbody>
@@ -4352,7 +4365,7 @@ function canPerm(key){
   if(!acc)return false;
   if(acc.role==="admin" || acc.permissions?.admin)return true;
   // Xem realtime và dashboard chỉ là quyền xem, vẫn cho xem trước/sau ca.
-  if(key!=="dashboard" && key!=="xemRealtime" && biKhoaThaoTacTheoGio())return false;
+  if(!["dashboard","xemRealtime","xemRealtimeNhanSu","xemChonNhanSu"].includes(key) && biKhoaThaoTacTheoGio())return false;
   return !!acc.permissions?.[key];
 }
 function requirePerm(key,label){
@@ -4384,28 +4397,32 @@ function capNhatMenuTheoQuyen(){
 }
 function enforcedDashboardForAccount(){
   const acc=currentAccount();
+  document.body.classList.remove("viewerFlightOnly");
   if(!acc || isAdmin())return;
   const p=acc.permissions||{};
-  if(!(p.xemRealtime||p.dashboard||p.nhapChuyen)){
+
+  const canFlight=!!(p.xemRealtime||p.dashboard||p.nhapChuyen);
+  const canStaff=!!(p.xemRealtimeNhanSu||p.dashboard);
+  const canPick=!!(p.xemChonNhanSu||p.dashboard);
+
+  if(!canFlight && !canStaff && !canPick && !p.nhapChuyen){
     setVisible(DASHBOARD_IDS,false);
     return;
   }
 
-  // Mặc định ai có quyền xem realtime đều xem được bảng realtime chuyến bay.
-  setVisible(["panelTimelineChuyen"],true);
-
-  // Nhập liệu/GSE: được nhập chuyến nếu có quyền nhapChuyen.
+  setVisible(["panelTimelineChuyen"],canFlight);
   setVisible(["panelNhapChuyen"],!!p.nhapChuyen);
+  setVisible(["gridRealtime"],canStaff||canPick);
 
-  // Dashboard đầy đủ mới thấy realtime nhân sự + chọn nhân sự.
-  setVisible(["gridRealtime"],!!p.dashboard);
+  const panelStaff=$("panelTimelineNhanSu");
+  const panelPick=$("panelChonNhanSu");
+  if(panelStaff)panelStaff.classList.toggle("hidden",!canStaff);
+  if(panelPick)panelPick.classList.toggle("hidden",!canPick);
 
-  // Hiển thị: chỉ một mình bảng realtime chuyến bay.
-  if(p.xemRealtime && !p.dashboard && !p.nhapChuyen){
-    setVisible(["panelNhapChuyen","gridRealtime"],false);
+  if(canFlight && !p.nhapChuyen && !canStaff && !canPick){
+    document.body.classList.add("viewerFlightOnly");
   }
 }
-
 function sessionShiftRaw(){
   const s=getSession();
   return String(s?.todayShift||"").trim().toUpperCase();
@@ -4563,7 +4580,7 @@ function statusBadgeAccount(st){
 function veBangTaiKhoan(){
   const el=$("bangTaiKhoan"); if(!el)return;
   const list=Object.values(state.accounts||{}).sort((a,b)=>(a.id||"").localeCompare(b.id||""));
-  const permKeys=["xemRealtime","dashboard","nhapChuyen","phanCa","nhanSu","ycHang","ycVanHanh","log"];
+  const permKeys=["xemRealtime","xemRealtimeNhanSu","xemChonNhanSu","dashboard","nhapChuyen","phanCa","nhanSu","ycHang","ycVanHanh","log"];
   el.innerHTML=list.map(acc=>{
     const p=acc.permissions||{};
     return `<tr>
@@ -4596,7 +4613,7 @@ function doiQuyen(id,key,val){
   acc.permissions[key]=val;
   if(key==="admin"){
     acc.role=val?"admin":"user";
-    if(val)Object.assign(acc.permissions,{xemRealtime:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true});
+    if(val)Object.assign(acc.permissions,{xemRealtime:true,xemRealtimeNhanSu:true,xemChonNhanSu:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true});
   }
   logAction("ĐỔI QUYỀN",`${acc.fullName||id}: ${key} = ${val?"ON":"OFF"}`);
   luu();veTatCa();
@@ -6625,7 +6642,7 @@ function togglePanelCollapse(id){
   if(btn)btn.textContent=el.classList.contains("collapsed")?"Hiện":"Ẩn";
 }
 const DICH_VU_OPTIONS=[
-  ["GPU","GPU"],["ACU","ACU"],["ASU","ASU"],["VS","Vệ sinh"],["NS","Nước sạch"],["HIGHLIFT ĐẾN","Highlift đến"],["HIGHLIFT ĐI","Highlift đi"]
+  ["GPU","GPU"],["ACU","ACU"],["ASU","ASU"],["VS","Vệ sinh"],["NS","Nước sạch"],["HIGHLIFT ĐẾN","Highlift đến"],["HIGHLIFT ĐI","Highlift đi"],["HIGHLOADER","HighLoader"]
 ];
 function dsDichVuTick(){
   return String(val("dichVuChuyen")||"").split(",").map(x=>x.trim()).filter(Boolean);
@@ -6658,12 +6675,17 @@ function moModalDichVu(){
         ${DICH_VU_OPTIONS.map(([v,label])=>`<label><input type="checkbox" class="svcModalTick" value="${v}" ${current.has(v)?"checked":""}> ${label}</label>`).join("")}
       </div>`,
     buttons:[
-      {label:"Lưu dịch vụ",className:"goodChoice",desc:"Áp dụng dịch vụ vào ô nhập chuyến.",onClick:()=>{
-        const ds=[...document.querySelectorAll(".svcModalTick:checked")].map(x=>x.value);
-        setVal("dichVuChuyen",ds.join(", "));
+      {label:"Lưu dịch vụ",className:"goodChoice",desc:"Áp dụng dịch vụ vào ô nhập chuyến.",beforeClose:true,onClick:(overlay)=>{
+        const ds=[...(overlay||document).querySelectorAll(".svcModalTick:checked")].map(x=>x.value);
+        const el=$("dichVuChuyen");
+        if(el)el.value=ds.join(", ");
         capNhatNutDichVu();
       }},
-      {label:"Xóa dịch vụ",desc:"Bỏ hết các tick dịch vụ.",onClick:()=>{setVal("dichVuChuyen","");capNhatNutDichVu();}},
+      {label:"Xóa dịch vụ",desc:"Bỏ hết các tick dịch vụ.",beforeClose:true,onClick:()=>{
+        const el=$("dichVuChuyen");
+        if(el)el.value="";
+        capNhatNutDichVu();
+      }},
       {label:"Hủy",desc:"Không thay đổi.",onClick:()=>{}}
     ]
   });
@@ -6693,37 +6715,36 @@ function updateRealtimeStats(){
   const p=$("rtPickInfo"); if(p)p.innerHTML=`Đang có <b>${ranh}</b> nhân sự rảnh | Có <b>${busy}</b> nhân sự đang phục vụ tàu`;
 }
 function rolePerms(role){
-  if(role==="admin")return {role:"admin",permissions:{admin:true,xemRealtime:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:"Admin"};
+  if(role==="admin")return {
+    role:"admin",
+    permissions:{admin:true,xemRealtime:true,xemRealtimeNhanSu:true,xemChonNhanSu:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},
+    label:"Admin"
+  };
 
-  // Full quyền trừ Admin
   if(["doi_truong","doi_pho"].includes(role))return {
     role:"user",accountRole:role,
-    permissions:{xemRealtime:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},
+    permissions:{xemRealtime:true,xemRealtimeNhanSu:true,xemChonNhanSu:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},
     label:role
   };
 
-  // Full quyền trừ Admin, nhưng chỉ thao tác trong giờ ca đã chọn khi đăng nhập
   if(["ca_truong","ca_pho"].includes(role))return {
     role:"user",accountRole:role,timeLimited:true,
-    permissions:{xemRealtime:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},
+    permissions:{xemRealtime:true,xemRealtimeNhanSu:true,xemChonNhanSu:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},
     label:role
   };
 
-  // GSE: xem realtime chuyến bay + nhập chuyến + phân ca + nhân sự, khóa thao tác ngoài giờ ca
   if(role==="gse")return {
     role:"user",accountRole:role,timeLimited:true,
     permissions:{xemRealtime:true,nhapChuyen:true,phanCa:true,nhanSu:true},
     label:"GSE"
   };
 
-  // Nhập liệu: chỉ xem realtime chuyến bay và nhập chuyến
   if(role==="nhap_lieu")return {
     role:"user",accountRole:"nhap_lieu",
     permissions:{xemRealtime:true,nhapChuyen:true},
     label:"Nhập liệu"
   };
 
-  // Hiển thị: chỉ xem một mình bảng realtime chuyến bay
   return {
     role:"user",accountRole:"hien_thi",
     permissions:{xemRealtime:true},
@@ -7055,6 +7076,12 @@ function moActionModal({title,htmlBody="",buttons=[]}){
     btn.onclick=()=>{
       const idx=Number(btn.dataset.idx);
       const b=buttons[idx];
+      // Một số form như Dịch vụ cần đọc checkbox/input trước khi modal bị remove.
+      if(b&&b.beforeClose&&typeof b.onClick==="function"){
+        b.onClick(overlay);
+        close();
+        return;
+      }
       close();
       if(b&&typeof b.onClick==="function")b.onClick();
     };
