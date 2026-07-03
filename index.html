@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.39 Service Modal Permissions Fix</title>
+<title>Dương Tú v1.40 Realtime Permission Roles</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2620,6 +2620,12 @@ button:hover,.taskItem:hover{
 }
 .panel.collapsed .hideBtn::after{content:""}
 
+
+/* v1.40 permission layout */
+body.dashboardOnly #panelNhapChuyen.hidden,
+body.dashboardOnly #panelTimelineChuyen.hidden,
+body.dashboardOnly #gridRealtime.hidden{display:none!important}
+
 </style>
 </head>
 <body>
@@ -2898,6 +2904,7 @@ button:hover,.taskItem:hover{
         <option value="ca_pho">Ca Phó</option>
         <option value="gse">GSE</option>
         <option value="nhap_lieu">Nhập liệu</option>
+        <option value="hien_thi">Hiển thị</option>
         <option value="admin">Admin</option>
       </select>
       <button class="primary" onclick="adminTaoTaiKhoan()">Tạo tài khoản</button>
@@ -2910,7 +2917,7 @@ button:hover,.taskItem:hover{
       <thead>
         <tr>
           <th>ID</th><th>Họ tên</th><th>Trạng thái</th><th>Admin</th>
-          <th>Dashboard</th><th>Nhập chuyến</th><th>Phân ca</th><th>Nhân sự</th><th>Yêu cầu hãng</th><th>Yêu cầu vận hành</th><th>Log</th><th>Đổi pass</th><th>Thao tác</th>
+          <th>Xem Realtime</th><th>Dashboard</th><th>Nhập chuyến</th><th>Phân ca</th><th>Nhân sự</th><th>Yêu cầu hãng</th><th>Yêu cầu vận hành</th><th>Log</th><th>Đổi pass</th><th>Thao tác</th>
         </tr>
       </thead>
       <tbody id="bangTaiKhoan"></tbody>
@@ -3328,12 +3335,12 @@ if(!state.accounts) state.accounts={};
 function seedAdminAccount(){
   if(!state.accounts["tudd"]){
     state.accounts["tudd"]={id:"tudd",pass:"Abc123@@",fullName:"Đặng Dương Tú",status:"approved",role:"admin",
-      permissions:{admin:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true}};
+      permissions:{admin:true,xemRealtime:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true}};
   }
   // v1.26: tài khoản admin bổ sung theo yêu cầu.
   if(!state.accounts["anhbq"]){
     state.accounts["anhbq"]={id:"anhbq",pass:"Anh123",fullName:"Bùi Quốc Anh",status:"approved",role:"admin",
-      permissions:{admin:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true}};
+      permissions:{admin:true,xemRealtime:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true}};
   }else{
     state.accounts["anhbq"].pass=state.accounts["anhbq"].pass||"Anh123";
     state.accounts["anhbq"].fullName=state.accounts["anhbq"].fullName||"Bùi Quốc Anh";
@@ -4344,7 +4351,8 @@ function canPerm(key){
   const acc=currentAccount();
   if(!acc)return false;
   if(acc.role==="admin" || acc.permissions?.admin)return true;
-  if(key!=="dashboard" && biKhoaThaoTacTheoGio())return false;
+  // Xem realtime và dashboard chỉ là quyền xem, vẫn cho xem trước/sau ca.
+  if(key!=="dashboard" && key!=="xemRealtime" && biKhoaThaoTacTheoGio())return false;
   return !!acc.permissions?.[key];
 }
 function requirePerm(key,label){
@@ -4377,7 +4385,25 @@ function capNhatMenuTheoQuyen(){
 function enforcedDashboardForAccount(){
   const acc=currentAccount();
   if(!acc || isAdmin())return;
-  if(!(canPerm("dashboard")||canPerm("nhapChuyen")))setVisible(DASHBOARD_IDS,false);
+  const p=acc.permissions||{};
+  if(!(p.xemRealtime||p.dashboard||p.nhapChuyen)){
+    setVisible(DASHBOARD_IDS,false);
+    return;
+  }
+
+  // Mặc định ai có quyền xem realtime đều xem được bảng realtime chuyến bay.
+  setVisible(["panelTimelineChuyen"],true);
+
+  // Nhập liệu/GSE: được nhập chuyến nếu có quyền nhapChuyen.
+  setVisible(["panelNhapChuyen"],!!p.nhapChuyen);
+
+  // Dashboard đầy đủ mới thấy realtime nhân sự + chọn nhân sự.
+  setVisible(["gridRealtime"],!!p.dashboard);
+
+  // Hiển thị: chỉ một mình bảng realtime chuyến bay.
+  if(p.xemRealtime && !p.dashboard && !p.nhapChuyen){
+    setVisible(["panelNhapChuyen","gridRealtime"],false);
+  }
 }
 
 function sessionShiftRaw(){
@@ -4387,7 +4413,7 @@ function sessionShiftRaw(){
 function caQuanLyTheoDangNhap(){
   if(isAdmin())return "tatca";
   const s=getSession();
-  if(s?.loginMode==="viewer" || s?.loginMode==="nhapChuyen")return "tatca";
+  if(s?.todayShift==="VIEW" || s?.todayShift==="NHAPCHUYEN")return "tatca";
   const raw=sessionShiftRaw();
   if(!raw)return "";
   if(raw.startsWith("TRUC") || raw.includes("CÁN") || raw.includes("CAN"))return "TRUC";
@@ -4466,9 +4492,9 @@ function moTaLoginMode(mode,shift){
 function optionDangNhapChoAcc(acc){
   const p=acc.permissions||{};
   const list=[];
-  list.push({mode:"viewer",label:"Người xem",desc:"Chỉ xem dashboard/realtime.",ok:!!(p.dashboard||p.nhapChuyen||p.phanCa||p.nhanSu||p.ycHang||p.ycVanHanh||p.log||p.admin||acc.role==="admin"),shift:"VIEW"});
-  list.push({mode:"nhapChuyen",label:"Nhập chuyến",desc:"Chỉ nhập thông tin chuyến bay theo quyền được cấp.",ok:!!(p.nhapChuyen||p.admin||acc.role==="admin"),shift:"NHAPCHUYEN"});
-  ["1","2","3","4","5"].forEach(c=>list.push({mode:"ca",label:`Ca ${c}`,desc:`Vào hệ thống theo phạm vi Ca ${c}.`,ok:!!(p.dashboard||p.nhapChuyen||p.admin||acc.role==="admin"),shift:c}));
+  list.push({mode:"viewer",label:"Người xem",desc:"Chỉ xem realtime theo quyền được cấp.",ok:!!(p.xemRealtime||p.dashboard||p.nhapChuyen||p.phanCa||p.nhanSu||p.ycHang||p.ycVanHanh||p.log||p.admin||acc.role==="admin"),shift:"VIEW"});
+  list.push({mode:"nhapChuyen",label:"Nhập chuyến",desc:"Nhập thông tin chuyến bay theo quyền được cấp.",ok:!!(p.nhapChuyen||p.admin||acc.role==="admin"),shift:"NHAPCHUYEN"});
+  ["1","2","3","4","5"].forEach(c=>list.push({mode:"ca",label:`Ca ${c}`,desc:`Vào hệ thống theo phạm vi Ca ${c}.`,ok:!!(p.xemRealtime||p.dashboard||p.nhapChuyen||p.admin||acc.role==="admin"),shift:c}));
   list.push({mode:"ca",label:"Kéo đẩy",desc:"Vào hệ thống theo nhóm Kéo đẩy.",ok:!!(p.dashboard||p.nhapChuyen||p.admin||acc.role==="admin"),shift:"KD"});
   list.push({mode:"ca",label:"Cán bộ / Trực",desc:"Vào hệ thống theo nhóm Cán bộ / Trực.",ok:!!(p.dashboard||p.nhapChuyen||p.admin||acc.role==="admin"),shift:"TRUC"});
   list.push({mode:"admin",label:"Admin",desc:"Toàn quyền hệ thống.",ok:!!(p.admin||acc.role==="admin"),shift:"ADMIN"});
@@ -4537,7 +4563,7 @@ function statusBadgeAccount(st){
 function veBangTaiKhoan(){
   const el=$("bangTaiKhoan"); if(!el)return;
   const list=Object.values(state.accounts||{}).sort((a,b)=>(a.id||"").localeCompare(b.id||""));
-  const permKeys=["dashboard","nhapChuyen","phanCa","nhanSu","ycHang","ycVanHanh","log"];
+  const permKeys=["xemRealtime","dashboard","nhapChuyen","phanCa","nhanSu","ycHang","ycVanHanh","log"];
   el.innerHTML=list.map(acc=>{
     const p=acc.permissions||{};
     return `<tr>
@@ -4570,7 +4596,7 @@ function doiQuyen(id,key,val){
   acc.permissions[key]=val;
   if(key==="admin"){
     acc.role=val?"admin":"user";
-    if(val)Object.assign(acc.permissions,{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true});
+    if(val)Object.assign(acc.permissions,{xemRealtime:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true});
   }
   logAction("ĐỔI QUYỀN",`${acc.fullName||id}: ${key} = ${val?"ON":"OFF"}`);
   luu();veTatCa();
@@ -6667,11 +6693,42 @@ function updateRealtimeStats(){
   const p=$("rtPickInfo"); if(p)p.innerHTML=`Đang có <b>${ranh}</b> nhân sự rảnh | Có <b>${busy}</b> nhân sự đang phục vụ tàu`;
 }
 function rolePerms(role){
-  if(role==="admin")return {role:"admin",permissions:{admin:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:"Admin"};
-  if(["doi_truong","doi_pho"].includes(role))return {role:"user",accountRole:role,permissions:{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:role};
-  if(["ca_truong","ca_pho"].includes(role))return {role:"user",accountRole:role,timeLimited:true,permissions:{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:role};
-  if(role==="gse")return {role:"user",accountRole:role,timeLimited:true,permissions:{dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true},label:"GSE"};
-  return {role:"user",accountRole:"nhap_lieu",permissions:{dashboard:true,flightOnly:true},label:"Nhập liệu"};
+  if(role==="admin")return {role:"admin",permissions:{admin:true,xemRealtime:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},label:"Admin"};
+
+  // Full quyền trừ Admin
+  if(["doi_truong","doi_pho"].includes(role))return {
+    role:"user",accountRole:role,
+    permissions:{xemRealtime:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},
+    label:role
+  };
+
+  // Full quyền trừ Admin, nhưng chỉ thao tác trong giờ ca đã chọn khi đăng nhập
+  if(["ca_truong","ca_pho"].includes(role))return {
+    role:"user",accountRole:role,timeLimited:true,
+    permissions:{xemRealtime:true,dashboard:true,nhapChuyen:true,phanCa:true,nhanSu:true,ycHang:true,ycVanHanh:true,log:true},
+    label:role
+  };
+
+  // GSE: xem realtime chuyến bay + nhập chuyến + phân ca + nhân sự, khóa thao tác ngoài giờ ca
+  if(role==="gse")return {
+    role:"user",accountRole:role,timeLimited:true,
+    permissions:{xemRealtime:true,nhapChuyen:true,phanCa:true,nhanSu:true},
+    label:"GSE"
+  };
+
+  // Nhập liệu: chỉ xem realtime chuyến bay và nhập chuyến
+  if(role==="nhap_lieu")return {
+    role:"user",accountRole:"nhap_lieu",
+    permissions:{xemRealtime:true,nhapChuyen:true},
+    label:"Nhập liệu"
+  };
+
+  // Hiển thị: chỉ xem một mình bảng realtime chuyến bay
+  return {
+    role:"user",accountRole:"hien_thi",
+    permissions:{xemRealtime:true},
+    label:"Hiển thị"
+  };
 }
 function accountBiGioiHanThoiGian(acc=currentAccount()){
   return !!(acc && (acc.timeLimited || ["ca_truong","ca_pho","gse"].includes(acc.accountRole)));
