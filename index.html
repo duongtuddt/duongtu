@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.35 Fairness Flight Count First</title>
+<title>Dương Tú v1.36 Staff Free Time Glow</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2518,6 +2518,34 @@ button:hover,.taskItem:hover{
 @keyframes fallbackTowBlink{
   from{opacity:.55;filter:brightness(.85)}
   to{opacity:1;filter:brightness(1.45)}
+}
+
+
+/* v1.36 - realtime nhân sự: rảnh bao lâu + sáng cả dòng */
+.bar.free{
+  background:#166534!important;
+  border:1px solid #22c55e!important;
+  color:#dcfce7!important;
+  font-weight:900!important;
+  box-shadow:0 0 10px rgba(34,197,94,.24), inset 0 1px 0 rgba(255,255,255,.10)!important;
+}
+.tlRow.staffSelectedRow .tlLabel,
+.tlRow.staffSelectedRow .tlLane{
+  outline:2px solid #38bdf8!important;
+  box-shadow:0 0 0 2px rgba(56,189,248,.22) inset,0 0 18px rgba(56,189,248,.26)!important;
+  background-color:rgba(56,189,248,.075)!important;
+}
+.tlRow.staffSelectedRow .staffMiniName,
+.tlRow.staffSelectedRow .staffMiniSub{
+  color:#ffffff!important;
+  text-shadow:0 0 10px rgba(56,189,248,.65)!important;
+}
+.tlRow[data-ma-nv] .tlLane,
+.tlRow[data-ma-nv] .bar{
+  cursor:pointer;
+}
+.tlRow[data-ma-nv] .bar{
+  pointer-events:none;
 }
 
 </style>
@@ -5678,8 +5706,9 @@ function baiDoHienTaiHoacSapLam(ma, now){
   return cb&&cb.baiDo ? normBaiDo(cb.baiDo) : "";
 }
 function standBadgeNhanSu(ma, now){
-  const bai=baiDoHienTaiHoacSapLam(ma, now);
-  return bai?`<span class="standBadge" title="Đang / sắp làm tại bãi ${bai}">${bai}</span>`:"";
+  // v1.36: bỏ chấm/số nhỏ trước tên nhân sự; viền trái đã thể hiện ca,
+  // còn bãi đang làm xem trực tiếp trên thanh realtime.
+  return "";
 }
 function tomTatNhanSuTimeline(ma, now){
   const ct=chiTietNhanSu(ma);
@@ -5688,34 +5717,59 @@ function tomTatNhanSuTimeline(ma, now){
   return `${busy} • ${tk.so} chuyến • ${fmtPhut(tk.tg)}`;
 }
 
+function textRanhTheoPhut(bd,kt){
+  const m=Math.max(0,Math.round(kt-bd));
+  return m>0?fmtPhut(m):"";
+}
+function taoBarRanh(bd,kt,caCls,tt){
+  if(kt<=bd)return "";
+  const txt=tt?.loai==="red"?tt.text:textRanhTheoPhut(bd,kt);
+  const cls=tt?.loai==="red"?"ot":"free";
+  return `<div class="bar ${cls} ${caCls}" style="left:${viTri(bd)}px;width:${rong(bd,kt)}px">${txt}</div>`;
+}
+function barsRanhTrongCa(ns,pcs,tt,caCls){
+  let html="";
+  const segs=caSegments(ns.ma);
+  segs.forEach(seg=>{
+    let cursor=seg.vao;
+    const rel=pcs
+      .filter(pc=>pcDangHieuLuc(pc)||pc.thuHoi)
+      .map(pc=>({bd:Math.max(seg.vao,pc.batDauAbs),kt:Math.min(seg.ra,pc.ketThucAbs)}))
+      .filter(x=>x.kt>x.bd)
+      .sort((a,b)=>a.bd-b.bd);
+    rel.forEach(p=>{
+      if(p.bd>cursor)html+=taoBarRanh(cursor,p.bd,caCls,tt);
+      cursor=Math.max(cursor,p.kt);
+    });
+    if(seg.ra>cursor)html+=taoBarRanh(cursor,seg.ra,caCls,tt);
+  });
+  return html;
+}
+
 function veTimelineNhanSu(){
   const el=$("timelineNhanSu"); veHeader(el); const now=hienTaiAbs();
   sapXepNhanSuTimeline(state.danhSachNhanSu.filter(ns=>state.phanCaHomNay[ns.ma]?.chon).filter(ns=>dungBoLocCaNV(ns.ma))).forEach(ns=>{
-    const tt=trangThaiCa(ns.ma), caCls=caClass(caCuaNV(ns.ma)), pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs); let bars=addBarNgoaiCa(ns.ma);
-    const c=caAbs(ns.ma), dang=pcs.some(pc=>pc.batDauAbs<=now&&now<=pc.ketThucAbs);
-    if(!dang){
-      const next=pcs.find(pc=>pc.batDauAbs>now);
-      caSegments(ns.ma).forEach(seg=>{
-        const bd=Math.max(now,seg.vao), kt=next?Math.min(next.batDauAbs,seg.ra):seg.ra;
-        if(kt>bd)bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"} ${caCls}" style="left:${viTri(bd)}px;width:${rong(bd,kt)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
-      });
-    }
+    const tt=trangThaiCa(ns.ma), caCls=caClass(caCuaNV(ns.ma));
+    const pcs=state.phanCong.filter(pc=>pc.maNV===ns.ma).sort((a,b)=>a.batDauAbs-b.batDauAbs);
+    let bars=addBarNgoaiCa(ns.ma);
+
+    // v1.36: khoảng rảnh có ở cả quá khứ, hiện tại và tương lai, tính từ lúc vào ca.
+    bars+=barsRanhTrongCa(ns,pcs,tt,caCls);
+
     pcs.forEach(pc=>{
       const cb=chuyen(pc.maChuyen),cut=biDieuDongDi(pc),kt=cut||pc.ketThucAbs;
       const cls=pc.thuHoi?"withdraw":pc.dieuDongTu?"transfer":cut?"cut":((pc.autoNhanSu&&!pc.autoLocked)?"autoTemp":"staff");
       const txt=pc.thuHoi?`THU HỒI ${cb?cb.flight:pc.maChuyen}`:pc.dieuDongTu?`${pc.batDauAbs>now?"DỰ KIẾN ":"ĐIỀU ĐỘNG "}${cb?cb.flight:pc.maChuyen} từ ${gioTuPhut(pc.batDauAbs)}`:`${cb?cb.flight:pc.maChuyen} - Bãi ${cb?cb.baiDo:""}`;
       if(kt>pc.batDauAbs)bars+=`<div class="bar staff ${cls} ${caCls}" style="left:${viTri(pc.batDauAbs)}px;width:${rong(pc.batDauAbs,kt)}px">${txt}</div>`;
     });
-    if(!bars){
-      caSegments(ns.ma).forEach(seg=>{
-        bars+=`<div class="bar ${tt.loai==="red"?"ot":"free"} ${caCls}" style="left:${viTri(seg.vao)}px;width:${rong(seg.vao,seg.ra)}px">${tt.loai==="red"?tt.text:"Rảnh"}</div>`;
-      });
-    }
+
+    const dang=pcs.some(pc=>pc.batDauAbs<=now&&now<=pc.ketThucAbs);
     const daChon=state.phanCong.some(pc=>pc.maChuyen===chuyenDangChon&&pc.maNV===ns.ma&&pcDangHieuLuc(pc));
     const dangDoiCho=nhanSuDoiCho===ns.ma;
     const sapXepText=!chuyenDangChon&&dangDoiCho?`<br><span class="sapXepHint">Đang chọn để đổi vị trí</span>`:"";
-    const handle=!chuyenDangChon?`<span class="dragHandle ${caCls}" title="Kéo để chèn vị trí" onpointerdown="batDauKeoNhanSuPointer(event,'${ns.ma}')"></span>`:"";
-    el.innerHTML+=`<div class="tlRow ${dang?"activeNowStaff":""} ${dangDoiCho?"reorderSelected":""}" data-ma-nv="${ns.ma}"><div class="tlLabel ${caCls} ${daChon?"selected":""} ${dang?"activeNow":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${handle}<div class="staffMiniTop">${standBadgeNhanSu(ns.ma,now)}<span class="staffMiniName">${ns.ten}</span></div><span class="staffMiniSub">${tomTatNhanSuTimeline(ns.ma,now)}</span>${sapXepText}</div><div class="tlLane ${daChon?"selected":""} ${dang?"activeNowLane":""} ${dangDoiCho?"reorderSelected":""}" onclick="ganBoNV('${ns.ma}')">${bars}</div></div>`;
+
+    // Bỏ chấm tròn/handle trước tên; chọn nhân sự bằng cả tên và vùng realtime.
+    el.innerHTML+=`<div class="tlRow ${daChon?"staffSelectedRow":""} ${dang?"activeNowStaff":""} ${dangDoiCho?"reorderSelected":""}" data-ma-nv="${ns.ma}" onclick="ganBoNV('${ns.ma}')"><div class="tlLabel ${caCls} ${daChon?"selected":""} ${dang?"activeNow":""} ${dangDoiCho?"reorderSelected":""}"><div class="staffMiniTop"><span class="staffMiniName">${ns.ten}</span></div><span class="staffMiniSub">${tomTatNhanSuTimeline(ns.ma,now)}</span>${sapXepText}</div><div class="tlLane ${daChon?"selected":""} ${dang?"activeNowLane":""} ${dangDoiCho?"reorderSelected":""}">${bars}</div></div>`;
   });
 }
 
@@ -6430,7 +6484,7 @@ function xuatAnhThongKe(scope){
         ctx.strokeStyle=pc.thuHoi?"#7f9fb8":(pc.dieuDongTu?"#22c55e":"#60a5fa");
         ctx.beginPath(); ctx.roundRect(x,y+6,w,rowH-12,6); ctx.stroke();
         ctx.fillStyle="#ffffff"; ctx.font="bold 11px Arial";
-        const txt=`${cb.flight} ${cb.baiDo||""}`;
+        const txt=`${cb.flight}`;
         ctx.save(); ctx.beginPath(); ctx.rect(x+2,y+6,w-4,rowH-12); ctx.clip(); ctx.fillText(txt,x+5,y+22); ctx.restore();
       });
     });
