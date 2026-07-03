@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.40c Attendance Override</title>
+<title>Dương Tú v1.40d</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -2729,8 +2729,7 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
 <input id="baiDo" class="standInput" placeholder="Bãi">
 <input id="soNguoiToiThieu" type="number" min="1" value="2" title="Số người tối thiểu" placeholder="Số người tối thiểu" class="minStaffInput">
 <select id="caPhuTrachChuyen" title="Ca thực hiện chuyến">
-  <option value="">Ca: tự động</option>
-  <option value="tatca">Ca: tất cả</option>
+  <option value="tatca">Chưa xác định</option>
   <option value="1">Ca 1</option>
   <option value="2">Ca 2</option>
   <option value="3">Ca 3</option>
@@ -6723,7 +6722,7 @@ function moModalDichVu(){
 function clearFormChuyen(){
   ["flight","sta","eta","std","etd","baiDo","ghiChuChuyen","dichVuChuyen"].forEach(id=>{const el=$(id); if(el)el.value="";});
   capNhatNutDichVu();
-  setVal("soNguoiToiThieu",2); setVal("caPhuTrachChuyen","");
+  setVal("soNguoiToiThieu",2); setVal("caPhuTrachChuyen","tatca");
 }
 function updateRealtimeStats(){
   const now=hienTaiAbs();
@@ -6796,7 +6795,7 @@ function biKhoaThaoTacTheoGio(){
 }
 function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); khoaAutoDenHan(); veBangTaiKhoan(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); veBangYeuCauHang(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatDongHo(); capNhatNutAutoNhanSu(); capNhatNutDichVu(); updateRealtimeStats(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
-function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; setVal("sta",cb.sta||""); $("eta").value=cb.eta; $("std").value=cb.std; setVal("etd",cb.etd||""); $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setDichVuTickFromNote(cb.ghiChu||""); setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); setVal("caPhuTrachChuyen",cb.caPhuTrach||""); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa(); if(liveFollow)setTimeout(canhTheoVachHienTai,100); }
+function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; setVal("sta",cb.sta||""); $("eta").value=cb.eta; $("std").value=cb.std; setVal("etd",cb.etd||""); $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setDichVuTickFromNote(cb.ghiChu||""); setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||"tatca"); setVal("caPhuTrachChuyen",cb.caPhuTrach||"tatca"); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa(); if(liveFollow)setTimeout(canhTheoVachHienTai,100); }
 function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; clearFormChuyen(); veTatCa(); }
 
 function xoaChuyenDangChon(){
@@ -6896,8 +6895,8 @@ function canhBaoGioChuyenTheoCa(cb){
   const segs=caLonSegmentsTheoCa(ca);
   if(!segs.length)return `Ca ${ca} chưa có nhân sự/giờ ca để kiểm tra.`;
   const start=batDauAbs(cb),end=ketThucAbs(cb);
-  const vaoMin=Math.min(...segs.map(s=>s.vao));
-  const raMax=Math.max(...segs.map(s=>s.ra));
+  const vaoMin=Math.min(...segs.map(s=>s.vao)); // giờ vào sớm nhất trong các ca nhỏ
+  const raMax=Math.max(...segs.map(s=>s.ra));   // giờ về muộn nhất trong các ca nhỏ
   if(start<vaoMin){
     return `Chuyến ${cb.flight} bắt đầu phục vụ lúc ${gioTuPhut(start)}, trước giờ vào sớm nhất của Ca ${ca} (${gioTuPhut(vaoMin)}).`;
   }
@@ -6926,7 +6925,7 @@ function themSuaChuyen(){
   const baiDo=$("baiDo").value.trim();
   const ghiChu=ghiChuTuTick();
   const soNguoiToiThieu=Math.max(1,parseInt(val("soNguoiToiThieu")||"2",10)||2);
-  const caPhuTrach=val("caPhuTrachChuyen")||"";
+  const caPhuTrach=val("caPhuTrachChuyen")||"tatca";
 
   if(!flight||!baiDo)return alert("Nhập Chuyến bay và Bãi đỗ.");
   if(staRaw&&!sta)return alert("STA sai định dạng. Nhập 2300 hoặc 23:00.");
@@ -6945,7 +6944,7 @@ function themSuaChuyen(){
       $("std").value=trung.std; setVal("etd",trung.etd||"");
       $("baiDo").value=trung.baiDo;
       $("ghiChuChuyen").value=trung.ghiChu||""; setDichVuTickFromNote(trung.ghiChu||"");
-      setVal("soNguoiToiThieu",trung.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",trung.caPhuTrach||"");
+      setVal("soNguoiToiThieu",trung.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",trung.caPhuTrach||"tatca");
       veTatCa();
     }
     return;
@@ -7263,15 +7262,14 @@ function caChuyenLabel(v){
 }
 function caPhuTrachOptionsHtml(value){
   const opts=[
-    ["","Tự động"],
-    ["tatca","Tất cả"],
+    ["tatca","Chưa xác định"],
     ["1","Ca 1"],
     ["2","Ca 2"],
     ["3","Ca 3"],
     ["4","Ca 4"],
     ["5","Ca 5"]
   ];
-  return opts.map(([v,t])=>`<option value="${v}" ${String(value||"")===v?"selected":""}>${t}</option>`).join("");
+  return opts.map(([v,t])=>`<option value="${v}" ${String(value||"tatca")===v?"selected":""}>${t}</option>`).join("");
 }
 function doiCaPhuTrachChuyen(ma,val){
   const cb=chuyen(ma);
