@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú v1.34 Detailed Logs Admin Presence</title>
+<title>Dương Tú v1.35 Fairness Flight Count First</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -7289,17 +7289,19 @@ function diemUngVienThuong(ns,cb,pool){
   const p=phanLoaiGoiY(ns,cb);
   const idle=phutRanhLienTucTaiMoc(ns,cb);
 
-  // v1.31:
-  // 1. Đúng điều kiện / rảnh ở mốc chuyến.
-  // 2. Rảnh liên tục lâu hơn phải đi trước, tránh người ngồi chơi dài cổ.
-  // 3. Sau đó mới xét tải theo giờ có mặt, phút làm, số chuyến.
-  // 4. Cuối cùng mới xét giữ chứng chỉ/chiều sâu.
+  // v1.35:
+  // Công bằng thực tế ramp:
+  // - Rảnh lâu vẫn phải kéo ra làm trước.
+  // - Nhưng "số chuyến đã làm" quan trọng hơn "tổng phút làm".
+  //   Một chuyến kéo dài 3 tiếng không nên bị tính nặng như nhiều chuyến riêng lẻ.
+  // - Phút làm chỉ dùng làm tiêu chí phụ sau số chuyến.
   return [
     p.nhom,
     diemRanhUuTien(ns,cb),
+    load.so,
+    Math.round(load.chuyenMoiGio*10000),
     Math.round(load.ratio*10000),
     load.tg,
-    load.so,
     p.sub||0,
     bacChungChiVanHanh(ns,pool),
     diemChienLuocChungChi(ns,pool),
@@ -7310,13 +7312,14 @@ function diemUngVienSlot(ns,cb,pool){
   const load=taiLamViecTaiMoc(ns,cb);
   const p=phanLoaiGoiY(ns,cb);
 
-  // Slot bắt buộc: đúng chứng chỉ trước rồi vẫn ưu tiên người rảnh lâu.
+  // Slot bắt buộc: đúng chứng chỉ trước, sau đó xét rảnh lâu và số chuyến.
   return [
     p.nhom,
     diemRanhUuTien(ns,cb),
+    load.so,
+    Math.round(load.chuyenMoiGio*10000),
     Math.round(load.ratio*10000),
     load.tg,
-    load.so,
     p.sub||0,
     bacChungChiVanHanh(ns,pool),
     String(ns.ten||"")
@@ -7355,12 +7358,18 @@ function diemChieuSauConLai(all,selected){
   return score;
 }
 function diemCongBangNhom(selected,cb){
-  // Nhóm tốt là nhóm kéo được người đã rảnh lâu ra làm,
-  // sau đó mới cân bằng theo tải trong giờ có mặt.
+  // v1.35:
+  // Nhóm tốt là nhóm kéo người rảnh lâu ra làm,
+  // nhưng không được bắt người đã làm nhiều chuyến làm tiếp chỉ vì người khác vừa có 1 chuyến dài.
   return selected.reduce((s,it)=>{
     const load=taiLamViecTaiMoc(it.ns,cb);
     const idle=phutRanhLienTucTaiMoc(it.ns,cb);
-    return s + (-idle*9000) + Math.round(load.ratio*600000) + load.tg*35 + load.so*700;
+    return s
+      + (-idle*7000)
+      + load.so*220000
+      + Math.round(load.chuyenMoiGio*120000)
+      + Math.round(load.ratio*90000)
+      + load.tg*12;
   },0);
 }
 function taoToHop(arr,k,limit=120){
@@ -7437,9 +7446,14 @@ function diemPhuongAn(selected,cb,pool,slots){
   // nhưng không phạt quá mức để còn cân bằng cơ cấu đội.
   const selectedSet=new Set(selected.map(it=>it.ns.ma));
   const maxIdle=Math.max(...pool.map(ns=>phutRanhLienTucTaiMoc(ns,cb)));
+  const minFlights=Math.min(...pool.map(ns=>taiLamViecTaiMoc(ns,cb).so));
   const skippedDebt=pool
     .filter(ns=>!selectedSet.has(ns.ma))
-    .filter(ns=>phutRanhLienTucTaiMoc(ns,cb)>=Math.max(0,maxIdle-10))
+    .filter(ns=>{
+      const load=taiLamViecTaiMoc(ns,cb);
+      const idle=phutRanhLienTucTaiMoc(ns,cb);
+      return load.so===minFlights && idle>=Math.max(0,maxIdle-15);
+    })
     .length;
 
   const balance=diemCanBangCoCau(selected,cb,pool,slots);
@@ -7498,8 +7512,8 @@ function hienGoiYNhanSu(){
   lines.push(`Cần tối thiểu: ${need} người`);
   lines.push(`Cần chứng chỉ: ${yc}`);
   lines.push("");
-  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - ưu tiên người rảnh lâu, rồi tính tải theo giờ có mặt`);
-  lines.push("Rule Engine v1.32: đúng ca → rảnh lâu hơn → tải theo giờ có mặt → cân bằng cấp 1/cấp 2 → slot bắt buộc → fallback đầu kéo có xác nhận.");
+  lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - ưu tiên rảnh lâu, số chuyến trước, phút làm sau`);
+  lines.push("Rule Engine v1.35: đúng ca → rảnh lâu → ít chuyến hơn → tải theo giờ có mặt → slot bắt buộc → fallback đầu kéo.");
   lines.push("");
   lines.push("Đề xuất:");
 
