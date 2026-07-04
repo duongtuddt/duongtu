@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v16a</title>
+<title>Dương Tú index 17</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1137,7 +1137,76 @@ body.taskOnly #khoiYeuCau .scroll{
 .logTime{color:#8fb0d4;font-size:12px}
 .logAction{color:#facc15;font-weight:900}
 .logUser{color:#66ff99;font-weight:900}
-.logDetail{margin-top:4px;color:#d8ebff}
+ .logDetail{margin-top:4px;color:#d8ebff}.logDetailInline{color:#d8ebff}
+
+/* v16c - hiển thị log 2 dòng, dễ đọc theo người thao tác / tác vụ / chuyến bay */
+.logLine{
+  display:grid;
+  gap:7px;
+  border-left:5px solid #38bdf8!important;
+}
+.logLineTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  padding-bottom:5px;
+  border-bottom:1px solid rgba(56,189,248,.16);
+}
+.logMainLeft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.logUserChip{
+  color:#66ff99;
+  font-weight:950;
+  font-size:14px;
+}
+.logPipe{color:#5f8ab9;font-weight:900}
+.logActionChip{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid #7c5c16;
+  background:#2b2109;
+  color:#facc15;
+  border-radius:999px;
+  padding:3px 9px;
+  font-weight:950;
+  letter-spacing:.2px;
+}
+.logDateChip{
+  color:#8fb0d4;
+  font-size:12px;
+  font-weight:800;
+}
+.logLineBottom{
+  color:#d8ebff;
+  line-height:1.45;
+  white-space:normal;
+  word-break:break-word;
+}
+.logTimeStrong{color:#7dd3fc;font-weight:950}
+.logFieldName{color:#b7d5ff;font-weight:950}
+.logFlightChip{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid #315984;
+  background:#071426;
+  color:#fff;
+  border-radius:7px;
+  padding:1px 7px;
+  margin:0 2px;
+  font-weight:950;
+}
+.logStaffText{color:#eaf3ff;font-weight:850}
+.logRawDetail{
+  margin-top:3px;
+  color:#8fb0d4;
+  font-size:12px;
+}
+@media(max-width:900px){
+  .logUserChip{font-size:12px!important}
+  .logActionChip{font-size:11px!important;padding:2px 7px!important}
+  .logLineBottom{font-size:11px!important}
+}
 .passwordBox{
   border:1px dashed var(--line);
   border-radius:10px;
@@ -4489,12 +4558,20 @@ body.dashboardOnly header > .row{
   </div>
   <div id="logContent" class="hidden">
     <div class="logToolbar">
-      <input id="tenNguoiDung" placeholder="Tên người dùng VD: Dương Tú" style="width:260px">
-      <button class="primary" id="nutLuuTenNguoiDung">Lưu tên</button>
+      <label>Ngày bắt đầu xem
+        <input id="logTuNgay" type="date">
+      </label>
+      <label>Ngày kết thúc xem
+        <input id="logDenNgay" type="datetime-local">
+      </label>
+      <label>Người thao tác
+        <input id="tenNguoiDung" list="logUserList" autocomplete="off" placeholder="Bấm chọn hoặc gõ tên" style="width:260px">
+        <datalist id="logUserList"></datalist>
+      </label>
       <button class="ghost" id="nutLamMoiLog">Làm mới log</button>
       <button class="danger" id="nutXoaLog">Xóa log hiển thị</button>
     </div>
-    <div class="hint">Log dùng để kiểm tra ai đã thêm/sửa/xóa/phân công. Dữ liệu log cũng đồng bộ Firebase.</div>
+    <div class="hint">Chọn khoảng ngày hoặc chọn tên người thao tác, danh sách phía dưới sẽ tự lọc.</div>
     <div id="bangLog" style="margin-top:8px"></div>
   </div>
 </div>
@@ -6275,9 +6352,11 @@ function tenNguoiDungHienTai(){
 }
 function logAction(action, detail, extra={}){
   if(!state.auditLogs)state.auditLogs=[];
+  const now=new Date();
   const item={
     id:"LOG"+Date.now()+"_"+Math.random().toString(16).slice(2),
-    time:new Date().toLocaleString("vi-VN"),
+    time:now.toLocaleString("vi-VN"),
+    ts:now.toISOString(),
     user:tenNguoiDungHienTai(),
     action,
     detail,
@@ -6348,6 +6427,31 @@ function veDangChinhSua(){
   el.classList.remove("hidden");
   el.textContent=`🟢 ${v.user} đang chỉnh ${v.label||v.target||"dữ liệu"}`;
 }
+function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]||m));}
+function pad2(n){return String(n).padStart(2,"0");}
+function dateInputValue(d){return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;}
+function dateTimeInputValue(d){return `${dateInputValue(d)}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;}
+function khoiTaoBoLocLog(){
+  const now=new Date();
+  if($("logTuNgay") && !$("logTuNgay").value) $("logTuNgay").value=dateInputValue(now);
+  if($("logDenNgay") && !$("logDenNgay").value) $("logDenNgay").value=dateTimeInputValue(now);
+}
+function parseLogDate(x){
+  if(x.ts){const d=new Date(x.ts); if(!isNaN(d))return d;}
+  const t=String(x.time||"").trim();
+  const m=t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}).*?(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(m)return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),Number(m[4]),Number(m[5]),Number(m[6]||0));
+  if(x.ngay){const d=new Date(String(x.ngay)+"T12:00:00"); if(!isNaN(d))return d;}
+  return null;
+}
+function capNhatGoiYNguoiLog(){
+  const dl=$("logUserList"); if(!dl)return;
+  const set=new Set();
+  (state.auditLogs||[]).forEach(x=>{if(x.user)set.add(String(x.user));});
+  (state.danhSachNhanSu||[]).forEach(ns=>{if(ns.ten)set.add(String(ns.ten));});
+  Object.values(state.accounts||{}).forEach(acc=>{if(acc.fullName)set.add(String(acc.fullName));});
+  dl.innerHTML=[...set].sort((a,b)=>a.localeCompare(b,"vi")).map(n=>`<option value="${escapeHtml(n)}"></option>`).join("");
+}
 function moLog(){
   if($("logPassword").value!==LOG_PASSWORD){
     alert("Sai mật khẩu log.");
@@ -6355,20 +6459,89 @@ function moLog(){
   }
   $("logLock").classList.add("hidden");
   $("logContent").classList.remove("hidden");
-  $("tenNguoiDung").value=tenNguoiDungHienTai();
+  khoiTaoBoLocLog();
+  capNhatGoiYNguoiLog();
+  if($("tenNguoiDung")) $("tenNguoiDung").value="";
   veLog();
+}
+function tachTenNhanSuTuLog(detail){
+  const raw=String(detail||"");
+  let names=[];
+  const them=(v)=>{
+    String(v||"").split(/\s*(?:-|–|—|,|;|\/|\+| và )\s*/i).forEach(n=>{
+      n=n.replace(/^(Đã thêm:|Tạm chọn:|Nhân sự:|NS:)/i,"").trim();
+      n=n.replace(/\s*(→|->).*$/g,"").trim();
+      if(n && !names.includes(n))names.push(n);
+    });
+  };
+  const mThem=raw.match(/(?:Đã thêm|Tạm chọn|Nhân sự|NS)\s*:\s*([^\n|]+)/i);
+  if(mThem) them(mThem[1]);
+  const mArrow=raw.match(/^([^\n|]+?)\s*(?:→|->)\s*/);
+  if(mArrow) them(mArrow[1]);
+  return names.slice(0,6);
+}
+function timChuyenTuLog(x){
+  const detail=String(x.detail||"");
+  const all=state.danhSachChuyenBay||[];
+  if(x.maChuyen){
+    const cb=all.find(c=>c.ma===x.maChuyen);
+    if(cb)return cb;
+  }
+  for(const cb of all){
+    if(cb.flight && detail.includes(cb.flight))return cb;
+  }
+  const m=detail.match(/([A-Z0-9]{2,4}\s*\d{2,4}(?:\s*\/\s*\d{2,4})?)/i);
+  if(m){
+    return {flight:m[1].replace(/\s+/g,""), eta:"", std:"", baiDo:""};
+  }
+  return null;
+}
+function formatLogDongHai(x){
+  const cb=timChuyenTuLog(x);
+  const d=parseLogDate(x);
+  const time=x.time|| (d?d.toLocaleString("vi-VN"):"");
+  const action=String(x.action||"TÁC VỤ");
+  const staff=tachTenNhanSuTuLog(x.detail).join(" - ");
+  const flight=cb?.flight||"--";
+  const eta=cb?gioHienThi(cb.eta):"--";
+  const std=cb?gioHienThi(cb.std):"--";
+  const sta=cb?.sta?gioHienThi(cb.sta):eta;
+  const stand=cb?.baiDo?normBaiDo(cb.baiDo):"--";
+  const raw=String(x.detail||"").trim();
+  const rawHtml=raw?`<div class="logRawDetail">Chi tiết gốc: ${escapeHtml(raw).replace(/\n/g,"<br>")}</div>`:"";
+  return `<span class="logTimeStrong">THỜI GIAN THỰC HIỆN TÁC VỤ: ${escapeHtml(time)}</span>: `+
+    `<span class="logFieldName">${escapeHtml(action)}</span>: `+
+    `<span class="logFlightChip">${escapeHtml(flight)}</span> | `+
+    `STA ${escapeHtml(sta)} | ETA ${escapeHtml(eta)} | STD ${escapeHtml(std)} | `+
+    `BÃI ĐỖ ${escapeHtml(stand)} | `+
+    `<span class="logStaffText">${staff?escapeHtml(staff):"--"}</span>`+
+    rawHtml;
 }
 function veLog(){
   const el=$("bangLog"); if(!el)return;
-  const ds=(state.auditLogs||[]).slice(0,200);
-  if(!ds.length){el.innerHTML='<div class="hint">Chưa có log.</div>';return;}
+  khoiTaoBoLocLog();
+  capNhatGoiYNguoiLog();
+  const tuVal=$("logTuNgay")?.value||"";
+  const denVal=$("logDenNgay")?.value||"";
+  const tu=tuVal?new Date(tuVal+"T00:00:00"):null;
+  const den=denVal?new Date(denVal):null;
+  const q=String($("tenNguoiDung")?.value||"").trim().toLowerCase();
+  const ds=(state.auditLogs||[]).filter(x=>{
+    const d=parseLogDate(x);
+    if(tu && d && d<tu)return false;
+    if(den && d && d>den)return false;
+    if(q && !String(x.user||"").toLowerCase().includes(q))return false;
+    return true;
+  }).slice(0,200);
+  if(!ds.length){el.innerHTML='<div class="hint">Không có log phù hợp bộ lọc.</div>';return;}
   el.innerHTML=ds.map(x=>`<div class="logLine">
-    <div><span class="logAction">${x.action}</span> · <span class="logUser">${x.user||""}</span></div>
-    <div class="logTime">${x.time||""} · Ngày ${x.ngay||""}</div>
-    <div class="logDetail">${x.detail||""}</div>
+    <div class="logLineTop">
+      <div class="logMainLeft"><span class="logUserChip">${escapeHtml(x.user||"")}</span><span class="logPipe">|</span><span class="logActionChip">${escapeHtml(x.action||"")}</span></div>
+      <div class="logDateChip">Ngày khai thác: ${escapeHtml(x.ngay||"--")}</div>
+    </div>
+    <div class="logLineBottom">${formatLogDongHai(x)}</div>
   </div>`).join("");
 }
-
 
 const TEN_CA={tatca:"Tất cả",TRUC:"Cán bộ",KD:"Kéo đẩy","1":"Ca 1","2":"Ca 2","3":"Ca 3","4":"Ca 4","5":"Ca 5","6":"Ca 6/OFF"};
 const CA_KEYS=["tatca","TRUC","KD","1","2","3","4","5","6"];
@@ -7321,6 +7494,28 @@ function caScopeChuyen(cb){
   if(pcs.length)return caCuaNV(pcs[0].maNV);
   return "";
 }
+function caLocHienTai(){
+  return isAdmin()?state.caDangLoc:caQuanLyTheoDangNhap();
+}
+function chuyenThuocBoLocCa(cb){
+  const loc=caLocHienTai();
+  if(loc==="tatca")return true;
+
+  // Ưu tiên lọc theo trường "Ca thực hiện chuyến" của chính chuyến bay.
+  // Như vậy bấm Ca 1 chỉ hiện các chuyến thuộc Ca 1, không bị lẫn theo nhân sự đã phân.
+  const scope=String(cb?.caPhuTrach||"").trim();
+  if(scope && scope!=="tatca")return scope===loc;
+
+  // Chuyến chọn "Tất cả" là chuyến dùng chung, cho hiện ở mọi ca.
+  if(scope==="tatca")return true;
+
+  // Dữ liệu cũ chưa có caPhuTrach: fallback theo ca của nhân sự đã phân.
+  const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc));
+  if(pcs.length)return pcs.some(pc=>caCuaNV(pc.maNV)===loc);
+
+  // Chưa có ca và chưa có nhân sự thì chỉ hiện ở bộ lọc Tất cả.
+  return false;
+}
 function thoiGianNamSanText(cb){
   const e=etaAbs(cb), s=stdAbs(cb);
   if(e===null || s===null)return "";
@@ -7337,16 +7532,7 @@ function veTimelineChuyen(){
   state.danhSachChuyenBay
     .filter(cb=>cb.ngay===state.ngayKhaiThac)
     .filter(cb=>chuyenKhopTuKhoa(cb,state.timChuyen||""))
-    .filter(cb=>{
-      if(state.caDangLoc==="tatca") return true;
-      const pcsAll=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc));
-
-      // Chuyến chưa phân người thì hiện ở tất cả các ca để ca nào cũng thấy và nhận chuyến được.
-      if(pcsAll.length===0) return true;
-
-      // Khi đã có người, chuyến chỉ hiện ở đúng ca của nhân sự đã phân.
-      return pcsAll.some(pc=>caCuaNV(pc.maNV)===state.caDangLoc);
-    })
+    .filter(cb=>chuyenThuocBoLocCa(cb))
     .sort((a,b)=>batDauAbs(a)-batDauAbs(b))
     .forEach(cb=>{
       const pcs=state.phanCong.filter(pc=>pc.maChuyen===cb.ma&&pcTrongNgayKhaiThac(pc)&&(pcDangHieuLuc(pc)||pc.thuHoi)&&(state.caDangLoc==="tatca"||caCuaNV(pc.maNV)===state.caDangLoc));
@@ -7361,7 +7547,9 @@ function veTimelineChuyen(){
       const bdCB=batDauAbs(cb), ktCB=ketThucAbs(cb);
       const dangLive=bdCB<=nowLive && nowLive<=ktCB;
       const mau=mauChuyen(cb.ma), left=viTri(bdCB), width=rong(bdCB,ktCB), sel=cb.ma===chuyenDangChon;
-      const ca=mauCaChuyen(cb.ma), caCls=caClass(ca), caScope=caScopeChuyen(cb), scopeCls=caScope?caClass(caScope):"";
+      const caScope=caScopeChuyen(cb);
+      const ca=caScope || mauCaChuyen(cb.ma);
+      const caCls=caClass(ca), scopeCls=caScope?caClass(caScope):"";
       const mon=theoDoiChuyen(cb);
       const cbWarn=shortCanhBaoCap(cb);
       const fallbackTowWarn=shortCanhBaoDauKeoFallback(cb);
@@ -10113,7 +10301,8 @@ $("nutLamMoiYeuCau").onclick=lamMoiYeuCau;
 $("nutThemSuaGhiChu").onclick=themSuaYeuCauGhiChu;
 $("nutLamMoiGhiChu").onclick=lamMoiYeuCauGhiChu;
 $("nutMoLog").onclick=moLog;
-$("nutLuuTenNguoiDung").onclick=()=>{localStorage.setItem("ramp_current_user",$("tenNguoiDung").value.trim()||"Người dùng");alert("Đã lưu tên người dùng.");};
+$("logPassword").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();moLog();}});
+["logTuNgay","logDenNgay","tenNguoiDung"].forEach(id=>{const el=$(id); if(el)el.addEventListener("input",veLog);});
 $("nutLamMoiLog").onclick=veLog;
 $("nutXoaLog").onclick=()=>{if(confirm("Xóa toàn bộ log hiển thị?")){logAction("XÓA LOG","Người dùng đã xóa log hiển thị");state.auditLogs=[];luu();veLog();}};
 $("tabLogin").onclick=()=>showLoginTab("login");
