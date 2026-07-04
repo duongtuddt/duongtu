@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v15_full_labels</title>
+<title>Dương Tú index_v15a Firebase Only</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4134,6 +4134,12 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
   min-height:66px!important;
 }
 
+
+/* index_v15a - Firebase only: hiện trạng thái để tránh thao tác khi chưa tải xong */
+#fbStatus{
+  display:inline-block!important;
+}
+
 </style>
 </head>
 <body>
@@ -4833,8 +4839,9 @@ function duLieuMau(){
   };
 }
 let state;
-try{state=JSON.parse(localStorage.getItem(KHO_LUU)||"null");}catch(e){state=null;}
-if(!state || !Array.isArray(state.danhSachNhanSu) || !Array.isArray(state.danhSachChuyenBay)){state=duLieuMau();}
+// v15a: Firebase là nguồn dữ liệu chính. Không nạp state từ localStorage nữa
+// để tránh máy đang có dữ liệu cũ/trống mở lên rồi ghi đè lên dữ liệu chung.
+state=duLieuMau();
 if(!state.ngayPhanCa) state.ngayPhanCa = state.ngayKhaiThac || homNayLocal();
 
 if(!Array.isArray(state.auditLogs)) state.auditLogs=[];
@@ -5689,6 +5696,7 @@ thayNhanSuChuanV047();
 
 
 let firebaseReady=false;
+let firebaseLoaded=false;
 let dangNhanFirebase=false;
 let saveTimer=null;
 let lastRemoteJson="";
@@ -5724,52 +5732,67 @@ function taoBanLuuFirebase(){
 }
 
 function luu(){
-  localStorage.setItem(KHO_LUU,JSON.stringify(state));
-  if(firebaseReady && !dangNhanFirebase){
-    localDirty=true;
-    lastLocalWriteAt=Date.now();
-    const jsonLocal=JSON.stringify(state);
-    // Cập nhật dấu vết local ngay để snapshot echo từ chính máy này không ghi đè ngược UI.
-    lastRemoteJson=jsonLocal;
-    clearTimeout(saveTimer);
-    saveTimer=setTimeout(async()=>{
-      try{
-        await fbDb.collection(FIREBASE_DOC_PATH[0]).doc(FIREBASE_DOC_PATH[1]).set(taoBanLuuFirebase(),{merge:true});
-        lastRemoteJson=JSON.stringify(state);
-        localDirty=false;
-      }catch(e){
-        console.error(e);
-        fbSetStatus("Firebase: lỗi lưu","err");
-        localDirty=false;
-      }
-    },350);
+  // v15a: chỉ lưu lên Firebase. Không lưu state vào localStorage.
+  // Nếu Firebase chưa tải xong thì tuyệt đối không cho ghi để tránh máy local cũ/trống đè dữ liệu chung.
+  if(dangNhanFirebase)return;
+  if(!firebaseReady || !firebaseLoaded || !fbDb){
+    fbSetStatus("Firebase: chưa sẵn sàng, chưa lưu","err");
+    console.warn("Firebase chưa sẵn sàng - bỏ qua lưu để tránh ghi đè dữ liệu chung.");
+    return;
   }
+
+  localDirty=true;
+  lastLocalWriteAt=Date.now();
+  const jsonLocal=JSON.stringify(state);
+  lastRemoteJson=jsonLocal;
+
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{
+    try{
+      await fbDb.collection(FIREBASE_DOC_PATH[0]).doc(FIREBASE_DOC_PATH[1]).set(taoBanLuuFirebase(),{merge:true});
+      lastRemoteJson=JSON.stringify(state);
+      localDirty=false;
+      fbSetStatus("Firebase: đã lưu","ok");
+    }catch(e){
+      console.error(e);
+      fbSetStatus("Firebase: lỗi lưu","err");
+      localDirty=false;
+    }
+  },80);
 }
 
 async function khoiDongFirebase(){
   try{
     fbSetStatus("Firebase: kết nối","sync");
-    firebase.initializeApp(FIREBASE_CONFIG);
+    if(!firebase.apps || !firebase.apps.length){
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
     fbDb=firebase.firestore();
     const ref=fbDb.collection(FIREBASE_DOC_PATH[0]).doc(FIREBASE_DOC_PATH[1]);
     const snap=await ref.get();
+
+    firebaseReady=true;
 
     if(snap.exists && snap.data() && snap.data().data){
       dangNhanFirebase=true;
       state=snap.data().data;
       if(!state.accounts)state.accounts={}; seedAdminAccount();
-      localStorage.setItem(KHO_LUU,JSON.stringify(state));
+      migrateAccountIdsCaseInsensitive();
+      if(state.autoNhanSuOn===undefined) state.autoNhanSuOn=false;
       lastRemoteJson=JSON.stringify(state);
       dangNhanFirebase=false;
+      firebaseLoaded=true;
       fbSetStatus("Firebase: đã tải","ok");
       veTatCa();
     }else{
+      // Chỉ tạo dữ liệu mới khi Firebase xác nhận document thật sự chưa tồn tại.
+      // Không lấy localStorage làm nguồn tạo để tránh đẩy dữ liệu cũ/trống từ máy lạ.
+      firebaseLoaded=true;
       await ref.set(taoBanLuuFirebase(),{merge:true});
       lastRemoteJson=JSON.stringify(state);
-      fbSetStatus("Firebase: đã tạo dữ liệu","ok");
+      fbSetStatus("Firebase: đã tạo dữ liệu mới","ok");
+      veTatCa();
     }
-
-    firebaseReady=true;
 
     if(fbUnsub)fbUnsub();
     fbUnsub=ref.onSnapshot(s=>{
@@ -5779,16 +5802,17 @@ async function khoiDongFirebase(){
       if(json===lastRemoteJson)return;
       if(json===JSON.stringify(state))return;
 
-      // v0.97: đang thao tác local thì không nhận ngược snapshot cũ làm mất tick/chớp UI.
-      if(localDirty && Date.now()-lastLocalWriteAt<2500){
+      if(localDirty && Date.now()-lastLocalWriteAt<1200){
         return;
       }
 
       dangNhanFirebase=true;
       state=incoming;
       if(!state.accounts)state.accounts={}; seedAdminAccount();
-      localStorage.setItem(KHO_LUU,JSON.stringify(state));
+      migrateAccountIdsCaseInsensitive();
+      if(state.autoNhanSuOn===undefined) state.autoNhanSuOn=false;
       lastRemoteJson=json;
+      firebaseLoaded=true;
       dangNhanFirebase=false;
       veTatCa();
     },err=>{
@@ -5798,7 +5822,8 @@ async function khoiDongFirebase(){
   }catch(e){
     console.error(e);
     firebaseReady=false;
-    fbSetStatus("Firebase: lỗi kết nối","err");
+    firebaseLoaded=false;
+    fbSetStatus("Firebase: lỗi kết nối - không dùng local","err");
   }
 }
 
@@ -10238,12 +10263,12 @@ function toggleLiveFollow(){
 
 suaDieuDongCu();
 document.body.classList.add("dashboardOnly");
-veTatCa();
+// v15a: Không veTatCa() trước khi Firebase tải xong, tránh nhìn/thaotác trên dữ liệu local tạm.
 khoiDongFirebase();
 dongBoKeoTimeline();
 capNhatNutLive();
 capNhatNutAutoNhanSu();
-setTimeout(()=>{canhTheoVachHienTai(); liveFollow=false; capNhatNutLive();},120);
+setTimeout(()=>{canhTheoVachHienTai(); liveFollow=false; capNhatNutLive();},350);
 </script>
 </body>
 </html>
