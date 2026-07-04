@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v16</title>
+<title>Dương Tú index_v16a</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4166,6 +4166,15 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
 #timelineChuyenBay .bar.flight.warn,
 #timelineChuyenBay .bar.flight.miss{
   border-top-width:5px!important;
+}
+
+
+/* index_v16a - Thanh ngày làm việc / lọc ca / LIVE chỉ hiện ở Dashboard */
+body.taskOnly header > .row{
+  display:none!important;
+}
+body.dashboardOnly header > .row{
+  display:flex!important;
 }
 
 </style>
