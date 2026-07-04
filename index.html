@@ -11923,6 +11923,7 @@ setInterval(()=>{
 
 
 let timelineScrollLeftMemory=null;
+let timelineCanhLanDau=false;
 let liveFollow=false;
 
 function dongBoKeoTimeline(){
@@ -11989,10 +11990,29 @@ function dongBoViTriSauRender(){
   const b=document.getElementById("khungTimelineNhanSu");
   if(!a||!b)return;
 
+  if(timelineScrollLeftMemory===null && !timelineCanhLanDau){
+    canhTimelineKhiMoLen();
+    return;
+  }
+
   const x=timelineScrollLeftMemory!==null ? timelineScrollLeftMemory : a.scrollLeft;
   a.scrollLeft=x;
   b.scrollLeft=x;
 }
+
+function canhTimelineKhiMoLen(){
+  if(timelineCanhLanDau)return;
+  timelineCanhLanDau=true;
+
+  [0,80,220,500].forEach(ms=>{
+    setTimeout(()=>{
+      canhTheoVachHienTai();
+      const a=document.getElementById("khungTimelineChuyenBay");
+      if(a)timelineScrollLeftMemory=a.scrollLeft;
+    },ms);
+  });
+}
+
 function canhTheoVachHienTai(){
   const a=document.getElementById("khungTimelineChuyenBay");
   const b=document.getElementById("khungTimelineNhanSu");
@@ -12049,6 +12069,7 @@ document.body.classList.add("dashboardOnly");
 // v15a: Không veTatCa() trước khi Firebase tải xong, tránh nhìn/thaotác trên dữ liệu local tạm.
 khoiDongFirebase();
 dongBoKeoTimeline();
+canhTimelineKhiMoLen();
 capNhatNutLive();
 capNhatNutAutoNhanSu();
 setTimeout(()=>{canhTheoVachHienTai(); liveFollow=false; capNhatNutLive();},350);
