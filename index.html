@@ -3905,8 +3905,8 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
    --flightInfoCardHeight = chiều cao ô thông tin bên trái
 */
 :root{
-  --flightInfoRowHeight:86px;
-  --flightInfoCardHeight:78px;
+  --flightInfoRowHeight:64px;
+  --flightInfoCardHeight:56px;
 }
 
 /* Ép riêng dòng Realtime chuyến bay, không để .tlRow chung 62px ghi đè */
@@ -4652,6 +4652,65 @@ body.dashboardOnly header > .row{
   color:#facc15!important;
   background:#1f1304!important;
   border:1px solid #facc15!important;
+}
+
+/* index_v17ae - realtime chuyến bay: card trái chỉ giữ mã chuyến, chọn ca, fr24 và bãi đỗ */
+#timelineChuyenBay .flightRtCard{
+  height:var(--flightInfoCardHeight)!important;
+  min-height:var(--flightInfoCardHeight)!important;
+  padding:6px 8px!important;
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:6px!important;
+}
+#timelineChuyenBay .flightRtCard .flightLabelTop{
+  width:100%!important;
+  min-height:26px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:5px!important;
+  padding-right:42px!important;
+  box-sizing:border-box!important;
+}
+#timelineChuyenBay .flightRtCard .flightLabelNo{
+  font-size:13px!important;
+  line-height:18px!important;
+}
+#timelineChuyenBay .flightRtCard .flightLabelTime,
+#timelineChuyenBay .flightRtCard .flightLabelMeta,
+#timelineChuyenBay .flightRtCard .flightLabelWarn{
+  display:none!important;
+}
+#timelineChuyenBay .flightRtCard .flightCaSelect{
+  width:42px!important;
+  min-width:42px!important;
+  max-width:42px!important;
+  margin:0!important;
+}
+#timelineChuyenBay .flightRtCard .fr24Btn{
+  flex:0 0 auto!important;
+}
+#timelineChuyenBay .fr24Btn.fr24-red{
+  background:#3a0710!important;
+  border-color:#ef4444!important;
+  color:#fecaca!important;
+}
+#timelineChuyenBay .fr24Btn.fr24-yellow{
+  background:#3a2a05!important;
+  border-color:#facc15!important;
+  color:#fde68a!important;
+}
+#timelineChuyenBay .fr24Btn.fr24-green{
+  background:#052e16!important;
+  border-color:#22c55e!important;
+  color:#bbf7d0!important;
+  cursor:not-allowed!important;
+  opacity:.92!important;
+}
+#timelineChuyenBay .flightRtCard .standPill{
+  right:6px!important;
 }
 
 </style>
@@ -6409,6 +6468,12 @@ const ACCOUNT_ADMIN_ID="tudd";
 const ACCOUNT_ADMIN_PASSWORD="Abc123@@";
 const FR24_API_KEY="019f2dbd-e796-73d9-ab22-39b64d3f10c5|XYgI6tPbxl5hxC4R1owUORgdNwWorndtRwCykxtM8e286b54";
 const FR24_BASE_URL="https://fr24api.flightradar24.com/api";
+const AIRLABS_API_KEY="19bcd0dc-0b21-4f04-b9f5-f49b405e97bc";
+const AIRLABS_FLIGHTS_URL="https://airlabs.co/api/v9/flights";
+const AIRLABS_BBOX="-10.95,81.06,43.06,135.34";
+const AIRLABS_DAD_LAT=16.0544;
+const AIRLABS_DAD_LNG=108.2022;
+const AIRLABS_MAX_DISTANCE_KM=2500;
 
 function normNameForAccount(s){
   return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase().replace(/\s+/g," ").trim();
@@ -7385,6 +7450,46 @@ function tokenTrungChuyen(flight){
 function normFr24(x){
   return String(x??"").trim().toUpperCase().replace(/\s+/g,"");
 }
+const AIRLABS_AIRLINE_CODE_MAP={
+  VJ:["VJC"],VJC:["VJ"],VZ:["TVJ"],TVJ:["VZ"],AK:["AXM"],AXM:["AK"],FD:["AIQ"],AIQ:["FD"],
+  QZ:["AWQ"],AWQ:["QZ"],Z2:["APG"],APG:["Z2"],BX:["ABL"],ABL:["BX"],LJ:["JNA"],JNA:["LJ"],
+  TW:["TWB"],TWB:["TW"],RS:["ASV"],ASV:["RS"],RF:["EOK"],EOK:["RF"],TR:["TGW"],TGW:["TR"],
+  KC:["KZR"],KZR:["KC"],EK:["UAE"],UAE:["EK"],SL:["TLM"],TLM:["SL"],HX:["CRK"],CRK:["HX"],
+  "9G":["SPF"],SPF:["9G"],VU:["VAG"],VAG:["VU"],MH:["MAS"],MAS:["MH"],OD:["MXD"],MXD:["OD"]
+};
+function airlabsSplitPrefixNumber(code){
+  const m=normFr24(code).replace(/[^A-Z0-9]/g,"").match(/^([A-Z0-9]+?)(\d+)$/);
+  return m?{prefix:m[1],number:m[2]}:null;
+}
+function airlabsExpandFlightKey(code){
+  const clean=normFr24(code).replace(/[^A-Z0-9]/g,"");
+  const keys=new Set();
+  if(!clean)return keys;
+  keys.add(clean);
+  const pn=airlabsSplitPrefixNumber(clean);
+  if(pn){
+    keys.add(pn.number);
+    (AIRLABS_AIRLINE_CODE_MAP[pn.prefix]||[]).forEach(alt=>keys.add(alt+pn.number));
+  }
+  return keys;
+}
+function airlabsKeysFromRow(row){
+  const keys=new Set();
+  ["flight_iata","flight_icao","flight_number"].forEach(k=>{
+    airlabsExpandFlightKey(row&&row[k]).forEach(x=>keys.add(x));
+  });
+  return keys;
+}
+function airlabsDistanceKm(lat1,lon1,lat2,lon2){
+  const rad=x=>x*Math.PI/180, r=6371;
+  const dLat=rad(lat2-lat1), dLon=rad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)**2;
+  return 2*r*Math.asin(Math.sqrt(a));
+}
+function etaLeadMinutes(cb){
+  if(!cb || !coGio(cb.eta))return null;
+  return absNgayGioKhaiThac(cb.ngay||state.ngayKhaiThac,cb.eta)-hienTaiAbs();
+}
 function flightDenFr24(cb){
   if(!cb || !coGio(cb.sta))return "";
   const toks=tokenTrungChuyen(cb.flight);
@@ -7435,20 +7540,61 @@ async function layFr24RowsTheoFlight(flightNo){
   if(payload&&Array.isArray(payload.data))return payload.data;
   return [];
 }
+async function layAirLabsDangBay(){
+  const qs=new URLSearchParams({
+    api_key:AIRLABS_API_KEY,
+    bbox:AIRLABS_BBOX,
+    _fields:"flight_iata,flight_icao,flight_number,reg_number,aircraft_icao,dep_iata,arr_iata,status,lat,lng"
+  });
+  const res=await fetch(`${AIRLABS_FLIGHTS_URL}?${qs.toString()}`);
+  if(!res.ok)throw new Error(`AirLabs status ${res.status}`);
+  const payload=await res.json();
+  const rows=Array.isArray(payload?.response)?payload.response:[];
+  return rows.filter(r=>{
+    const lat=Number(r.lat), lng=Number(r.lng);
+    if(!isFinite(lat)||!isFinite(lng))return false;
+    return airlabsDistanceKm(lat,lng,AIRLABS_DAD_LAT,AIRLABS_DAD_LNG)<=AIRLABS_MAX_DISTANCE_KM;
+  });
+}
+function airlabsRowKhopChuyen(cb,airKeys){
+  const flightNo=flightDenFr24(cb);
+  if(!flightNo)return false;
+  const keys=airlabsExpandFlightKey(flightNo);
+  for(const k of keys){ if(airKeys.has(k))return true; }
+  return false;
+}
+function trangThaiFr24(cb){
+  if(!cb || !coGio(cb.sta))return "none";
+  if(cb.fr24AutoFinal)return "green";
+  if(!coGio(cb.eta))return "red";
+  if(cb.fr24Airborne || cb.fr24Status==="yellow")return "yellow";
+  return "normal";
+}
 function htmlNutFr24(cb){
   if(!coGio(cb?.sta))return "";
   const flightNo=flightDenFr24(cb);
   if(!flightNo)return "";
   return `<button type="button" class="fr24Btn" title="Lấy ETA FR24 cho ${escHtml(flightNo)}" onclick="capNhatEtaTuFr24('${cb.ma}',event)">fr24</button>`;
 }
-async function capNhatEtaTuFr24(ma,event){
+function htmlNutFr24(cb){
+  if(!coGio(cb?.sta))return "";
+  const flightNo=flightDenFr24(cb);
+  if(!flightNo)return "";
+  const st=trangThaiFr24(cb);
+  const disabled=st==="green"?" disabled aria-disabled=\"true\"":"";
+  const title=st==="green"?"FR24 xanh: da chot ETA, khong goi lai de tiet kiem API":`Lay ETA FR24 cho ${escHtml(flightNo)}`;
+  return `<button type="button" class="fr24Btn fr24-${st}" title="${escHtml(title)}"${disabled} onclick="capNhatEtaTuFr24('${cb.ma}',event)">fr24</button>`;
+}
+async function capNhatEtaTuFr24(ma,event,opts={}){
   if(event)event.stopPropagation();
-  if(!canPerm("nhapChuyen")){
+  const silent=!!opts.silent;
+  if(!canPerm("nhapChuyen") && !silent){
     alert("Tài khoản của bạn chưa được cấp quyền: cập nhật ETA FR24.");
     return;
   }
   const cb=chuyen(ma);
   if(!cb)return;
+  if(cb.fr24AutoFinal && !opts.force)return;
   const flightNo=flightDenFr24(cb);
   if(!flightNo){
     moActionModal({title:"Không lấy được FR24",htmlBody:"Chuyến này không có STA hoặc không xác định được số hiệu chuyến đến.",buttons:[]});
@@ -7477,6 +7623,74 @@ async function capNhatEtaTuFr24(ma,event){
     moActionModal({title:"Đã cập nhật ETA FR24",htmlBody:`<b>${escHtml(cb.flight||flightNo)}</b><br>Chuyến đến: <b>${escHtml(flightNo)}</b><br>ETA: <b>${escHtml(eta)}</b>`,buttons:[]});
   }catch(err){
     moActionModal({title:"Lỗi FR24",htmlBody:`Không lấy được ETA cho <b>${escHtml(flightNo)}</b>.<br><span class="redText">${escHtml(err.message||err)}</span>`,buttons:[]});
+  }
+}
+let airlabsFr24DangChay=false;
+async function capNhatEtaFr24Nen(ma,forceFinal=false){
+  const cb=chuyen(ma);
+  if(!cb || (cb.fr24AutoFinal && !forceFinal))return false;
+  const flightNo=flightDenFr24(cb);
+  if(!flightNo)return false;
+  try{
+    const rows=await layFr24RowsTheoFlight(flightNo);
+    const row=pickBestFr24Row(flightNo,rows);
+    const eta=parseFr24EtaToHHMM(row&&row.eta);
+    if(!eta)return false;
+    const oldEta=cb.eta||"";
+    cb.eta=eta;
+    cb.etaFr24Raw=row.eta||"";
+    cb.fr24Flight=flightNo;
+    cb.fr24Airborne=true;
+    cb.fr24LastCheck=new Date().toISOString();
+    const lead=etaLeadMinutes(cb);
+    cb.fr24Status=lead!==null && lead>=60 && !forceFinal ? "yellow" : "green";
+    cb.fr24AutoFinal=cb.fr24Status==="green";
+    cb.autoChanSauThuHoi=false;
+    cb.autoChanSig="";
+    cb.autoChanAbs=null;
+    logAction("AIRLABS -> FR24",`${cb.flight} dùng ${flightNo}: ${oldEta||"--"} -> ${eta} (${cb.fr24Status})`);
+    return true;
+  }catch(err){
+    console.warn("AirLabs/FR24 auto error",flightNo,err);
+    return false;
+  }
+}
+async function quetAirLabsVaFr24(){
+  if(airlabsFr24DangChay || !firebaseLoaded)return;
+  airlabsFr24DangChay=true;
+  let changed=false;
+  try{
+    const rows=await layAirLabsDangBay();
+    const airKeys=new Set();
+    rows.forEach(r=>airlabsKeysFromRow(r).forEach(k=>airKeys.add(k)));
+    const today=state.danhSachChuyenBay.filter(cb=>cb.ngay===state.ngayKhaiThac && coGio(cb.sta));
+    for(const cb of today){
+      if(cb.fr24AutoFinal)continue;
+      const matched=airlabsRowKhopChuyen(cb,airKeys);
+      const lead=etaLeadMinutes(cb);
+      if(matched){
+        cb.fr24Airborne=true;
+        if(!coGio(cb.eta)){
+          changed = await capNhatEtaFr24Nen(cb.ma,false) || changed;
+        }else if(lead!==null && lead<60){
+          changed = await capNhatEtaFr24Nen(cb.ma,true) || changed;
+        }else if(cb.fr24Status!=="yellow"){
+          cb.fr24Status="yellow";
+          changed=true;
+        }
+      }else if(coGio(cb.eta) && cb.fr24Status==="yellow" && lead!==null && lead<60){
+        changed = await capNhatEtaFr24Nen(cb.ma,true) || changed;
+      }
+    }
+    if(changed){
+      luu();
+      veTatCa();
+      autoSauKhiNhapChuyen();
+    }
+  }catch(err){
+    console.warn("AirLabs scan error",err);
+  }finally{
+    airlabsFr24DangChay=false;
   }
 }
 function chuyenKhopTuKhoa(cb,q){
@@ -12073,6 +12287,8 @@ canhTimelineKhiMoLen();
 capNhatNutLive();
 capNhatNutAutoNhanSu();
 setTimeout(()=>{canhTheoVachHienTai(); liveFollow=false; capNhatNutLive();},350);
+setTimeout(quetAirLabsVaFr24,5000);
+setInterval(quetAirLabsVaFr24,5*60*1000);
 </script>
 </body>
 </html>
