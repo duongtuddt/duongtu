@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v17af</title>
+<title>Dương Tú index_v17ag</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -5100,9 +5100,16 @@ const KHO_LUU="duong_tu_rampops_v030";
 const TIMELINE_LABEL_WIDTH=185;
 const GIO_BAT_DAU=4*60, SO_GIO=26, RONG_GIO=250;
 
-function homNayLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+function isoLocalDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+function homNayLocal(){return isoLocalDate(new Date());}
+function ngayKhaiThacHienTaiLocal(){
+  const d=new Date();
+  const phut=d.getHours()*60+d.getMinutes();
+  if(phut < 4*60+30)d.setDate(d.getDate()-1);
+  return isoLocalDate(d);
+}
 function duLieuMau(){
-  const ngay=homNayLocal();
+  const ngay=ngayKhaiThacHienTaiLocal();
   const ns=[
   {
     "ma": "1754",
@@ -9626,6 +9633,13 @@ function ngayKhaiThacTheoGio(baseNgay,gio){
   // 00:00-04:29 là phần kéo dài của ngày làm việc đó, không chuyển sang dashboard ngày hôm sau.
   return baseNgay;
 }
+function ngayNhapLichTongMacDinh(){
+  const ngayKhaiThac=state.ngayKhaiThac||"";
+  const ngayDuongLich=homNayLocal();
+  const ngayTheoCa=ngayKhaiThacHienTaiLocal();
+  if(ngayKhaiThac===ngayDuongLich && ngayTheoCa!==ngayDuongLich)return ngayTheoCa;
+  return ngayKhaiThac||ngayTheoCa;
+}
 function dichVuTheoLoaiMayBay(acType){
   const s=String(acType||"").toUpperCase();
   return /(B77|A33|B78|A35|B76)/.test(s)?"HIGHLOADER":"";
@@ -9798,7 +9812,7 @@ function parseLichTongText(text,baseNgay){
 function moNhapLichTong(){
   if(!canPerm("nhapChuyen")){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
   const m=$("modalNhapLichTong"); if(!m)return;
-  setVal("bulkNgayNhap",state.ngayKhaiThac||homNayLocal());
+  setVal("bulkNgayNhap",ngayNhapLichTongMacDinh());
   setVal("bulkTextNhap","");
   const k=$("bulkKetQua"); if(k)k.innerHTML="";
   m.classList.remove("hidden");
@@ -9921,7 +9935,7 @@ function capNhatChuyenTuLichTong(cb,row){
   cb.duKienTong=true;
 }
 function xemThuNhapLichTong(){
-  const base=val("bulkNgayNhap")||state.ngayKhaiThac||homNayLocal();
+  const base=val("bulkNgayNhap")||ngayNhapLichTongMacDinh();
   const {rows,loi,all}=parseLichTongText(val("bulkTextNhap"),base);
   const updated=[];
   const rowKey=new Map(rows.map(r=>[r.line,r]));
@@ -9942,7 +9956,7 @@ function xemThuNhapLichTong(){
 }
 function nhapLichTongTuText(){
   if(!canPerm("nhapChuyen")){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
-  const base=val("bulkNgayNhap")||state.ngayKhaiThac||homNayLocal();
+  const base=val("bulkNgayNhap")||ngayNhapLichTongMacDinh();
   const {rows,loi,all}=parseLichTongText(val("bulkTextNhap"),base);
   const ok=[], updated=[], skip=[];
   const rowKey=new Map(rows.map(r=>[r.line,r]));
