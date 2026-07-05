@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v17ah</title>
+<title>Dương Tú index_v17ai</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4564,6 +4564,12 @@ body.dashboardOnly header > .row{
   color:#fff7cc!important;
   box-shadow:0 0 16px rgba(250,204,21,.38)!important;
 }
+.flight.departureReady{
+  background:linear-gradient(90deg,#064e3b,#047857)!important;
+  border-color:#34d399!important;
+  color:#ecfdf5!important;
+  box-shadow:0 0 16px rgba(52,211,153,.38)!important;
+}
 .waitEtaNote.waitReady{
   color:#facc15!important;
   background:#1f1304!important;
@@ -4654,6 +4660,11 @@ body.dashboardOnly header > .row{
   border:1px solid #facc15!important;
 }
 
+#khungTimelineChuyenBay,
+#khungTimelineNhanSu{
+  scroll-behavior:smooth;
+}
+
 /* index_v17ae - realtime chuyến bay: card trái chỉ giữ mã chuyến, chọn ca, fr24 và bãi đỗ */
 #timelineChuyenBay .flightRtCard{
   height:var(--flightInfoCardHeight)!important;
@@ -4723,10 +4734,10 @@ body.dashboardOnly header > .row{
     <div class="loginBody">
       <div id="loginForm" autocomplete="off">
         <label class="loginLabel">MÃ ĐIỀU HÀNH
-          <input id="loginId" placeholder="Nhập mã điều hành" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" readonly onfocus="this.removeAttribute('readonly')">
+          <input id="loginId" placeholder="Nhập mã điều hành" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text">
         </label>
         <label class="loginLabel">MÃ TRUY CẬP
-          <input id="loginPass" type="password" placeholder="Nhập mã truy cập" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
+          <input id="loginPass" type="password" placeholder="Nhập mã truy cập" autocomplete="new-password">
         </label>
         <div class="loginActions">
           <button class="primary" id="btnLogin">Vào hệ thống</button>
@@ -8444,9 +8455,11 @@ function chuyenThuocBoLocCa(cb){
   return false;
 }
 function thoiGianNamSanText(cb){
-  const a=staAbs(cb), s=stdAbs(cb);
-  if(a===null || s===null)return "";
-  let m=s-a;
+  const a=staAbs(cb), e=etaAbs(cb), s=stdAbs(cb), etd=etdAbs(cb);
+  const start=e!==null?e:a;
+  const end=etd!==null?etd:s;
+  if(start===null || end===null)return "";
+  let m=end-start;
   if(m<0)m+=1440;
   return fmtPhut(m);
 }
@@ -8476,6 +8489,7 @@ function veTimelineChuyen(){
       const dangLive=bdCB<=nowLive && nowLive<=ktCB;
       const waitEta=dangChoEta(cb) && nowLive>=batDauAbs(cb);
       const waitReady=dangChoTauSan(cb) && nowLive>=batDauAbs(cb) && nowLive<ketThucAbs(cb);
+      const departureReady=loaiChuyenKhaiThac(cb)==="namSanDi" && coTauSan(cb);
       const mau=mauChuyen(cb.ma);
       const rawLeft=viTri(bdCB), rawWidth=rong(bdCB,ktCB);
       const left=(waitEta||waitReady)?viTri(nowLive):rawLeft;
@@ -8518,7 +8532,7 @@ function veTimelineChuyen(){
       const warnHtml=warnText?`<div class="requireWarn ${fallbackTowWarn?"fallbackTowWarn":""}" style="left:${warnLeft}px;width:${warnRong}px;max-width:${warnRong}px">${warnText}</div>`:"";
       const readyHtml=htmlCoTauSan(cb);
       const fr24Html=htmlNutFr24(cb);
-      htmlParts.push(`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls}" onclick="chonChuyen('${cb.ma}')"><div class="flightRtCard ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}"><div class="flightLabelTop"><span class="flightLabelNo">${escHtml(cb.flight||"")}</span><select class="flightCaSelect" onclick="event.stopPropagation()" onchange='doiCaPhuTrachChuyen("${cb.ma}",this.value)'>${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select>${fr24Html}<span class="standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span></div><div class="flightLabelTime">STA ${gioHienThi(cb.sta)} / ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</div>${acMeta?`<div class="flightLabelMeta">${escHtml(acMeta)}</div>`:""}<span class="flightLabelWarn ${mau==="planned"?"mutedPlanned":(["activeOk","futureOk","doneOk"].includes(mau)?"greenText":mau==="warn"?"orangeText":"redText")}">${mau==="planned"?"":ghiChu(cb.ma)}</span></div></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${waitEta?"waitEta":""} ${waitReady?"waitReady":""} ${caCls} ${scopeCls}" title="${escHtml(titleChuyen)}" style="left:${left}px;width:${width}px"><span class="flightLeft"><span class="flightNo">${escHtml(cb.flight||"")}</span>${readyHtml}<span class="flightStand standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span><span class="flightGround">${escHtml(thoiGianNamSanText(cb))}</span></span><span class="flightCount">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)}</span></div>${waitEtaHtml}${shiftHtml}${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`);
+      htmlParts.push(`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls}" onclick="chonChuyen('${cb.ma}')"><div class="flightRtCard ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}"><div class="flightLabelTop"><span class="flightLabelNo">${escHtml(cb.flight||"")}</span><select class="flightCaSelect" onclick="event.stopPropagation()" onchange='doiCaPhuTrachChuyen("${cb.ma}",this.value)'>${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select>${fr24Html}<span class="standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span></div><div class="flightLabelTime">STA ${gioHienThi(cb.sta)} / ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</div>${acMeta?`<div class="flightLabelMeta">${escHtml(acMeta)}</div>`:""}<span class="flightLabelWarn ${mau==="planned"?"mutedPlanned":(["activeOk","futureOk","doneOk"].includes(mau)?"greenText":mau==="warn"?"orangeText":"redText")}">${mau==="planned"?"":ghiChu(cb.ma)}</span></div></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${waitEta?"waitEta":""} ${waitReady?"waitReady":""} ${departureReady?"departureReady":""} ${caCls} ${scopeCls}" title="${escHtml(titleChuyen)}" style="left:${left}px;width:${width}px"><span class="flightLeft"><span class="flightNo">${escHtml(cb.flight||"")}</span>${readyHtml}<span class="flightStand standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span><span class="flightGround">${escHtml(thoiGianNamSanText(cb))}</span></span><span class="flightCount">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)}</span></div>${waitEtaHtml}${shiftHtml}${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`);
     });
   el.innerHTML=htmlParts.join("");
 }
@@ -9045,6 +9059,21 @@ function moKhoaAutoDaChotKhiXaLai(){
   });
   return changed;
 }
+function capNhatPhanCongTheoKhungChuyen(maChuyen){
+  const cb=chuyen(maChuyen);
+  if(!cb)return 0;
+  const bdMoi=batDauAbs(cb), ktMoi=ketThucAbs(cb);
+  let changed=0;
+  (state.phanCong||[]).forEach(pc=>{
+    if(pc.maChuyen!==maChuyen || pc.thuHoi)return;
+    if(pc.batDauAbs!==bdMoi || pc.ketThucAbs!==ktMoi){
+      pc.batDauAbs=bdMoi;
+      pc.ketThucAbs=ktMoi;
+      changed++;
+    }
+  });
+  return changed;
+}
 function xoaAutoTam(){
   const before=state.phanCong.length;
   state.phanCong=state.phanCong.filter(pc=>!pcAutoTam(pc));
@@ -9284,10 +9313,16 @@ function diemAutoNhanSu(ns,cb,slot=null){
   const tk=thongKeNV(ns.ma,moc);
   const truoc=pcTruocThoiDiemCuaNV(ns.ma,moc);
   const ranh=truoc?Math.max(0,moc-truoc.ketThucAbs):999999;
+  const pool=ungVienAutoSach(cb);
+  const maxRanh=pool.length?Math.max(...pool.map(x=>{
+    const prev=pcTruocThoiDiemCuaNV(x.ma,moc);
+    return prev?Math.max(0,moc-prev.ketThucAbs):999999;
+  })):ranh;
+  const ranhBucket=ranh>=maxRanh-15?0:(maxRanh-ranh);
   const next=phutDenChuyenTiep(ns.ma,cb);
   const sameCa=caCuaNV(ns.ma) && String(caCuaNV(ns.ma))===String(cb.caPhuTrach||"") ? -250 : 0;
   const certCost=slot?Math.max(0,tongSoChungChi(ns)-(slot.ids||[]).length)*18:bacChungChiVanHanh(ns,ungVienChinh(cb))*8;
-  return tk.so*10000 + tk.tg*40 + Math.max(0,120-Math.min(next,120))*25 - Math.min(ranh,240)*8 + certCost + sameCa;
+  return ranhBucket*500000 + tk.so*10000 - Math.min(ranh,240)*80 + Math.max(0,120-Math.min(next,120))*25 + certCost + sameCa;
 }
 function ungVienAutoSach(cb){
   return state.danhSachNhanSu
@@ -9933,6 +9968,7 @@ function capNhatChuyenTuLichTong(cb,row){
   cb.soNguoiToiThieu=row.soNguoiToiThieu||2;
   cb.caPhuTrach=row.caPhuTrach||cb.caPhuTrach||"tatca";
   cb.duKienTong=true;
+  capNhatPhanCongTheoKhungChuyen(cb.ma);
 }
 function xemThuNhapLichTong(){
   const base=val("bulkNgayNhap")||ngayNhapLichTongMacDinh();
@@ -10380,6 +10416,24 @@ function baoGioChuyenTheoCaNeuCan(cb){
   if(msg)moActionModal({title:"Cảnh báo giờ phục vụ chuyến",htmlBody:msg,buttons:[]});
 }
 
+function canhBaoTinhLaiNhanSuKhiDoiChuyen(oldData,newCb){
+  if(!oldData||!newCb)return;
+  const doiBai=String(oldData.baiDo||"")!==String(newCb.baiDo||"");
+  const doiDichVu=String(oldData.ghiChu||"")!==String(newCb.ghiChu||"");
+  if(!doiBai&&!doiDichVu)return;
+  const current=(state.phanCong||[]).filter(pc=>pc.maChuyen===newCb.ma&&pcDangHieuLuc(pc));
+  if(!current.length)return;
+  const suggested=chonGoiYNhanSu(newCb);
+  const curHtml=current.map(pc=>`<tr><td>${escHtml(tenNV(pc.maNV))}</td><td>${escHtml(pc.autoLocked||!pc.autoNhanSu?"Da chot":"Du kien")}</td><td>${escHtml(gioTuPhut(pc.batDauAbs))} - ${escHtml(gioTuPhut(pc.ketThucAbs))}</td></tr>`).join("");
+  const sugHtml=suggested.length?suggested.map(x=>`<tr><td>${escHtml(x.ns.ten)}</td><td>${escHtml(x.vaiTro||"Bo sung nguoi")}</td><td>${escHtml(caCuaNV(x.ns.ma)||"--")}</td></tr>`).join(""):`<tr><td colspan="3" class="redText">Khong tim duoc phuong an phu hop</td></tr>`;
+  moActionModal({
+    title:"Canh bao tinh lai nhan su",
+    htmlBody:`<div>Chuyen <b>${escHtml(newCb.flight)}</b> vua doi ${doiBai?"bai":""}${doiBai&&doiDichVu?" / ":""}${doiDichVu?"dich vu":""}. Danh sach da chot co the khong con toi uu.</div>
+      <div class="bulkPreviewWrap" style="margin-top:10px"><table class="bulkPreviewTable"><thead><tr><th>Nhan su hien tai</th><th>Trang thai</th><th>Khung gio</th></tr></thead><tbody>${curHtml}</tbody></table></div>
+      <div class="bulkPreviewWrap" style="margin-top:10px"><table class="bulkPreviewTable"><thead><tr><th>Goi y moi</th><th>Vai tro</th><th>Ca</th></tr></thead><tbody>${sugHtml}</tbody></table></div>`,
+    buttons:[]
+  });
+}
 function themSuaChuyen(){
   if(!canPerm("nhapChuyen")){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
   clearTimChuyenNoRender();
@@ -10440,6 +10494,8 @@ function themSuaChuyen(){
       state.danhSachChuyenBay[i].autoChanSauThuHoi=false;
       state.danhSachChuyenBay[i].autoChanSig="";
       state.danhSachChuyenBay[i].autoChanAbs=null;
+      capNhatPhanCongTheoKhungChuyen(state.danhSachChuyenBay[i].ma);
+      canhBaoTinhLaiNhanSuKhiDoiChuyen(oldData,state.danhSachChuyenBay[i]);
       logAction("SỬA CHUYẾN BAY",`${moTaChuyenLog(state.danhSachChuyenBay[i])}\nThay đổi: ${diffChuyenLog(oldData,state.danhSachChuyenBay[i])}`); if(typeof baoGioChuyenTheoCaNeuCan==="function")baoGioChuyenTheoCaNeuCan(state.danhSachChuyenBay[i]);
     }
   }else{
@@ -11229,6 +11285,41 @@ function cmpArray(a,b){
   }
   return a.length-b.length;
 }
+function diemUngVienThuong(ns,cb,pool){
+  const load=taiLamViecTaiMoc(ns,cb);
+  const p=phanLoaiGoiY(ns,cb);
+  const idle=phutRanhLienTucTaiMoc(ns,cb);
+  const maxIdle=Math.max(...pool.map(x=>phutRanhLienTucTaiMoc(x,cb)));
+  const idleBucket=idle>=maxIdle-15?0:(maxIdle-idle);
+  return [
+    p.nhom,
+    idleBucket,
+    load.so,
+    -idle,
+    phutDenChuyenTiep(ns.ma,cb),
+    p.sub||0,
+    bacChungChiVanHanh(ns,pool),
+    diemChienLuocChungChi(ns,pool),
+    String(ns.ten||"")
+  ];
+}
+function diemUngVienSlot(ns,cb,pool){
+  const load=taiLamViecTaiMoc(ns,cb);
+  const p=phanLoaiGoiY(ns,cb);
+  const idle=phutRanhLienTucTaiMoc(ns,cb);
+  const maxIdle=Math.max(...pool.map(x=>phutRanhLienTucTaiMoc(x,cb)));
+  const idleBucket=idle>=maxIdle-15?0:(maxIdle-idle);
+  return [
+    p.nhom,
+    idleBucket,
+    load.so,
+    -idle,
+    phutDenChuyenTiep(ns.ma,cb),
+    p.sub||0,
+    bacChungChiVanHanh(ns,pool),
+    String(ns.ten||"")
+  ];
+}
 function sortedThuong(pool,cb,used,need){
   return pool.filter(ns=>!used.has(ns.ma)).filter(ns=>duocLamNguoiBoSung(ns,cb,need))
     .sort((a,b)=>cmpArray(diemUngVienThuong(a,cb,pool),diemUngVienThuong(b,cb,pool)));
@@ -11329,6 +11420,16 @@ function diemCanBangCoCau(selected,cb,pool,slots){
   }
 
   return 0;
+}
+function diemCongBangNhom(selected,cb){
+  const pool=ungVienChinh(cb);
+  const maxIdle=pool.length?Math.max(...pool.map(ns=>phutRanhLienTucTaiMoc(ns,cb))):0;
+  return selected.reduce((s,it)=>{
+    const load=taiLamViecTaiMoc(it.ns,cb);
+    const idle=phutRanhLienTucTaiMoc(it.ns,cb);
+    const idleBucket=idle>=maxIdle-15?0:(maxIdle-idle);
+    return s + idleBucket*500000 + load.so*120000 - idle*1000 + phutDenChuyenTiep(it.ns.ma,cb)*2;
+  },0);
 }
 function diemPhuongAn(selected,cb,pool,slots){
   const match=mucPhuHopYeuCau(selected,slots);
@@ -12206,9 +12307,6 @@ function dongBoKeoTimeline(){
 
   a.addEventListener("scroll",()=>syncScroll(a,b),{passive:true});
   b.addEventListener("scroll",()=>syncScroll(b,a),{passive:true});
-  batKeo(a,b);
-  batKeo(b,a);
-
   a.dataset.syncReady="1";
   b.dataset.syncReady="1";
 }
