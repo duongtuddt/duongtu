@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v17al</title>
+<title>Dương Tú index_v17ar</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -639,8 +639,8 @@ input,select,button{
   white-space:nowrap;
 }
 .flightMonitor.arrival{
-  background:transparent!important;
-  border:0!important;
+  border:1px solid currentColor;
+  background:#071426;
 }
 .flightMonitor.work{
   border:1px solid currentColor;
@@ -4026,6 +4026,7 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
 }
 #timelineChuyenBay .bar.flight,
 #timelineChuyenBay .flightMonitor,
+#timelineChuyenBay .cargoBadge,
 #timelineChuyenBay .flightNote,
 #timelineChuyenBay .requireWarn,
 #timelineChuyenBay .tenSau{
@@ -4042,11 +4043,62 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
   justify-content:flex-end!important;
 }
 #timelineChuyenBay .flightMonitor,
+#timelineChuyenBay .cargoBadge,
 #timelineChuyenBay .flightNote,
 #timelineChuyenBay .requireWarn{
   height:36px!important;
   min-height:36px!important;
   justify-content:center!important;
+}
+#timelineChuyenBay .cargoBadge{
+  position:absolute;
+  width:54px;
+  border:1px solid #facc15;
+  border-radius:8px;
+  background:linear-gradient(180deg,#4b3605,#18120a);
+  color:#fde68a;
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:0 0 10px rgba(250,204,21,.35);
+  z-index:7!important;
+}
+#timelineChuyenBay .cargoBadge.bigCargo{
+  width:81px;
+  border-color:#fb7185;
+  background:linear-gradient(180deg,#7f1d1d,#241010);
+  color:#fecaca;
+  box-shadow:0 0 13px rgba(248,113,113,.48);
+}
+#timelineChuyenBay .cargoBadge.nilCargo{
+  border-color:#60a5fa;
+  background:linear-gradient(180deg,#163b63,#071627);
+  color:#bfdbfe;
+}
+.cargoModalCard{
+  border:1px solid rgba(125,211,252,.28);
+  border-radius:8px;
+  padding:10px;
+  margin:8px 0;
+  background:rgba(8,22,38,.72);
+}
+.cargoTable{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:8px;
+}
+.cargoTable th,.cargoTable td{
+  border-bottom:1px solid rgba(148,163,184,.22);
+  padding:7px 8px;
+  text-align:left;
+}
+.cargoRaw{
+  margin-top:8px;
+  max-height:220px;
+  overflow:auto;
+  white-space:pre-wrap;
+  border:1px solid rgba(125,211,252,.22);
+  border-radius:8px;
+  padding:8px;
 }
 #timelineChuyenBay .tenSau{
   height:36px!important;
@@ -4930,7 +4982,7 @@ body.timelineNavDragging #khungTimelineNhanSu{
 </div>
 <div class="wrap">
 <section class="panel" id="panelNhapChuyen">
-<h2><span>Nhập / sửa chuyến bay</span><span class="rtActions"><button class="small danger" id="nutXoaChuyenTrongNgay" type="button" onclick="moXoaChuyenTrongNgay()">Xóa chuyến trong ngày</button><button class="small primary" id="nutNhapLichTong" type="button" onclick="moNhapLichTong()">Nhập lịch tổng</button></span></h2>
+<h2><span>Nhập / sửa chuyến bay</span><span class="rtActions"><button class="small danger" id="nutXoaChuyenTrongNgay" type="button" onclick="moXoaChuyenTrongNgay()">Xóa chuyến trong ngày</button><button class="small danger" id="nutXoaDuLieuCargo" type="button" onclick="xoaDuLieuCargoNgay()">Xóa dữ liệu cargo</button><button class="small primary" id="nutNhapLichTong" type="button" onclick="moNhapLichTong()">Nhập lịch tổng</button></span></h2>
 <div class="body">
 <div class="row">
 <label class="hidden">Ngày khai thác <input type="date" id="ngayKhaiThac"></label>
@@ -5581,6 +5633,9 @@ if(!state.ngayPhanCa) state.ngayPhanCa = state.ngayKhaiThac || homNayLocal();
 if(!Array.isArray(state.auditLogs)) state.auditLogs=[];
 if(!state.activeEditors) state.activeEditors={};
 if(!state.accounts) state.accounts={};
+if(!state.cargoDi) state.cargoDi={};
+if(!state.cargoDen) state.cargoDen={};
+if(!state.mvtEtaRaw) state.mvtEtaRaw={};
 function seedAdminAccount(){
   if(!state.accounts["tudd"]){
     state.accounts["tudd"]={id:"tudd",pass:"Abc123@@",fullName:"Đặng Dương Tú",status:"approved",role:"admin",
@@ -8492,8 +8547,8 @@ function theoDoiChuyen(cb){
   // Chuyến chưa đáp: hiện còn bao nhiêu phút tới ETA, không có khung.
   if(e!==null && now<e){
     const con=Math.max(0,Math.ceil(e-now));
-    const cls=con>30?"monGreen":con>15?"monYellow":"monRed";
-    return {html:`<div class="flightMonitor arrival ${cls}" title="Còn ${con} phút tới ETA">${con}'</div>`, rong:54};
+    const cls=con>60?"monGreen":con>=15?"monYellow":"monRed";
+    return {type:"arrival",html:`<div class="flightMonitor arrival ${cls}" title="Còn ${con} phút tới ETA">${con}'</div>`, rong:54};
   }
 
   // Chuyến đang phục vụ: hiện còn bao nhiêu phút tới kết thúc, có khung.
@@ -8509,11 +8564,11 @@ function theoDoiChuyen(cb){
     if(elapsed<redWindow) cls="monRed";
     else if(remain<=greenWindow) cls="monGreen";
 
-    return {html:`<div class="flightMonitor work ${cls}" title="Còn ${remain} phút xong chuyến">${remain}'</div>`, rong:54};
+    return {type:"work",html:`<div class="flightMonitor work ${cls}" title="Còn ${remain} phút xong chuyến">${remain}'</div>`, rong:54};
   }
 
   // Chuyến đã xong hoặc chưa đủ dữ liệu thì không hiện gì.
-  return {html:"", rong:0};
+  return {type:"",html:"", rong:0};
 }
 
 
@@ -8559,6 +8614,134 @@ function thoiGianNamSanText(cb){
   let m=end-start;
   if(m<0)m+=1440;
   return fmtPhut(m);
+}
+
+function cargoNgayKey(ngay){return String(ngay||state.ngayKhaiThac||homNayLocal()).slice(0,10);}
+function cargoFlightKey(flight){return String(flight||"").replace(/[^A-Z0-9]/gi,"").toUpperCase();}
+function cargoKey(flight,ngay){return `${cargoNgayKey(ngay)}|${cargoFlightKey(flight)}`;}
+function cargoTokensChuyen(cb){
+  const toks=tokenTrungChuyen(cb.flight||"").map(cargoFlightKey).filter(Boolean);
+  return [...new Set(toks)];
+}
+function cargoChuyenDiTokens(cb){
+  const toks=cargoTokensChuyen(cb);
+  if(toks.length>1 && cb.std)return [toks[toks.length-1]];
+  return toks;
+}
+function cargoChuyenDenTokens(cb){
+  const toks=cargoTokensChuyen(cb);
+  if(toks.length>1 && cb.sta)return [toks[0]];
+  return toks;
+}
+function cargoFind(map,cb,kind){
+  const toks=kind==="den"?cargoChuyenDenTokens(cb):cargoChuyenDiTokens(cb);
+  for(const t of toks){
+    const item=map?.[cargoKey(t,cb.ngay)];
+    if(item)return item;
+  }
+  return null;
+}
+function cargoIsNil(item){
+  const text=String(item?.cargo_mail||"");
+  return /kh[oô]ng c[oó] h[aà]ng|\bnil+\s*cargo\b/i.test(text) || /(^|\n)\s*nil+l?\s*($|\n)/i.test(text);
+}
+function cargoBadgeHtml(item,kind,left){
+  if(!item)return "";
+  const nil=cargoIsNil(item);
+  const heavy=!!item.heavy || Number(item.weight_kg||0)>=1500;
+  const cls=nil?"nilCargo":(heavy?"bigCargo":"");
+  const title=`Cargo ${kind==="den"?"đến":"đi"} ${item.flightno||""} - ${nil?item.cargo_mail:(heavy?"Hàng nhiều / trên 1.5 tấn":"Dưới 1.5 tấn")}`;
+  const icon=kind==="den"?"📥":"📦";
+  return `<div class="cargoBadge ${cls}" style="left:${left}px" title="${escHtml(title)}" onclick="moCargoInfo('${kind}','${escHtml(item.flightno||"")}','${escHtml(item.ngay||"")}',event)">${icon}</div>`;
+}
+function cargoDisplayText(item,kind){
+  if(cargoIsNil(item))return kind==="den"?"Không có hàng đến":"Không có hàng đi";
+  return String(item?.cargo_mail||"")
+    .split(/\r?\n/)
+    .map(x=>x.trim())
+    .filter(Boolean)
+    .filter(line=>!/^DEAR\s+DUTY\b/i.test(line))
+    .map(line=>line.replace(/^\d+\s*\/\s*([A-Z0-9]{2,3}\s?\d{2,4}\s*\/)/i,"$1"))
+    .join("\n")
+    .trim();
+}
+function moCargoInfo(kind,flight,ngay,event){
+  if(event){event.stopPropagation();event.preventDefault();}
+  const map=kind==="den"?state.cargoDen:state.cargoDi;
+  const item=map?.[cargoKey(flight,ngay)];
+  if(!item)return;
+  const title=kind==="den"?"Cargo chuyến đến":"Cargo chuyến đi";
+  const info=cargoDisplayText(item,kind);
+  const body=`
+    <div class="cargoModalCard">
+      <div><b>Chuyến:</b> ${escHtml(item.flightno||"--")} &nbsp; <b>Ngày:</b> ${escHtml(item.ngay||"--")}</div>
+      <div class="cargoRaw">${escHtml(info||"Chưa có thông tin cargo.")}</div>
+    </div>`;
+  moActionModal({title,htmlBody:body,buttons:[]});
+}
+function nhanCargoItems(kind,items){
+  const map={...(kind==="den"?(state.cargoDen||{}):(state.cargoDi||{}))};
+  (items||[]).forEach(item=>{
+    const k=cargoKey(item.flightno,item.ngay);
+    if(k.includes("|")) map[k]={...item,kind};
+  });
+  if(kind==="den")state.cargoDen=map;
+  else state.cargoDi=map;
+}
+let cargoBridgeDaQuetLanDau=false;
+async function capNhatCargoTuBridge(){
+  const limit=cargoBridgeDaQuetLanDau?50:1000;
+  try{
+    const [diRes,denRes,mvtRes]=await Promise.all([
+      fetch(`http://127.0.0.1:8787/cargo-di?limit=${limit}`),
+      fetch(`http://127.0.0.1:8787/cargo-den?limit=${limit}`),
+      fetch(`http://127.0.0.1:8787/mvt-eta?limit=${limit}`)
+    ]);
+    const [di,den,mvt]=await Promise.all([diRes.json(),denRes.json(),mvtRes.json()]);
+    if(di.ok)nhanCargoItems("di",di.items||[]);
+    if(den.ok)nhanCargoItems("den",den.items||[]);
+    if(mvt.ok)capNhatEtaTuMvt(mvt.items||[]);
+    cargoBridgeDaQuetLanDau=true;
+    luu();
+    veTatCa();
+  }catch(err){
+    console.warn("Chưa kết nối cargo_di_bridge.py hoặc đọc mail lỗi:",err);
+  }
+}
+function capNhatEtaTuMvt(items){
+  const byKey={};
+  (items||[]).forEach(item=>{
+    if(item.flightno && item.eta){
+      byKey[cargoKey(item.flightno,state.ngayKhaiThac)]=item;
+    }
+  });
+  state.danhSachChuyenBay.forEach(cb=>{
+    if(cb.ngay!==state.ngayKhaiThac || !cb.sta)return;
+    for(const t of cargoChuyenDenTokens(cb)){
+      const item=byKey[cargoKey(t,cb.ngay)];
+      if(item && cb.eta!==item.eta){
+        cb.eta=item.eta;
+        if(!state.mvtEtaRaw)state.mvtEtaRaw={};
+        state.mvtEtaRaw[cb.ma]=item.raw||"";
+      }
+    }
+  });
+}
+function xoaDuLieuCargoNgay(){
+  const pass=prompt("Nhập mật khẩu để xóa dữ liệu cargo của ngày đang mở:");
+  if(pass===null)return;
+  if(pass!=="SAGS2026"){alert("Sai mật khẩu.");return;}
+  const ngay=cargoNgayKey(state.ngayKhaiThac);
+  ["cargoDi","cargoDen"].forEach(name=>{
+    const src=state[name]||{};
+    Object.keys(src).forEach(k=>{if(k.startsWith(ngay+"|"))delete src[k];});
+    state[name]=src;
+  });
+  state.mvtEtaRaw={};
+  logAction("XÓA DỮ LIỆU CARGO",`Đã xóa dữ liệu cargo của ngày ${ngay}.`);
+  luu();
+  veTatCa();
+  alert("Đã xóa dữ liệu cargo của ngày đang mở.");
 }
 function veTimelineChuyen(){
   const el=$("timelineChuyenBay"); veHeader(el);
@@ -8606,15 +8789,38 @@ function veTimelineChuyen(){
       const etaShift=etaShiftInfo(cb);
       const waitEtaHtml=waitEta?`<div class="waitEtaNote statusFlightNote delay" style="left:${Math.max(0,left-92)}px;width:82px">TRỄ</div>`:(waitReady?`<div class="waitEtaNote statusFlightNote waitReady" style="left:${Math.max(0,left-92)}px;width:82px">CHỜ TÀU</div>`:"");
       const shiftW=82;
-      const shiftLeft=etaShift?Math.max(0,left-shiftW-gap):0;
-      const shiftHtml=etaShift?`<div class="etaShiftNote ${etaShift.type}" style="left:${shiftLeft}px;width:${shiftW}px">${etaShift.text}</div>`:"";
+      const cargoDen=cargoFind(state.cargoDen,cb,"den");
+      const cargoDi=cargoFind(state.cargoDi,cb,"di");
+      const monIsArrival=mon.type==="arrival";
+      let preCursor=left-gap;
+      let cargoDenHtml="";
+      if(cargoDen){
+        const cargoDenW=cargoDen.heavy?81:54;
+        preCursor-=cargoDenW;
+        cargoDenHtml=cargoBadgeHtml(cargoDen,"den",Math.max(0,preCursor));
+        preCursor-=gap;
+      }
+      let arrivalMonHtml="";
+      if(monIsArrival && mon.html){
+        const monW=Math.max(mon.rong||0,54);
+        preCursor-=monW;
+        arrivalMonHtml=mon.html.replace('<div class="flightMonitor','<div style="left:'+Math.max(0,preCursor)+'px" class="flightMonitor');
+        preCursor-=gap;
+      }
+      const shiftLeft=etaShift?Math.max(0,preCursor-shiftW):0;
+      let shiftHtml=etaShift?`<div class="etaShiftNote ${etaShift.type}" style="left:${shiftLeft}px;width:${shiftW}px">${etaShift.text}</div>`:"";
+      shiftHtml+=arrivalMonHtml+cargoDenHtml;
       let cursor=left+width+gap;
 
       // Tất cả phần phía sau thanh chuyến lấy vị trí theo chuỗi:
-      // flight -> phút -> dịch vụ -> cảnh báo -> nhân sự.
+      // flight -> phút -> cargo đi -> dịch vụ -> cảnh báo -> nhân sự.
       // Không dùng vị trí cố định để tránh chồng chữ khi dịch vụ/cảnh báo dài.
       const monLeft=cursor;
-      if(mon.html)cursor+=Math.max(mon.rong||0,54)+gap;
+      const monAfterHtml=(!monIsArrival&&mon.html)?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):"";
+      if(!monIsArrival&&mon.html)cursor+=Math.max(mon.rong||0,54)+gap;
+      const cargoDiLeft=cursor;
+      const cargoDiHtml=cargoDi?cargoBadgeHtml(cargoDi,"di",cargoDiLeft):"";
+      if(cargoDi)cursor+=(cargoDi.heavy?81:54)+gap;
 
       const noteRong=noteText?Math.min(520,Math.max(90,noteText.length*8+28)):0;
       const noteLeft=cursor;
@@ -8625,11 +8831,11 @@ function veTimelineChuyen(){
       if(warnText)cursor+=warnRong+gap;
 
       const tenLeft=cursor;
-      const noteHtml=noteText?`<div class="flightNote" style="left:${noteLeft}px;width:${noteRong}px;max-width:${noteRong}px" title="${noteText.replace(/"/g,'&quot;')}">${noteText}</div>`:"";
+      const noteHtml=cargoDiHtml+(noteText?`<div class="flightNote" style="left:${noteLeft}px;width:${noteRong}px;max-width:${noteRong}px" title="${noteText.replace(/"/g,'&quot;')}">${noteText}</div>`:"");
       const warnHtml=warnText?`<div class="requireWarn ${fallbackTowWarn?"fallbackTowWarn":""}" style="left:${warnLeft}px;width:${warnRong}px;max-width:${warnRong}px">${warnText}</div>`:"";
       const readyHtml=htmlCoTauSan(cb);
       const fr24Html=htmlNutFr24(cb);
-      htmlParts.push(`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls}" onclick="chonChuyen('${cb.ma}')"><div class="flightRtCard ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}"><div class="flightLabelTop"><span class="flightLabelNo">${escHtml(cb.flight||"")}</span><select class="flightCaSelect" onclick="event.stopPropagation()" onchange='doiCaPhuTrachChuyen("${cb.ma}",this.value)'>${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select>${fr24Html}<span class="standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span></div><div class="flightLabelTime">STA ${gioHienThi(cb.sta)} / ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</div>${acMeta?`<div class="flightLabelMeta">${escHtml(acMeta)}</div>`:""}<span class="flightLabelWarn ${mau==="planned"?"mutedPlanned":(["activeOk","futureOk","doneOk"].includes(mau)?"greenText":mau==="warn"?"orangeText":"redText")}">${mau==="planned"?"":ghiChu(cb.ma)}</span></div></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${waitEta?"waitEta":""} ${waitReady?"waitReady":""} ${departureReady?"departureReady":""} ${caCls} ${scopeCls}" title="${escHtml(titleChuyen)}" style="left:${left}px;width:${width}px"><span class="flightLeft"><span class="flightNo">${escHtml(cb.flight||"")}</span>${readyHtml}<span class="flightStand standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span><span class="flightGround">${escHtml(thoiGianNamSanText(cb))}</span></span><span class="flightCount">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)}</span></div>${waitEtaHtml}${shiftHtml}${mon.html?mon.html.replace('<div class="flightMonitor','<div style="left:'+monLeft+'px" class="flightMonitor'):''}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`);
+      htmlParts.push(`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls}" onclick="chonChuyen('${cb.ma}')"><div class="flightRtCard ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}"><div class="flightLabelTop"><span class="flightLabelNo">${escHtml(cb.flight||"")}</span><select class="flightCaSelect" onclick="event.stopPropagation()" onchange='doiCaPhuTrachChuyen("${cb.ma}",this.value)'>${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select>${fr24Html}<span class="standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span></div><div class="flightLabelTime">STA ${gioHienThi(cb.sta)} / ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</div>${acMeta?`<div class="flightLabelMeta">${escHtml(acMeta)}</div>`:""}<span class="flightLabelWarn ${mau==="planned"?"mutedPlanned":(["activeOk","futureOk","doneOk"].includes(mau)?"greenText":mau==="warn"?"orangeText":"redText")}">${mau==="planned"?"":ghiChu(cb.ma)}</span></div></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${waitEta?"waitEta":""} ${waitReady?"waitReady":""} ${departureReady?"departureReady":""} ${caCls} ${scopeCls}" title="${escHtml(titleChuyen)}" style="left:${left}px;width:${width}px"><span class="flightLeft"><span class="flightNo">${escHtml(cb.flight||"")}</span>${readyHtml}<span class="flightStand standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span><span class="flightGround">${escHtml(thoiGianNamSanText(cb))}</span></span><span class="flightCount">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)}</span></div>${waitEtaHtml}${shiftHtml}${monAfterHtml}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`);
     });
   el.innerHTML=htmlParts.join("");
 }
@@ -12684,6 +12890,8 @@ setTimeout(()=>{canhTheoVachHienTai(); liveFollow=false; capNhatNutLive();},350)
 window.addEventListener("resize",()=>capNhatTimelineNavigator(),{passive:true});
 setTimeout(quetAirLabsVaFr24,5000);
 setInterval(quetAirLabsVaFr24,20*60*1000);
+setTimeout(capNhatCargoTuBridge,7000);
+setInterval(capNhatCargoTuBridge,5*60*1000);
 </script>
 </body>
 </html>
