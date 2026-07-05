@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v17ak</title>
+<title>Dương Tú index_v17al</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4663,6 +4663,93 @@ body.dashboardOnly header > .row{
 #khungTimelineChuyenBay,
 #khungTimelineNhanSu{
   scroll-behavior:smooth;
+}
+body.timelineNavDragging #khungTimelineChuyenBay,
+body.timelineNavDragging #khungTimelineNhanSu{
+  scroll-behavior:auto!important;
+}
+.timelineNavigator{
+  display:grid;
+  grid-template-columns:auto 1fr auto auto;
+  align-items:center;
+  gap:8px;
+  padding:7px 10px 9px;
+  border-top:1px solid #17314f;
+  background:#061525;
+  position:sticky;
+  bottom:0;
+  z-index:420;
+}
+.timelineNavBtn{
+  height:30px!important;
+  min-width:44px!important;
+  padding:0 10px!important;
+  border-radius:8px!important;
+  font-weight:950!important;
+  font-size:11px!important;
+  background:#0b2742!important;
+  border:1px solid #2a5f96!important;
+  color:#dbeafe!important;
+}
+.timelineNavNow{
+  min-width:58px!important;
+  border-color:#38bdf8!important;
+  color:#7dd3fc!important;
+}
+.timelineNavTrack{
+  position:relative;
+  height:28px;
+  border-radius:999px;
+  background:
+    linear-gradient(90deg,rgba(56,189,248,.16),rgba(52,211,153,.14)),
+    #071d31;
+  border:1px solid #244466;
+  overflow:hidden;
+  touch-action:none;
+  cursor:pointer;
+}
+.timelineNavTrack::before{
+  content:"";
+  position:absolute;
+  inset:12px 8px auto;
+  height:2px;
+  background:rgba(148,163,184,.45);
+}
+.timelineNavNowMark{
+  position:absolute;
+  top:4px;
+  bottom:4px;
+  width:2px;
+  border-radius:2px;
+  background:#facc15;
+  box-shadow:0 0 8px rgba(250,204,21,.7);
+  pointer-events:none;
+}
+.timelineNavThumb{
+  position:absolute;
+  top:4px;
+  left:0;
+  height:18px;
+  min-width:44px;
+  border-radius:999px;
+  background:linear-gradient(180deg,#38bdf8,#0ea5e9);
+  border:1px solid rgba(224,242,254,.9);
+  box-shadow:0 4px 14px rgba(14,165,233,.35);
+  touch-action:none;
+  cursor:grab;
+}
+.timelineNavThumb:active{cursor:grabbing}
+@media(max-width:720px){
+  .timelineNavigator{
+    grid-template-columns:auto 1fr auto auto;
+    gap:6px;
+    padding:9px 8px 10px;
+  }
+  .timelineNavTrack{height:34px}
+  .timelineNavTrack::before{top:16px}
+  .timelineNavThumb{top:5px;height:22px;min-width:56px}
+  .timelineNavBtn{height:34px!important;min-width:42px!important;padding:0 8px!important}
+  .timelineNavNow{min-width:54px!important}
 }
 
 /* index_v17ae - realtime chuyến bay: card trái chỉ giữ mã chuyến, chọn ca, fr24 và bãi đỗ */
@@ -12328,12 +12415,129 @@ setInterval(()=>{
 let timelineScrollLeftMemory=null;
 let timelineCanhLanDau=false;
 let liveFollow=false;
+let timelineNavRaf=0;
+
+function taoTimelineNavigator(){
+  const panel=document.getElementById("panelTimelineChuyen");
+  const khung=document.getElementById("khungTimelineChuyenBay");
+  if(!panel||!khung)return null;
+  let nav=document.getElementById("timelineNavigator");
+  if(nav)return nav;
+  nav=document.createElement("div");
+  nav.id="timelineNavigator";
+  nav.className="timelineNavigator";
+  nav.innerHTML=`
+    <button type="button" class="timelineNavBtn" id="timelineNavBack" title="Lùi 1 giờ">-1h</button>
+    <div class="timelineNavTrack" id="timelineNavTrack" role="slider" aria-label="Timeline navigator">
+      <div class="timelineNavNowMark" id="timelineNavNowMark"></div>
+      <div class="timelineNavThumb" id="timelineNavThumb"></div>
+    </div>
+    <button type="button" class="timelineNavBtn timelineNavNow" id="timelineNavNow" title="Về timeline hiện tại">NOW</button>
+    <button type="button" class="timelineNavBtn" id="timelineNavNext" title="Tiến 1 giờ">+1h</button>`;
+  khung.insertAdjacentElement("afterend",nav);
+
+  const track=nav.querySelector("#timelineNavTrack");
+  const thumb=nav.querySelector("#timelineNavThumb");
+  const setByClientX=(clientX)=>{
+    const a=document.getElementById("khungTimelineChuyenBay");
+    const b=document.getElementById("khungTimelineNhanSu");
+    if(!a||!b)return;
+    const max=Math.max(0,a.scrollWidth-a.clientWidth);
+    const rect=track.getBoundingClientRect();
+    const thumbW=Math.max(44,thumb.offsetWidth||44);
+    const usable=Math.max(1,rect.width-thumbW);
+    const raw=clientX-rect.left-thumbW/2;
+    const ratio=Math.max(0,Math.min(1,raw/usable));
+    const x=ratio*max;
+    timelineScrollLeftMemory=x;
+    a.scrollLeft=x;
+    b.scrollLeft=x;
+    capNhatTimelineNavigator();
+  };
+
+  let dragging=false;
+  const endDrag=(e)=>{
+    if(!dragging)return;
+    dragging=false;
+    document.body.classList.remove("timelineNavDragging");
+    thumb.releasePointerCapture?.(e.pointerId);
+  };
+  thumb.addEventListener("pointerdown",e=>{
+    dragging=true;
+    document.body.classList.add("timelineNavDragging");
+    thumb.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  });
+  thumb.addEventListener("pointermove",e=>{
+    if(!dragging)return;
+    requestAnimationFrame(()=>setByClientX(e.clientX));
+  });
+  thumb.addEventListener("pointerup",endDrag);
+  thumb.addEventListener("pointercancel",endDrag);
+  track.addEventListener("pointerdown",e=>{
+    if(e.target===thumb)return;
+    document.body.classList.add("timelineNavDragging");
+    setByClientX(e.clientX);
+    setTimeout(()=>document.body.classList.remove("timelineNavDragging"),80);
+  });
+
+  nav.querySelector("#timelineNavBack").onclick=()=>dichTimelineTheoGio(-1);
+  nav.querySelector("#timelineNavNext").onclick=()=>dichTimelineTheoGio(1);
+  nav.querySelector("#timelineNavNow").onclick=()=>{
+    canhTheoVachHienTai();
+    capNhatTimelineNavigator();
+  };
+  capNhatTimelineNavigator();
+  return nav;
+}
+
+function dichTimelineTheoGio(soGio){
+  const a=document.getElementById("khungTimelineChuyenBay");
+  const b=document.getElementById("khungTimelineNhanSu");
+  if(!a||!b)return;
+  const max=Math.max(0,a.scrollWidth-a.clientWidth);
+  const x=Math.max(0,Math.min(max,a.scrollLeft + soGio*RONG_GIO));
+  timelineScrollLeftMemory=x;
+  a.scrollLeft=x;
+  b.scrollLeft=x;
+  capNhatTimelineNavigator();
+}
+
+function capNhatTimelineNavigator(){
+  if(timelineNavRaf)return;
+  timelineNavRaf=requestAnimationFrame(()=>{
+    timelineNavRaf=0;
+    const nav=taoTimelineNavigator();
+    const a=document.getElementById("khungTimelineChuyenBay");
+    if(!nav||!a)return;
+    const track=nav.querySelector("#timelineNavTrack");
+    const thumb=nav.querySelector("#timelineNavThumb");
+    const nowMark=nav.querySelector("#timelineNavNowMark");
+    if(!track||!thumb)return;
+    const max=Math.max(0,a.scrollWidth-a.clientWidth);
+    const trackW=Math.max(1,track.clientWidth);
+    const ratioVisible=a.scrollWidth>0?Math.min(1,a.clientWidth/a.scrollWidth):1;
+    const thumbW=Math.max(44,Math.round(trackW*ratioVisible));
+    const usable=Math.max(1,trackW-thumbW);
+    const left=max>0?(a.scrollLeft/max)*usable:0;
+    thumb.style.width=`${Math.min(trackW,thumbW)}px`;
+    thumb.style.transform=`translate3d(${left}px,0,0)`;
+    if(nowMark){
+      const nowLine=a.querySelector(".nowLine");
+      const nowX=nowLine?parseFloat(nowLine.style.left||"0"):0;
+      const contentW=Math.max(1,a.scrollWidth);
+      const nowPct=Math.max(0,Math.min(1,nowX/contentW));
+      nowMark.style.left=`${Math.round(nowPct*trackW)}px`;
+    }
+  });
+}
 
 function dongBoKeoTimeline(){
   const a=document.getElementById("khungTimelineChuyenBay");
   const b=document.getElementById("khungTimelineNhanSu");
   if(!a||!b)return;
 
+  taoTimelineNavigator();
   if(a.dataset.syncReady==="1")return;
   let khoa=false;
 
@@ -12342,6 +12546,7 @@ function dongBoKeoTimeline(){
     khoa=true;
     timelineScrollLeftMemory=src.scrollLeft;
     dst.scrollLeft = src.scrollLeft;
+    capNhatTimelineNavigator();
     requestAnimationFrame(()=>{khoa=false;});
   }
 
@@ -12398,6 +12603,7 @@ function dongBoViTriSauRender(){
   const x=timelineScrollLeftMemory!==null ? timelineScrollLeftMemory : a.scrollLeft;
   a.scrollLeft=x;
   b.scrollLeft=x;
+  capNhatTimelineNavigator();
 }
 
 function canhTimelineKhiMoLen(){
@@ -12409,6 +12615,7 @@ function canhTimelineKhiMoLen(){
       canhTheoVachHienTai();
       const a=document.getElementById("khungTimelineChuyenBay");
       if(a)timelineScrollLeftMemory=a.scrollLeft;
+      capNhatTimelineNavigator();
     },ms);
   });
 }
@@ -12429,6 +12636,7 @@ function canhTheoVachHienTai(){
   function setBoth(){
     a.scrollLeft=mucTieu;
     b.scrollLeft=mucTieu;
+    capNhatTimelineNavigator();
   }
 
   setBoth();
@@ -12473,6 +12681,7 @@ canhTimelineKhiMoLen();
 capNhatNutLive();
 capNhatNutAutoNhanSu();
 setTimeout(()=>{canhTheoVachHienTai(); liveFollow=false; capNhatNutLive();},350);
+window.addEventListener("resize",()=>capNhatTimelineNavigator(),{passive:true});
 setTimeout(quetAirLabsVaFr24,5000);
 setInterval(quetAirLabsVaFr24,20*60*1000);
 </script>
