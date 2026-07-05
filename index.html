@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v17ai</title>
+<title>Dương Tú index_v17ak</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -7634,6 +7634,7 @@ async function capNhatEtaTuFr24(ma,event,opts={}){
     cb.autoChanSauThuHoi=false;
     cb.autoChanSig="";
     cb.autoChanAbs=null;
+    capNhatPhanCongTheoKhungChuyen(cb.ma);
     logAction("CẬP NHẬT ETA FR24",`${cb.flight} dùng ${flightNo}: ${oldEta||"--"} → ${eta}`);
     luu();
     veTatCa();
@@ -7661,11 +7662,20 @@ async function capNhatEtaFr24Nen(ma,forceFinal=false){
     cb.fr24Airborne=true;
     cb.fr24LastCheck=new Date().toISOString();
     const lead=etaLeadMinutes(cb);
+    cb.fr24LeadAtCheck=lead;
+    if(forceFinal){
+      cb.fr24SecondDone=true;
+      cb.fr24SecondEligible=false;
+    }else{
+      cb.fr24SecondDone=false;
+      cb.fr24SecondEligible=lead!==null && lead>=120;
+    }
     cb.fr24Status=lead!==null && lead>=60 && !forceFinal ? "yellow" : "green";
     cb.fr24AutoFinal=cb.fr24Status==="green";
     cb.autoChanSauThuHoi=false;
     cb.autoChanSig="";
     cb.autoChanAbs=null;
+    capNhatPhanCongTheoKhungChuyen(cb.ma);
     logAction("AIRLABS -> FR24",`${cb.flight} dùng ${flightNo}: ${oldEta||"--"} -> ${eta} (${cb.fr24Status})`);
     return true;
   }catch(err){
@@ -7690,13 +7700,13 @@ async function quetAirLabsVaFr24(){
         cb.fr24Airborne=true;
         if(!coGio(cb.eta)){
           changed = await capNhatEtaFr24Nen(cb.ma,false) || changed;
-        }else if(lead!==null && lead<60){
+        }else if(cb.fr24SecondEligible && !cb.fr24SecondDone && lead!==null && lead<60){
           changed = await capNhatEtaFr24Nen(cb.ma,true) || changed;
         }else if(cb.fr24Status!=="yellow"){
           cb.fr24Status="yellow";
           changed=true;
         }
-      }else if(coGio(cb.eta) && cb.fr24Status==="yellow" && lead!==null && lead<60){
+      }else if(coGio(cb.eta) && cb.fr24Status==="yellow" && cb.fr24SecondEligible && !cb.fr24SecondDone && lead!==null && lead<60){
         changed = await capNhatEtaFr24Nen(cb.ma,true) || changed;
       }
     }
@@ -9063,14 +9073,26 @@ function capNhatPhanCongTheoKhungChuyen(maChuyen){
   const cb=chuyen(maChuyen);
   if(!cb)return 0;
   const bdMoi=batDauAbs(cb), ktMoi=ketThucAbs(cb);
+  const now=hienTaiAbs();
   let changed=0;
   (state.phanCong||[]).forEach(pc=>{
     if(pc.maChuyen!==maChuyen || pc.thuHoi)return;
-    if(pc.batDauAbs!==bdMoi || pc.ketThucAbs!==ktMoi){
-      pc.batDauAbs=bdMoi;
-      pc.ketThucAbs=ktMoi;
+    const bdCu=pc.batDauAbs;
+    const ktCu=pc.ketThucAbs;
+    if(now<bdCu && !pc.dieuDongTu)pc.batDauAbs=bdMoi;
+    pc.ketThucAbs=ktMoi;
+    if(pc.ketThucAbs<=pc.batDauAbs)pc.ketThucAbs=Math.max(ktMoi,pc.batDauAbs+15);
+    if(pc.batDauAbs!==bdCu || pc.ketThucAbs!==ktCu){
+      if(!pc.ketThucGocAbs || pc.ketThucGocAbs<pc.ketThucAbs)pc.ketThucGocAbs=pc.ketThucAbs;
       changed++;
     }
+  });
+  (state.phanCong||[]).forEach(pc=>{
+    if(pc.dieuDongTu!==maChuyen || pc.thuHoi)return;
+    const ktCu=pc.ketThucAbs;
+    pc.ketThucAbs=ktMoi;
+    if(pc.ketThucAbs<=pc.batDauAbs)pc.ketThucAbs=Math.max(ktMoi,pc.batDauAbs+15);
+    if(pc.ketThucAbs!==ktCu)changed++;
   });
   return changed;
 }
@@ -11774,6 +11796,47 @@ function thuHoiNhanSuTuChip(ma,maChuyen,event){
   );
 }
 
+function ungVienThayTheChoPC(oldPc,maDi){
+  const cbCu=chuyen(oldPc.maChuyen);
+  if(!cbCu)return [];
+  const bd=oldPc.batDauAbs, kt=oldPc.ketThucAbs;
+  return (state.danhSachNhanSu||[])
+    .filter(ns=>ns.ma!==maDi)
+    .filter(ns=>state.phanCaHomNay[ns.ma]?.chon)
+    .filter(ns=>gioiHanTheoCaChuyen(ns,cbCu))
+    .filter(ns=>gioChuyenCoGiaoVoiCa(ns,cbCu))
+    .filter(ns=>!canhBaoGioLamViec(ns.ma,cbCu))
+    .filter(ns=>!(state.phanCong||[]).some(pc=>pc.maNV===ns.ma&&pcDangHieuLuc(pc)&&!(pc.ketThucAbs<=bd||pc.batDauAbs>=kt)))
+    .sort((a,b)=>cmpArray(diemUngVienThuong(a,cbCu,ungVienChinh(cbCu)),diemUngVienThuong(b,cbCu,ungVienChinh(cbCu))))
+    .slice(0,8);
+}
+function moDoiNguoiChoPhanCong(oldPc,maDi,pcMoi,cbMoi,onDone){
+  const cbCu=chuyen(oldPc.maChuyen);
+  const ds=ungVienThayTheChoPC(oldPc,maDi);
+  if(!cbCu || !ds.length){
+    moActionModal({title:"Khong doi duoc nguoi",htmlBody:"Khong tim thay nhan su phu hop de thay o chuyen cu.",buttons:[]});
+    return;
+  }
+  moActionModal({
+    title:"Doi nguoi",
+    htmlBody:`<div><b>${escHtml(tenNV(maDi))}</b> se sang <b>${escHtml(cbMoi.flight)}</b>.</div>
+      <div>Chon nguoi thay o chuyen cu <b>${escHtml(cbCu.flight)}</b>, giu khung gio <b>${escHtml(gioTuPhut(oldPc.batDauAbs))} - ${escHtml(gioTuPhut(oldPc.ketThucAbs))}</b>.</div>`,
+    buttons:ds.map(ns=>({
+      label:ns.ten,
+      desc:`Thay ${tenNV(maDi)} o ${cbCu.flight}`,
+      className:"goodChoice",
+      onClick:()=>{
+        const repl={...oldPc,id:"PC"+Date.now()+"_"+Math.random().toString(36).slice(2,7),maNV:ns.ma,dieuDongTu:null,doiNguoiTu:maDi,autoNhanSu:false,autoLocked:false,autoTemp:false};
+        state.phanCong=state.phanCong.filter(pc=>pc.id!==oldPc.id);
+        state.phanCong.push(repl);
+        pcMoi.doiNguoiTu=oldPc.maChuyen;
+        pcMoi.doiNguoiThayBang=ns.ma;
+        logAction("DOI NGUOI",`${tenNV(maDi)} sang ${cbMoi.flight}; ${ns.ten} thay o ${cbCu.flight}`);
+        onDone();
+      }
+    }))
+  });
+}
 function ganBoNV(ma){
   if(!requirePerm("dashboard","phân công nhân sự"))return;
   if(!isAdmin() && caCuaNV(ma)!==caQuanLyTheoDangNhap()){
@@ -11901,7 +11964,18 @@ function ganBoNV(ma){
         return;
       }
     }else{
-      chonDichVuVaHoanTat(trungPc,bdDieuDong);
+      moActionModal({
+        title:"Nhan su dang co chuyen",
+        htmlBody:`<div><b>${escHtml(tenNV(ma))}</b> dang duoc phan cong o <b>${escHtml(tenChuyenTuPC(trungPc))}</b>.</div><div>Ban muon dieu dong bo sung hay doi nguoi thay o chuyen cu?</div>`,
+        buttons:[
+          {label:"Dieu dong",desc:"Cat/bo sung theo loai dich vu nhu hien tai.",className:"goodChoice",onClick:()=>chonDichVuVaHoanTat(trungPc,bdDieuDong)},
+          {label:"Doi nguoi",desc:"Chon nguoi khac thay o chuyen cu, nhan su nay sang chuyen moi.",className:"warnChoice",onClick:()=>{
+            pc.batDauAbs=bdDieuDong;
+            pc.ketThucAbs=ketThucAbs(cb);
+            moDoiNguoiChoPhanCong(trungPc,ma,pc,cb,hoanTatPhanCong);
+          }}
+        ]
+      });
       return;
     }
   }else if(cbDangLam){
