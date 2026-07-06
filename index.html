@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Duong Tu index_v17bl</title>
+<title>Duong Tu index_v17br</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -5072,6 +5072,31 @@ body.timelineNavDragging #khungTimelineNhanSu{
   cursor:not-allowed;
   filter:grayscale(.55);
 }
+.flightUpdatedBadge{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  height:28px;
+  line-height:26px;
+  padding:0 10px;
+  border:1px solid #ef4444;
+  border-radius:8px;
+  background:#260b0b;
+  color:#ff7777;
+  font-weight:900;
+  font-size:12px;
+  white-space:nowrap;
+  z-index:6;
+  box-shadow:0 0 10px rgba(239,68,68,.35);
+}
+.flightRtCard.splitShift{border-left-width:4px!important;border-right-width:4px!important}
+.flightRtCard.caDen1{border-left-color:#3ddc84!important}.flightRtCard.caDi1{border-right-color:#3ddc84!important}
+.flightRtCard.caDen2{border-left-color:#f59e0b!important}.flightRtCard.caDi2{border-right-color:#f59e0b!important}
+.flightRtCard.caDen3{border-left-color:#c084fc!important}.flightRtCard.caDi3{border-right-color:#c084fc!important}
+.flightRtCard.caDen4{border-left-color:#38bdf8!important}.flightRtCard.caDi4{border-right-color:#38bdf8!important}
+.flightRtCard.caDen5{border-left-color:#fb7185!important}.flightRtCard.caDi5{border-right-color:#fb7185!important}
+.flightDualCa{display:flex;gap:3px;align-items:center}
+.flightDualCa .flightCaSelect{width:42px!important}
 
 </style>
 </head>
@@ -5141,17 +5166,17 @@ body.timelineNavDragging #khungTimelineNhanSu{
 <div id="modalNhapLichTong" class="bulkOverlay hidden">
   <div class="bulkBox">
     <div class="bulkHead">
-      <b>Nhập lịch tổng</b>
+      <b id="bulkModalTitle">Nhập lịch tổng</b>
       <button class="small ghost" type="button" onclick="dongNhapLichTong()">Đóng</button>
     </div>
     <div class="bulkBody">
       <label class="bulkDateLabel">Ngày nhập
         <input id="bulkNgayNhap" type="date">
       </label>
-      <div class="hint">Dán dữ liệu lịch tổng dạng text/tab từ file. Cột hiểu theo thứ tự: Ca | Chuyến bay | A/C Regn | A/C type | Chặng bay | STA | STD | Bãi.</div>
+      <div class="hint" id="bulkModalHint">Dán dữ liệu lịch tổng dạng text/tab từ file. Cột hiểu theo thứ tự: Ca | Chuyến bay | A/C Regn | A/C type | Chặng bay | STA | STD | Bãi.</div>
       <textarea id="bulkTextNhap" placeholder="Dán lịch tổng vào đây..."></textarea>
       <div class="bulkActions">
-        <button class="good" type="button" onclick="nhapLichTongTuText()">Nhập lịch tổng</button>
+        <button class="good" id="bulkActionButton" type="button" onclick="nhapLichTongTuText()">Nhập lịch tổng</button>
         <button class="ghost" type="button" onclick="xemThuNhapLichTong()">Xem thử</button>
         <button class="ghost" type="button" onclick="dongNhapLichTong()">Hủy</button>
       </div>
@@ -5193,7 +5218,7 @@ body.timelineNavDragging #khungTimelineNhanSu{
 </div>
 <div class="wrap">
 <section class="panel" id="panelNhapChuyen">
-<h2><span>Nhập / sửa chuyến bay</span><span class="rtActions"><button class="small danger" id="nutXoaChuyenTrongNgay" type="button" onclick="moXoaChuyenTrongNgay()">Xóa chuyến trong ngày</button><button class="small danger" id="nutXoaDuLieuCargo" type="button" onclick="xoaDuLieuCargoNgay()">Xóa dữ liệu cargo</button><button class="small primary" id="nutNhapLichTong" type="button" onclick="moNhapLichTong()">Nhập lịch tổng</button></span></h2>
+<h2><span>Nhập / sửa chuyến bay</span><span class="rtActions"><button class="small danger" id="nutXoaChuyenTrongNgay" type="button" onclick="moXoaChuyenTrongNgay()">Xóa chuyến trong ngày</button><button class="small danger" id="nutXoaDuLieuCargo" type="button" onclick="xoaDuLieuCargoNgay()">Xóa dữ liệu cargo</button><button class="small primary" id="nutNhapLichTong" type="button" onclick="moNhapLichTong()">Nhập lịch tổng</button><button class="small primary" id="nutCapNhatLich" type="button" onclick="moCapNhatLich()">Cập nhật lịch</button></span></h2>
 <div class="body">
 <div class="row"><button class="primary" type="button" onclick="moFlightQuickModal(chuyenDangChon)">Nhập/sửa chuyến bay</button></div>
 <div class="row hidden" id="legacyFlightForm">
@@ -5201,6 +5226,7 @@ body.timelineNavDragging #khungTimelineNhanSu{
 <input id="flight" placeholder="Chuyến bay VD: RS511/512">
 <input id="acRegn" class="aircraftInput" placeholder="A/C Regn">
 <input id="acType" class="aircraftInput" placeholder="A/C type">
+<input id="routeChuyen" class="aircraftInput" placeholder="Route">
 <input id="sta" class="timeInput" placeholder="STA">
 <input id="eta" class="timeInput" placeholder="ETA">
 <input id="std" class="timeInput" placeholder="STD">
@@ -5868,6 +5894,7 @@ if(!state.accounts) state.accounts={};
 if(!state.cargoDi) state.cargoDi={};
 if(!state.cargoDen) state.cargoDen={};
 if(!state.mvtEtaRaw) state.mvtEtaRaw={};
+if(!state.flightLegs) state.flightLegs={};
 if(!Array.isArray(state.discordNhanSu)) state.discordNhanSu=[];
 if(!state.discordSent) state.discordSent={};
 function seedDiscordNhanSu(){
@@ -9367,8 +9394,15 @@ function veTimelineChuyen(){
         preCursor-=gap;
       }
       const shiftLeft=etaShift?Math.max(0,preCursor-shiftW):0;
+      let updatedHtml="";
+      if(cb.vuaCapNhatLich){
+        const updateText=`Vừa cập nhật: ${cb.updateSummary||"doi chang"}`;
+        const updW=Math.min(260,Math.max(126,updateText.length*7+24));
+        const anchor=etaShift?shiftLeft:preCursor;
+        updatedHtml=`<div class="flightUpdatedBadge" title="${escHtml(updateText)}" style="left:${Math.max(0,anchor-gap-updW)}px;width:${updW}px">${escHtml(updateText)}</div>`;
+      }
       let shiftHtml=etaShift?`<div class="etaShiftNote ${etaShift.type}" style="left:${shiftLeft}px;width:${shiftW}px">${etaShift.text}</div>`:"";
-      shiftHtml+=arrivalMonHtml+cargoDenHtml;
+      shiftHtml+=updatedHtml+arrivalMonHtml+cargoDenHtml;
       let cursor=left+width+gap;
 
       // Tất cả phần phía sau thanh chuyến lấy vị trí theo chuỗi:
@@ -9399,7 +9433,9 @@ function veTimelineChuyen(){
       const readyHtml=htmlCoTauSan(cb);
       const fr24Html=htmlNutFr24(cb);
       const infoHtml=`<button type="button" class="flightInfoBtn" title="Thông tin chuyến bay" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation();event.preventDefault();moFlightDetailModal('${cb.ma}')">i</button>`;
-      htmlParts.push(`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls}" onclick="chonChuyen('${cb.ma}')"><div class="flightRtCard ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}"><div class="flightLabelTop"><span class="flightLabelNo">${escHtml(cb.flight||"")}</span><select class="flightCaSelect" onclick="event.stopPropagation()" onchange='doiCaPhuTrachChuyen("${cb.ma}",this.value)'>${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select>${fr24Html}${infoHtml}<span class="standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span></div><div class="flightLabelTime">STA ${gioHienThi(cb.sta)} / ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</div>${acMeta?`<div class="flightLabelMeta">${escHtml(acMeta)}</div>`:""}<span class="flightLabelWarn ${mau==="planned"?"mutedPlanned":(["activeOk","futureOk","doneOk"].includes(mau)?"greenText":mau==="warn"?"orangeText":"redText")}">${mau==="planned"?"":ghiChu(cb.ma)}</span></div></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${waitEta?"waitEta":""} ${waitReady?"waitReady":""} ${departureReady?"departureReady":""} ${caCls} ${scopeCls}" title="${escHtml(titleChuyen)}" style="left:${left}px;width:${width}px"><span class="flightLeft"><span class="flightNo">${escHtml(cb.flight||"")}</span>${readyHtml}<span class="flightStand standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span><span class="flightGround">${escHtml(thoiGianNamSanText(cb))}</span></span><span class="flightCount">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)}</span></div>${waitEtaHtml}${shiftHtml}${monAfterHtml}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`);
+      const caSelectHtml=caSelectRealtimeHtml(cb);
+      const splitCls=caSplitClass(cb);
+      htmlParts.push(`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls}" onclick="chonChuyen('${cb.ma}')"><div class="flightRtCard ${caCls} ${splitCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}"><div class="flightLabelTop"><span class="flightLabelNo">${escHtml(cb.flight||"")}</span>${caSelectHtml}${fr24Html}${infoHtml}<span class="standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span></div><div class="flightLabelTime">STA ${gioHienThi(cb.sta)} / ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</div>${acMeta?`<div class="flightLabelMeta">${escHtml(acMeta)}</div>`:""}<span class="flightLabelWarn ${mau==="planned"?"mutedPlanned":(["activeOk","futureOk","doneOk"].includes(mau)?"greenText":mau==="warn"?"orangeText":"redText")}">${mau==="planned"?"":ghiChu(cb.ma)}</span></div></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${waitEta?"waitEta":""} ${waitReady?"waitReady":""} ${departureReady?"departureReady":""} ${caCls} ${scopeCls}" title="${escHtml(titleChuyen)}" style="left:${left}px;width:${width}px"><span class="flightLeft"><span class="flightNo">${escHtml(cb.flight||"")}</span>${readyHtml}<span class="flightStand standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span><span class="flightGround">${escHtml(thoiGianNamSanText(cb))}</span></span><span class="flightCount">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)}</span></div>${waitEtaHtml}${shiftHtml}${monAfterHtml}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`);
     });
   el.innerHTML=htmlParts.join("");
   setTimeout(autoGuiDiscordSapChot,0);
@@ -10708,7 +10744,7 @@ function parseLichTongText(text,baseNgay){
       return;
     }
 
-    rows.push({
+    const rowOut={
       line:item.line,
       ngay:item.ngay,
       flight:item.flight,
@@ -10725,13 +10761,239 @@ function parseLichTongText(text,baseNgay){
       soNguoiToiThieu:2,
       caPhuTrach:item.caPhuTrach,
       duKienTong:true
-    });
+    };
+    const f=tachFlightDetail(rowOut);
+    const routeInfo=tachRouteDetail(rowOut);
+    if(rowOut.sta||rowOut.eta){
+      rowOut.arrivalLeg={
+        line:item.line,ngay:item.ngay,flight:f.den||item.flight,acRegn:item.acRegn,acType:item.acType,
+        dep:(routeInfo.den||"").split("-")[0]||"",arr:(routeInfo.den||"").split("-")[1]||"",route:routeInfo.den,
+        schedDep:"",schedArr:item.sta,eta:"",stand:item.baiDo,caPhuTrach:item.caPhuTrach,source:"lichTong"
+      };
+    }
+    if(rowOut.std){
+      rowOut.departureLeg={
+        line:item.line,ngay:item.ngay,flight:f.di||item.flight,acRegn:item.acRegn,acType:item.acType,
+        dep:(routeInfo.di||"").split("-")[0]||"",arr:(routeInfo.di||"").split("-")[1]||"",route:routeInfo.di,
+        schedDep:item.std,schedArr:"",etd:"",stand:item.baiDo,caPhuTrach:item.caPhuTrach,source:"lichTong"
+      };
+    }
+    rows.push(rowOut);
   });
   return {rows,loi,all};
+}
+function routeTuCapSanBay(dep,arr){
+  const d=String(dep||"").trim().toUpperCase();
+  const a=String(arr||"").trim().toUpperCase();
+  return d&&a?`${d}-${a}`:"";
+}
+function standTuCellUpdate(v){
+  const s=String(v||"").trim();
+  if(!s)return "";
+  const parts=s.split("-").map(x=>x.trim()).filter(x=>x&&x!=="__");
+  return parts[0]||s.replace(/__/g,"").replace(/-/g,"").trim();
+}
+function parseNgayUpdateCell(v,baseNgay){
+  const s=String(v||"").trim();
+  const m=s.match(/^(\d{1,2})[-\/\s]([A-Za-z]{3})/);
+  if(!m)return baseNgay;
+  const mon={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11}[m[2].toLowerCase()];
+  if(mon===undefined)return baseNgay;
+  const y=Number(String(baseNgay||homNayLocal()).slice(0,4))||new Date().getFullYear();
+  return `${y}-${String(mon+1).padStart(2,"0")}-${String(Number(m[1])).padStart(2,"0")}`;
+}
+function absNgayGioSafe(ngay,gio){
+  const g=chuanHoaGio(gio);
+  if(!g)return null;
+  return absNgayGio(ngay,g);
+}
+function flightDenDiFromLegs(arr,dep){
+  const den=String(arr?.flight||"").trim().toUpperCase();
+  const di=String(dep?.flight||"").trim().toUpperCase();
+  if(den&&di){
+    const pref=den.slice(0,2);
+    return di.startsWith(pref)?`${den} ${di.slice(2)}`:`${den} ${di}`;
+  }
+  return den||di;
+}
+function capNhatFlightLayers(cb,arr,dep){
+  const oldDen=cb.caDen || cb.caPhuTrach || "tatca";
+  const oldDi=cb.caDi || cb.caPhuTrach || "tatca";
+  cb.arrivalLeg=arr?{...arr}:null;
+  cb.departureLeg=dep?{...dep}:null;
+  cb.layerUpdatedAt=new Date().toISOString();
+  cb.caDen=arr?oldDen:"";
+  cb.caDi=dep?oldDi:"";
+  if(cb.caDen && cb.caDi && cb.caDen===cb.caDi)cb.caPhuTrach=cb.caDen;
+}
+function flightLegSig(leg){
+  if(!leg)return "";
+  return [
+    normFr24(leg.flight||""),
+    String(leg.dep||"").toUpperCase(),
+    String(leg.arr||"").toUpperCase(),
+    String(leg.route||"").toUpperCase()
+  ].join("|");
+}
+function flightLayerSig(arr,dep){
+  return `${flightLegSig(arr)}__${flightLegSig(dep)}`;
+}
+function legAbsArrival(leg){
+  if(!leg)return null;
+  return absNgayGioSafe(leg.ngay,leg.eta||leg.schedArr||leg.sta||"");
+}
+function arrivalLegDaCoTau(leg){
+  if(!leg)return false;
+  if(coGio(leg.eta))return true;
+  const a=legAbsArrival(leg);
+  return a!=null && a<=hienTaiAbs();
+}
+function chuyenDenDaCoTauChoChuyenDi(cb){
+  if(!cb)return false;
+  if(coGio(cb.eta))return true;
+  const e=etaAbs(cb), a=staAbs(cb);
+  const now=hienTaiAbs();
+  return (e!=null && e<=now) || (a!=null && a<=now);
+}
+function updateDiffSummary(oldCb,newRow,oldLayerSig,newLayerSig){
+  const ds=[];
+  if(oldLayerSig && newLayerSig && oldLayerSig!==newLayerSig)ds.push("doi chang");
+  if(String(oldCb.acRegn||"")!==String(newRow.acRegn||""))ds.push("A/C REGN");
+  if(String(oldCb.acType||"")!==String(newRow.acType||""))ds.push("A/C TYPE");
+  if(String(oldCb.route||"")!==String(newRow.route||""))ds.push("ROUTE");
+  if(String(oldCb.sta||"")!==String(newRow.sta||""))ds.push("STA");
+  if(String(oldCb.eta||"")!==String(newRow.eta||"") && newRow.eta)ds.push("ETA");
+  if(String(oldCb.std||"")!==String(newRow.std||""))ds.push("STD");
+  if(String(oldCb.etd||"")!==String(newRow.etd||"") && newRow.etd)ds.push("ETD");
+  return ds.join(", ");
+}
+function clearVuaCapNhatLich(){
+  (state.danhSachChuyenBay||[]).forEach(cb=>{
+    cb.vuaCapNhatLich=false;
+    cb.updateBatchId="";
+    cb.updateSummary="";
+  });
+}
+function danhDauCoTauSanTuLienKet(cb,row){
+  if(!cb||!row||!row.linkedArrivalLeg)return;
+  cb.linkedArrivalLeg={...row.linkedArrivalLeg};
+  if(!cb.coTauSan && arrivalLegDaCoTau(row.linkedArrivalLeg)){
+    cb.coTauSan=true;
+    cb.coTauSanAbs=hienTaiAbs();
+    cb.coTauSanTuChuyenDen=true;
+  }
+}
+function parseCapNhatLichText(text,baseNgay){
+  const rawRows=[];
+  const loi=[];
+  String(text||"").split(/\r?\n/).forEach((line,idx)=>{
+    if(!line.trim())return;
+    const cols=line.includes("\t")?line.split(/\t/).map(x=>x.trim()):line.trim().split(/\s{2,}|\t/).map(x=>x.trim()).filter(Boolean);
+    if(cols.length<10){
+      loi.push(`Dòng ${idx+1}: thiếu cột dữ liệu cập nhật`);
+      return;
+    }
+    const ngay=parseNgayUpdateCell(cols[0],baseNgay);
+    const flight=chuanHoaFlightNhapTong(cols[1]);
+    if(!/^VJ/i.test(flight))return;
+    const dep=String(cols[5]||"").trim().toUpperCase();
+    const arr=String(cols[6]||"").trim().toUpperCase();
+    const schedDep=chuanHoaGio(cols[7]);
+    const schedArr=chuanHoaGio(cols[8]);
+    const etd=chuanHoaGio(cols[11]||cols[12]||"")||"";
+    const eta=chuanHoaGio(cols[13]||"")||"";
+    const stand=standTuCellUpdate(cols[17]||cols[16]||"");
+    const ca=caNhapTong(cols[18]||"");
+    const acRegn=String(cols[3]||"").trim().toUpperCase();
+    const acType=String(cols[4]||"").trim().toUpperCase();
+    if(!flight||!acRegn||!dep||!arr||!schedDep||!schedArr){
+      loi.push(`Dòng ${idx+1}: thiếu flight/A-C/route/giờ`);
+      return;
+    }
+    rawRows.push({
+      line:idx+1,ngay,flight,acRegn,acType,dep,arr,route:routeTuCapSanBay(dep,arr),
+      schedDep,schedArr,etd,eta,stand,caPhuTrach:ca,raw:line
+    });
+  });
+  const arrivals=rawRows.filter(r=>r.arr==="DAD").sort((a,b)=>(absNgayGioSafe(a.ngay,a.schedArr)||0)-(absNgayGioSafe(b.ngay,b.schedArr)||0));
+  const departures=rawRows.filter(r=>r.dep==="DAD").sort((a,b)=>(absNgayGioSafe(a.ngay,a.schedDep)||0)-(absNgayGioSafe(b.ngay,b.schedDep)||0));
+  const usedDep=new Set();
+  const rows=[];
+  arrivals.forEach(arr=>{
+    const arrAbs=absNgayGioSafe(arr.ngay,arr.schedArr);
+    const dep=departures.find(d=>{
+      if(usedDep.has(d.line)||d.acRegn!==arr.acRegn)return false;
+      const depAbs=absNgayGioSafe(d.ngay,d.schedDep);
+      return arrAbs!=null && depAbs!=null && depAbs>=arrAbs && depAbs-arrAbs<=120;
+    });
+    if(dep)usedDep.add(dep.line);
+    const route=dep?`${arr.dep}-DAD-${dep.arr}`:arr.route;
+    rows.push({
+      line:arr.line,ngay:arr.ngay,flight:flightDenDiFromLegs(arr,dep),acRegn:arr.acRegn,acType:arr.acType,
+      route,sta:arr.schedArr,eta:arr.eta,std:dep?.schedDep||"",etd:dep?.etd||"",
+      baiDo:arr.stand||dep?.stand||"36",ghiChu:dichVuTheoLoaiMayBay(arr.acType),groundTime:groundTimeMacDinh({ngay:arr.ngay,sta:arr.schedArr,std:dep?.schedDep||"",eta:arr.eta,groundTime:""}),
+      soNguoiToiThieu:2,caPhuTrach:"",caDen:"",caDi:"",
+      arrivalLeg:arr,departureLeg:dep||null,capNhatLich:true
+    });
+  });
+  departures.filter(d=>!usedDep.has(d.line)).forEach(dep=>{
+    const depAbs=absNgayGioSafe(dep.ngay,dep.schedDep);
+    const linkedArrival=[...arrivals].reverse().find(arr=>{
+      if(arr.acRegn!==dep.acRegn)return false;
+      const arrAbs=absNgayGioSafe(arr.ngay,arr.schedArr);
+      return depAbs!=null && arrAbs!=null && arrAbs<=depAbs;
+    })||null;
+    rows.push({
+      line:dep.line,ngay:dep.ngay,flight:dep.flight,acRegn:dep.acRegn,acType:dep.acType,route:dep.route,
+      sta:"",eta:"",std:dep.schedDep,etd:dep.etd,baiDo:dep.stand||"36",ghiChu:dichVuTheoLoaiMayBay(dep.acType),
+      groundTime:75,soNguoiToiThieu:2,caPhuTrach:"",caDen:"",caDi:"",
+      arrivalLeg:null,departureLeg:dep,linkedArrivalLeg:linkedArrival,capNhatLich:true
+    });
+  });
+  return {rows,loi,all:rows,legs:rawRows};
+}
+function laDongCapNhatLichMoi(line){
+  return /^\s*\d{1,2}[-\/\s][A-Za-z]{3}\b/i.test(String(line||""));
+}
+function parseCapNhatLichTheoDinhDangCu(text,baseNgay){
+  const parsed=parseLichTongText(text,baseNgay);
+  parsed.rows=(parsed.rows||[]).map(r=>({
+    ...r,
+    capNhatLich:true,
+    capNhatTheoDinhDangCu:true
+  }));
+  parsed.all=(parsed.all||[]).map(item=>({
+    ...item,
+    capNhatLich:true,
+    capNhatTheoDinhDangCu:true,
+    note:item.note||"Cập nhật lịch theo định dạng cũ - match bằng số hiệu chuyến bay"
+  }));
+  return parsed;
+}
+let bulkMode="import";
+function setupBulkModal(mode){
+  bulkMode=mode||"import";
+  const isUpdate=bulkMode==="update";
+  const title=$("bulkModalTitle"), hint=$("bulkModalHint"), btn=$("bulkActionButton");
+  if(title)title.textContent=isUpdate?"Cập nhật lịch":"Nhập lịch tổng";
+  if(hint)hint.textContent=isUpdate
+    ?"Dán dữ liệu cập nhật lịch dạng bảng khai thác. Hệ thống chỉ xử lý VJ, match theo A/C regn, ghép chuyến đến/đi DAD trong vòng <= 2 giờ."
+    :"Dán dữ liệu lịch tổng dạng text/tab từ file. Cột hiểu theo thứ tự: Ca | Chuyến bay | A/C Regn | A/C type | Chặng bay | STA | STD | Bãi.";
+  if(btn)btn.textContent=isUpdate?"Cập nhật lịch":"Nhập lịch tổng";
 }
 function moNhapLichTong(){
   if(!canPerm("nhapChuyen")){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
   const m=$("modalNhapLichTong"); if(!m)return;
+  setupBulkModal("import");
+  setVal("bulkNgayNhap",ngayNhapLichTongMacDinh());
+  setVal("bulkTextNhap","");
+  const k=$("bulkKetQua"); if(k)k.innerHTML="";
+  m.classList.remove("hidden");
+}
+function moCapNhatLich(){
+  if(!canPerm("nhapChuyen")){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
+  const m=$("modalNhapLichTong"); if(!m)return;
+  setupBulkModal("update");
   setVal("bulkNgayNhap",ngayNhapLichTongMacDinh());
   setVal("bulkTextNhap","");
   const k=$("bulkKetQua"); if(k)k.innerHTML="";
@@ -10751,6 +11013,7 @@ function bulkCell(v,field,editable=true){
   return `<td${ed}${f}>${escHtml(v||"")}</td>`;
 }
 function bulkPreviewToText(){
+  if(bulkMode==="update" && laDongCapNhatLichMoi((val("bulkTextNhap")||"").split(/\r?\n/).find(x=>x.trim())||""))return;
   const table=document.querySelector(".bulkPreviewTable");
   if(!table)return;
   const lines=[...table.querySelectorAll("tbody tr")].map(tr=>{
@@ -10772,6 +11035,10 @@ function bulkPreviewToText(){
   setVal("bulkTextNhap",lines.join("\n"));
 }
 function nhapLichTongTuBangSua(){
+  if(bulkMode==="update" && laDongCapNhatLichMoi((val("bulkTextNhap")||"").split(/\r?\n/).find(x=>x.trim())||"")){
+    nhapLichTongTuText();
+    return;
+  }
   bulkPreviewToText();
   nhapLichTongTuText();
 }
@@ -10840,24 +11107,68 @@ function baoCaoNhapLichTong(kq){
 
 function capNhatChuyenTuLichTong(cb,row){
   if(!cb||!row)return;
+  const isUpdate=!!row.capNhatLich;
+  const oldLayerSig=flightLayerSig(cb.arrivalLeg,cb.departureLeg);
+  const oldData={...cb};
+  const oldCa=cb.caPhuTrach||"tatca";
+  const oldCaDen=cb.caDen||oldCa;
+  const oldCaDi=cb.caDi||oldCa;
+  const oldFlight=cb.flight;
   cb.acRegn=row.acRegn;
   cb.acType=row.acType;
   cb.route=row.route;
   cb.sta=row.sta;
-  if(!coGio(cb.eta)) cb.eta=row.eta||"";
+  if(isUpdate) cb.eta=row.eta||cb.eta||"";
+  else if(!coGio(cb.eta)) cb.eta=row.eta||"";
   cb.std=row.std;
-  cb.etd=row.etd||cb.etd||"";
+  cb.etd=isUpdate?(row.etd||cb.etd||""):(row.etd||cb.etd||"");
   cb.groundTime=row.groundTime||groundTimeMacDinh(row);
-  cb.baiDo=row.baiDo||"36";
+  if(!isUpdate)cb.baiDo=row.baiDo||"36";
   cb.ghiChu=row.ghiChu||cb.ghiChu||"";
   cb.soNguoiToiThieu=row.soNguoiToiThieu||2;
-  cb.caPhuTrach=row.caPhuTrach||cb.caPhuTrach||"tatca";
+  if(!isUpdate)cb.caPhuTrach=row.caPhuTrach||cb.caPhuTrach||"tatca";
+  else{
+    cb.flight=oldFlight;
+    cb.caPhuTrach=oldCa;
+    cb.caDen=row.arrivalLeg?oldCaDen:"";
+    cb.caDi=row.departureLeg?oldCaDi:"";
+  }
+  if(row.arrivalLeg||row.departureLeg){
+    const newLayerSig=flightLayerSig(row.arrivalLeg,row.departureLeg);
+    const summary=updateDiffSummary(oldData,row,oldLayerSig,newLayerSig);
+    capNhatFlightLayers(cb,row.arrivalLeg,row.departureLeg);
+    if(isUpdate && oldLayerSig && newLayerSig && oldLayerSig!==newLayerSig){
+      cb.vuaCapNhatLich=true;
+      cb.updateBatchId=state.lastScheduleUpdateBatchId||"";
+      cb.updateSummary=summary||"doi chang";
+    }
+  }
+  danhDauCoTauSanTuLienKet(cb,row);
   cb.duKienTong=true;
   capNhatPhanCongTheoKhungChuyen(cb.ma);
 }
+function timChuyenTrungCapNhat(row){
+  if(!row)return null;
+  const tokenSet=new Set(tokenTrungChuyen(row.flight||""));
+  const candidates=state.danhSachChuyenBay.filter(cb=>cb.ngay===row.ngay);
+  return candidates.find(cb=>tokenTrungChuyen(cb.flight||"").some(t=>tokenSet.has(t))) ||
+    candidates.find(cb=>{
+      if(!row.acRegn || String(cb.acRegn||"").toUpperCase()!==String(row.acRegn||"").toUpperCase())return false;
+      const a1=staAbs(cb)??etaAbs(cb), b1=stdAbs(cb)??etdAbs(cb);
+      const a2=absNgayGioSafe(row.ngay,row.sta||row.eta||row.std), b2=absNgayGioSafe(row.ngay,row.std||row.etd||row.sta);
+      if(a1==null||a2==null)return false;
+      return Math.abs(a1-a2)<=180 || (b1!=null&&b2!=null&&Math.abs(b1-b2)<=180);
+    }) || null;
+}
+function parseBulkTheoMode(text,base){
+  if(bulkMode!=="update")return parseLichTongText(text,base);
+  const first=String(text||"").split(/\r?\n/).find(x=>x.trim())||"";
+  return laDongCapNhatLichMoi(first)?parseCapNhatLichText(text,base):parseCapNhatLichTheoDinhDangCu(text,base);
+}
 function xemThuNhapLichTong(){
   const base=val("bulkNgayNhap")||ngayNhapLichTongMacDinh();
-  const {rows,loi,all}=parseLichTongText(val("bulkTextNhap"),base);
+  const parsed=parseBulkTheoMode(val("bulkTextNhap"),base);
+  const {rows,loi,all}=parsed;
   const updated=[];
   const rowKey=new Map(rows.map(r=>[r.line,r]));
   const preview=(all||[]).map(item=>{
@@ -10865,7 +11176,7 @@ function xemThuNhapLichTong(){
     if(item.errors&&item.errors.length){
       return {...item,statusClass:"bulkErr",statusHtml:'<span class="bulkErrText">Lỗi</span>',note:item.errors.join("; "),soNguoiToiThieu:2};
     }
-    const trung=timChuyenTrungTheoNgay(item.flight,item.ngay);
+    const trung=bulkMode==="update"?timChuyenTrungCapNhat(row||item):timChuyenTrungTheoNgay(item.flight,item.ngay);
     if(trung){
       const msg=`${item.flight} (${item.ngay}) sẽ cập nhật ${trung.flight} | Bãi ${trung.baiDo}`;
       updated.push(msg);
@@ -10873,12 +11184,21 @@ function xemThuNhapLichTong(){
     }
     return {...item,statusClass:"bulkOk",statusHtml:'<span class="bulkOkText">Thêm mới</span>',note:item.baiDo==="36"?"Nếu file thiếu bãi thì đã mặc định 36":"",soNguoiToiThieu:2};
   });
-  baoCaoNhapLichTong({ok:rows.filter(r=>!timChuyenTrungTheoNgay(r.flight,r.ngay)),updated,skip:[],loi,preview});
+  baoCaoNhapLichTong({ok:rows.filter(r=>!(bulkMode==="update"?timChuyenTrungCapNhat(r):timChuyenTrungTheoNgay(r.flight,r.ngay))),updated,skip:[],loi,preview});
 }
 function nhapLichTongTuText(){
   if(!canPerm("nhapChuyen")){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
   const base=val("bulkNgayNhap")||ngayNhapLichTongMacDinh();
-  const {rows,loi,all}=parseLichTongText(val("bulkTextNhap"),base);
+  const parsed=parseBulkTheoMode(val("bulkTextNhap"),base);
+  const {rows,loi,all}=parsed;
+  if(bulkMode==="update"){
+    state.lastScheduleUpdateBatchId="UPD_"+Date.now();
+    clearVuaCapNhatLich();
+  }
+  if(bulkMode==="update" && parsed.legs){
+    if(!state.flightLegs)state.flightLegs={};
+    state.flightLegs[base]=parsed.legs;
+  }
   const ok=[], updated=[], skip=[];
   const rowKey=new Map(rows.map(r=>[r.line,r]));
   const preview=[];
@@ -10889,7 +11209,7 @@ function nhapLichTongTuText(){
       preview.push({...item,statusClass:"bulkErr",statusHtml:'<span class="bulkErrText">Lỗi</span>',note:item.errors.join("; "),soNguoiToiThieu:2});
       return;
     }
-    const trung=timChuyenTrungTheoNgay(item.flight,item.ngay);
+    const trung=bulkMode==="update"?timChuyenTrungCapNhat(row):timChuyenTrungTheoNgay(item.flight,item.ngay);
     if(trung){
       capNhatChuyenTuLichTong(trung,row);
       const msg=`${item.flight} (${item.ngay}) đã cập nhật ${trung.flight} | Bãi ${trung.baiDo}`;
@@ -10898,13 +11218,22 @@ function nhapLichTongTuText(){
       return;
     }
     const cb={ma:"CB"+Date.now()+"_"+Math.random().toString(16).slice(2),...row};
+    if(row.arrivalLeg||row.departureLeg){
+      capNhatFlightLayers(cb,row.arrivalLeg,row.departureLeg);
+      if(bulkMode==="update"){
+        cb.vuaCapNhatLich=true;
+        cb.updateBatchId=state.lastScheduleUpdateBatchId||"";
+        cb.updateSummary="them moi tu cap nhat lich";
+      }
+    }
+    danhDauCoTauSanTuLienKet(cb,row);
     state.danhSachChuyenBay.push(cb);
     ok.push(cb);
     preview.push({...item,statusClass:"bulkOk",statusHtml:'<span class="bulkOkText">Đã nhập</span>',note:item.baiDo==="36"?"Nếu file thiếu bãi thì đã mặc định 36":"",soNguoiToiThieu:2});
   });
 
   if(ok.length||updated.length){
-    logAction("NHẬP LỊCH TỔNG",`Thêm mới ${ok.length} chuyến, cập nhật ${updated.length} chuyến.`);
+    logAction(bulkMode==="update"?"CẬP NHẬT LỊCH":"NHẬP LỊCH TỔNG",`Thêm mới ${ok.length} chuyến, cập nhật ${updated.length} chuyến.`);
     luu();
     veTatCa();
   }
@@ -10997,7 +11326,7 @@ function moModalDichVu(){
   });
 }
 function clearFormChuyen(){
-  ["flight","acRegn","acType","sta","eta","std","etd","groundTime","baiDo","ghiChuChuyen","dichVuChuyen"].forEach(id=>{const el=$(id); if(el)el.value="";});
+  ["flight","acRegn","acType","routeChuyen","sta","eta","std","etd","groundTime","baiDo","ghiChuChuyen","dichVuChuyen"].forEach(id=>{const el=$(id); if(el)el.value="";});
   capNhatNutDichVu();
   setVal("soNguoiToiThieu",2); setVal("caPhuTrachChuyen","tatca");
 }
@@ -11057,9 +11386,10 @@ function tachChuyenDangChon(){
   const route=tachChangBay(cb.route);
   const pcCu=state.phanCong.filter(pc=>pc.maChuyen===cb.ma||pc.dieuDongTu===cb.ma);
   const canhBao=pcCu.length?`\n\nChuyến gốc đang có ${pcCu.length} phân công/điều động. Khi tách chuyến, các phân công cũ của chuyến gốc sẽ được xóa để tránh giữ nhân sự theo khung dài.`:"";
+  const tauSanTuChuyenDen=chuyenDenDaCoTauChoChuyenDi(cb);
   const msg=`Tách chuyến ${cb.flight} thành:\n\n`+
     `1. ${so.den} | ${route.den||"--"} | STA ${gioHienThi(cb.sta)} | ETA ${gioHienThi(cb.eta)} | STD --\n`+
-    `2. ${so.di} | ${route.di||"--"} | STA -- | ETA -- | STD ${gioHienThi(cb.std)} | Chờ xác nhận tàu sẵn\n`+
+    `2. ${so.di} | ${route.di||"--"} | STA -- | ETA -- | STD ${gioHienThi(cb.std)} | ${tauSanTuChuyenDen?"Tự có tàu sẵn theo chuyến đến":"Chờ xác nhận tàu sẵn"}\n`+
     canhBao+`\n\nBạn chắc chắn muốn tách?`;
   if(!confirm(msg))return;
 
@@ -11083,7 +11413,8 @@ function tachChuyenDangChon(){
     eta:cb.eta||"",
     std:"",
     etd:"",
-    groundTime:""
+    groundTime:"",
+    linkedDepartureMa:maDi
   };
   const di={
     ...chung,
@@ -11095,8 +11426,11 @@ function tachChuyenDangChon(){
     std:cb.std||"",
     etd:cb.etd||"",
     groundTime:"",
-    coTauSan:false,
-    coTauSanAbs:null
+    coTauSan:tauSanTuChuyenDen,
+    coTauSanAbs:tauSanTuChuyenDen?hienTaiAbs():null,
+    coTauSanTuChuyenDen:tauSanTuChuyenDen,
+    linkedArrivalMa:maDen,
+    linkedArrivalFlight:den.flight
   };
 
   const idx=state.danhSachChuyenBay.findIndex(x=>x.ma===cb.ma);
@@ -11104,7 +11438,7 @@ function tachChuyenDangChon(){
   state.danhSachChuyenBay.splice(idx,1,den,di);
   state.phanCong=state.phanCong.filter(pc=>pc.maChuyen!==cb.ma && pc.dieuDongTu!==cb.ma);
   chuyenDangChon=maDi;
-  logAction("TÁCH CHUYẾN",`${cb.flight} → ${den.flight} (${den.route||"--"}) + ${di.flight} (${di.route||"--"}) | Bãi ${cb.baiDo||"--"} | Chuyến đi chờ xác nhận tàu sẵn`);
+  logAction("TÁCH CHUYẾN",`${cb.flight} → ${den.flight} (${den.route||"--"}) + ${di.flight} (${di.route||"--"}) | Bãi ${cb.baiDo||"--"} | ${tauSanTuChuyenDen?"Chuyến đi tự có tàu sẵn theo chuyến đến":"Chuyến đi chờ xác nhận tàu sẵn"}`);
   luu();
   veTatCa();
   autoSauKhiNhapChuyen();
@@ -11185,7 +11519,7 @@ function biKhoaThaoTacTheoGio(){
 }
 function veTatCa(){ updateAccountUI(); apDungGioiHanCaTheoDangNhap(); khoaAutoDenHan(); veBangTaiKhoan(); veBangDiscordNhanSu(); veDangChinhSua(); veLog(); veBoLocCa(); veBoNutGanCa(); if($("lichChinh")) $("lichChinh").value=state.ngayKhaiThac; $("ngayKhaiThac").value=state.ngayKhaiThac; if($("ngayPhanCa")) $("ngayPhanCa").value=state.ngayKhaiThac; state.ngayPhanCa=state.ngayKhaiThac; veTimelineChuyen(); veTimelineNhanSu(); veDanhSachChon(); veBangPhanCa(); veBangNhanSu(); veBangYeuCau(); veBangYeuCauHang(); $("nutChuyenBay").textContent=chuyenDangChon?"Sửa đổi":"Thêm chuyến"; $("nutTimChuyen").textContent=state.timChuyen?"↺":"🔍"; $("nutXoaChuyen").style.display=chuyenDangChon?"inline-block":"none"; capNhatNutTachChuyen(); capNhatDongHo(); capNhatNutAutoNhanSu(); capNhatNutDichVu(); updateRealtimeStats(); dongBoKeoTimeline(); dongBoViTriSauRender(); }
 
-function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; setVal("acRegn",cb.acRegn||""); setVal("acType",cb.acType||""); setVal("sta",cb.sta||""); $("eta").value=cb.eta; $("std").value=cb.std; setVal("etd",cb.etd||""); setVal("groundTime",cb.groundTime||groundTimeMacDinh(cb)); $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setDichVuTickFromNote(cb.ghiChu||""); setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||"tatca"); setVal("caPhuTrachChuyen",cb.caPhuTrach||"tatca"); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa(); if(liveFollow)setTimeout(canhTheoVachHienTai,100); }
+function chonChuyen(ma){ nhanSuDoiCho=null; if(chuyenDangChon===ma){boChon();return;} chuyenDangChon=ma; const cb=chuyen(ma); if(cb&&cb.ngay){state.ngayPhanCa=cb.ngay;} $("flight").value=cb.flight; setVal("acRegn",cb.acRegn||""); setVal("acType",cb.acType||""); setVal("routeChuyen",cb.route||""); setVal("sta",cb.sta||""); $("eta").value=cb.eta; $("std").value=cb.std; setVal("etd",cb.etd||""); setVal("groundTime",cb.groundTime||groundTimeMacDinh(cb)); $("baiDo").value=cb.baiDo; $("ghiChuChuyen").value=cb.ghiChu||""; setDichVuTickFromNote(cb.ghiChu||""); setVal("soNguoiToiThieu",cb.soNguoiToiThieu||2); setVal("caPhuTrachChuyen",cb.caPhuTrach||"tatca"); setVal("caPhuTrachChuyen",cb.caPhuTrach||"tatca"); if(cb)setActiveEdit("flight",ma,`chuyến ${cb.flight}`); luu(); veTatCa(); if(liveFollow)setTimeout(canhTheoVachHienTai,100); }
 function boChon(){ clearActiveEdit(); nhanSuDoiCho=null; chuyenDangChon=null; clearFormChuyen(); veTatCa(); }
 
 function xoaChuyenDangChon(){
@@ -11347,6 +11681,7 @@ function moFlightQuickModal(ma=null){
           ${flightDetailField("fq","Chuyến bay","flight",cb.flight||"","text","flightDetailWide")}
           ${flightDetailField("fq","A/C Regn","acRegn",cb.acRegn||"")}
           ${flightDetailField("fq","A/C Type","acType",cb.acType||"")}
+          ${flightDetailField("fq","Route","route",cb.route||"","text","flightDetailWide")}
           ${flightDetailField("fq","STA","sta",cb.sta||"")}
           ${flightDetailField("fq","ETA","eta",cb.eta||"")}
           ${flightDetailField("fq","STD","std",cb.std||"")}
@@ -11376,6 +11711,7 @@ function luuFlightQuickModal(root,close){
   setVal("flight",fdVal(root,"fq_flight"));
   setVal("acRegn",fdVal(root,"fq_acRegn"));
   setVal("acType",fdVal(root,"fq_acType"));
+  setVal("routeChuyen",fdVal(root,"fq_route"));
   setVal("sta",fdVal(root,"fq_sta"));
   setVal("eta",fdVal(root,"fq_eta"));
   setVal("std",fdVal(root,"fq_std"));
@@ -11532,6 +11868,7 @@ function themSuaChuyen(){
   const flight=$("flight").value.trim();
   const acRegn=val("acRegn").trim();
   const acType=val("acType").trim();
+  const route=val("routeChuyen").trim().toUpperCase();
   const staRaw=val("sta").trim();
   const etaRaw=$("eta").value.trim();
   const stdRaw=$("std").value.trim();
@@ -11566,7 +11903,7 @@ function themSuaChuyen(){
     if(confirm(msg)){
       chuyenDangChon=trung.ma;
       $("flight").value=trung.flight;
-      setVal("acRegn",trung.acRegn||""); setVal("acType",trung.acType||"");
+      setVal("acRegn",trung.acRegn||""); setVal("acType",trung.acType||""); setVal("routeChuyen",trung.route||"");
       setVal("sta",trung.sta||""); $("eta").value=trung.eta;
       $("std").value=trung.std; setVal("etd",trung.etd||""); setVal("groundTime",trung.groundTime||groundTimeMacDinh(trung));
       $("baiDo").value=trung.baiDo;
@@ -11577,7 +11914,7 @@ function themSuaChuyen(){
     return;
   }
 
-  const newData={ngay:state.ngayKhaiThac,flight,acRegn,acType,sta,eta,std,etd,groundTime,baiDo,ghiChu,soNguoiToiThieu,caPhuTrach};
+  const newData={ngay:state.ngayKhaiThac,flight,acRegn,acType,route,sta,eta,std,etd,groundTime,baiDo,ghiChu,soNguoiToiThieu,caPhuTrach};
   if(chuyenDangChon){
     const i=state.danhSachChuyenBay.findIndex(x=>x.ma===chuyenDangChon);
     if(i>=0){
@@ -11910,6 +12247,28 @@ function doiCaPhuTrachChuyen(ma,val){
   cb.caPhuTrach=val||"";
   logAction("ĐỔI CA CHUYẾN",`${cb.flight} → ${caChuyenLabel(cb.caPhuTrach)}`);
   luu(); veTatCa();
+}
+function doiCaPhuTrachChuyenLoai(ma,loai,val){
+  const cb=chuyen(ma);
+  if(!cb)return;
+  if(loai==="den")cb.caDen=val||"tatca";
+  if(loai==="di")cb.caDi=val||"tatca";
+  if(cb.caDen && cb.caDi && cb.caDen===cb.caDi)cb.caPhuTrach=cb.caDen;
+  logAction("ĐỔI CA CHUYẾN",`${cb.flight} ${loai==="den"?"đến":"đi"} → ${caChuyenLabel(val)}`);
+  luu(); veTatCa();
+}
+function caSelectRealtimeHtml(cb){
+  const den=String(cb.caDen||"");
+  const di=String(cb.caDi||"");
+  if(den && di && den!==di){
+    return `<span class="flightDualCa"><select class="flightCaSelect" title="Ca phục vụ chuyến đến" onclick="event.stopPropagation()" onchange='doiCaPhuTrachChuyenLoai("${cb.ma}","den",this.value)'>${caPhuTrachOptionsHtml(den)}</select><select class="flightCaSelect" title="Ca phục vụ chuyến đi" onclick="event.stopPropagation()" onchange='doiCaPhuTrachChuyenLoai("${cb.ma}","di",this.value)'>${caPhuTrachOptionsHtml(di)}</select></span>`;
+  }
+  return `<select class="flightCaSelect" onclick="event.stopPropagation()" onchange='doiCaPhuTrachChuyen("${cb.ma}",this.value)'>${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select>`;
+}
+function caSplitClass(cb){
+  const den=String(cb.caDen||""), di=String(cb.caDi||"");
+  if(!den||!di||den===di)return "";
+  return `splitShift caDen${den} caDi${di}`;
 }
 function gioChuyenNamTrongCa(ns,cb){
   // Full ca: người đó làm đủ cả khung chuyến.
