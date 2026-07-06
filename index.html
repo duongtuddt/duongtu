@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v17ar</title>
+<title>Dương Tú index_v17au</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4070,9 +4070,10 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
   box-shadow:0 0 13px rgba(248,113,113,.48);
 }
 #timelineChuyenBay .cargoBadge.nilCargo{
-  border-color:#60a5fa;
-  background:linear-gradient(180deg,#163b63,#071627);
-  color:#bfdbfe;
+  border-color:#66ff99;
+  background:#071426;
+  color:#66ff99;
+  box-shadow:0 0 12px rgba(102,255,153,.36);
 }
 .cargoModalCard{
   border:1px solid rgba(125,211,252,.28);
@@ -8643,14 +8644,15 @@ function cargoFind(map,cb,kind){
 }
 function cargoIsNil(item){
   const text=String(item?.cargo_mail||"");
-  return /kh[oô]ng c[oó] h[aà]ng|\bnil+\s*cargo\b/i.test(text) || /(^|\n)\s*nil+l?\s*($|\n)/i.test(text);
+  return /kh[oô]ng c[oó] h[aà]ng|\bnil+l?\s*cargo\b/i.test(text) || /(^|\n)\s*nil+l?\s*[\.;,:-]?\s*($|\n)/i.test(text);
 }
 function cargoBadgeHtml(item,kind,left){
   if(!item)return "";
   const nil=cargoIsNil(item);
   const heavy=!!item.heavy || Number(item.weight_kg||0)>=1500;
   const cls=nil?"nilCargo":(heavy?"bigCargo":"");
-  const title=`Cargo ${kind==="den"?"đến":"đi"} ${item.flightno||""} - ${nil?item.cargo_mail:(heavy?"Hàng nhiều / trên 1.5 tấn":"Dưới 1.5 tấn")}`;
+  const nilText=kind==="den"?"Không có hàng đến":"Không có hàng đi";
+  const title=`Cargo ${kind==="den"?"đến":"đi"} ${item.flightno||""} - ${nil?nilText:(heavy?"Hàng nhiều / trên 1.5 tấn":"Dưới 1.5 tấn")}`;
   const icon=kind==="den"?"📥":"📦";
   return `<div class="cargoBadge ${cls}" style="left:${left}px" title="${escHtml(title)}" onclick="moCargoInfo('${kind}','${escHtml(item.flightno||"")}','${escHtml(item.ngay||"")}',event)">${icon}</div>`;
 }
@@ -9612,7 +9614,6 @@ function pcTrungKhungAuto(ma,cb){
     pc.maNV===ma &&
     pc.maChuyen!==cb.ma &&
     pcDangHieuLuc(pc) &&
-    !pcAutoTam(pc) &&
     !(pc.ketThucAbs<=bd || pc.batDauAbs>=kt)
   );
 }
@@ -11106,7 +11107,6 @@ function pcTrungChuyenCuaNV(ma,cb){
   const bd=batDauAbs(cb), kt=ketThucAbs(cb);
   return state.phanCong
     .filter(pc=>pc.maNV===ma && pcDangHieuLuc(pc) && pc.maChuyen!==cb.ma)
-    .filter(pc=>!pcAutoTam(pc))
     .filter(pc=>!(pc.ketThucAbs<=bd || pc.batDauAbs>=kt))
     .sort((a,b)=>a.ketThucAbs-b.ketThucAbs)[0]||null;
 }
@@ -11372,7 +11372,6 @@ function pcTruocThoiDiemCuaNV(ma,moc){
 function pcTrungTaiMocCuaNV(ma,cb){
   const moc=thoiDiemXetGoiY(cb);
   return state.phanCong.filter(pc=>pc.maNV===ma&&pcDangHieuLuc(pc)&&pc.maChuyen!==cb.ma)
-    .filter(pc=>!pcAutoTam(pc))
     .find(pc=>pc.batDauAbs<=moc && moc<pc.ketThucAbs) || null;
 }
 function gioiHanTheoCaChuyen(ns,cb){
@@ -11528,6 +11527,11 @@ function diemRanhUuTien(ns,cb){
   // Số nhỏ hơn là tốt hơn. Rảnh càng lâu càng phải được kéo ra làm trước.
   return -phutRanhLienTucTaiMoc(ns,cb);
 }
+function diemChuyenTiepUuTien(ns,cb){
+  // Số nhỏ hơn là tốt hơn. Khoảng tới chuyến kế tiếp càng xa càng nên ưu tiên.
+  const next=phutDenChuyenTiep(ns.ma,cb);
+  return -Math.min(next,240);
+}
 function minTaiPool(pool,cb){
   const ds=pool.map(ns=>taiLamViecTaiMoc(ns,cb));
   return {
@@ -11611,7 +11615,7 @@ function diemUngVienThuong(ns,cb,pool){
     idleBucket,
     load.so,
     -idle,
-    phutDenChuyenTiep(ns.ma,cb),
+    diemChuyenTiepUuTien(ns,cb),
     p.sub||0,
     bacChungChiVanHanh(ns,pool),
     diemChienLuocChungChi(ns,pool),
@@ -11629,7 +11633,7 @@ function diemUngVienSlot(ns,cb,pool){
     idleBucket,
     load.so,
     -idle,
-    phutDenChuyenTiep(ns.ma,cb),
+    diemChuyenTiepUuTien(ns,cb),
     p.sub||0,
     bacChungChiVanHanh(ns,pool),
     String(ns.ten||"")
@@ -11743,7 +11747,7 @@ function diemCongBangNhom(selected,cb){
     const load=taiLamViecTaiMoc(it.ns,cb);
     const idle=phutRanhLienTucTaiMoc(it.ns,cb);
     const idleBucket=idle>=maxIdle-15?0:(maxIdle-idle);
-    return s + idleBucket*500000 + load.so*120000 - idle*1000 + phutDenChuyenTiep(it.ns.ma,cb)*2;
+    return s + idleBucket*500000 + load.so*120000 - idle*1000 + diemChuyenTiepUuTien(it.ns,cb)*100;
   },0);
 }
 function diemPhuongAn(selected,cb,pool,slots){
@@ -11824,7 +11828,7 @@ function hienGoiYNhanSu(){
   lines.push(`Cần chứng chỉ: ${yc}`);
   lines.push("");
   lines.push(`Mốc xét: ${gioTuPhut(thoiDiemXetGoiY(cb))} - ưu tiên rảnh lâu, số chuyến trước, phút làm sau`);
-  lines.push("Rule Engine v1.35: đúng ca → rảnh lâu → ít chuyến hơn → tải theo giờ có mặt → slot bắt buộc → fallback đầu kéo.");
+  lines.push("Rule Engine v1.37: đúng ca → tính cả lịch tạm màu đỏ → rảnh lâu → ít chuyến hơn → tránh sát chuyến kế tiếp → slot bắt buộc.");
   lines.push("");
   lines.push("Đề xuất:");
 
