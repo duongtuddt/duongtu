@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Duong Tu index_v17be</title>
+<title>Duong Tu index_v17bj</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -4054,6 +4054,8 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
 #timelineChuyenBay .cargoBadge{
   position:absolute;
   width:54px;
+  font-size:28px!important;
+  line-height:1!important;
   border:1px solid #facc15;
   border-radius:8px;
   background:linear-gradient(180deg,#4b3605,#18120a);
@@ -5227,7 +5229,7 @@ body.timelineNavDragging #khungTimelineNhanSu{
 </div>
 </section>
 
-<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span class="panelHeadLine"><span>Realtime chuyến bay</span><span id="rtFlightInfo" class="rtInfo"></span></span><span id="editNotice" class="editNotice hidden"></span><span class="rtActions"><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelTimelineChuyen')">Ẩn</button><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small ghost" id="nutAutoNhanSu" onclick="toggleAutoNhanSu()">Tự động nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button><button class="small ghost" id="nutThongKeTimeline" onclick="moModalThongKe()">Thống kê</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
+<section class="panel realtimeCompact" id="panelTimelineChuyen"><h2><span class="panelHeadLine"><span>Realtime chuyến bay</span><span id="rtFlightInfo" class="rtInfo"></span><span id="discordPollStatus" class="rtInfo"></span></span><span id="editNotice" class="editNotice hidden"></span><span class="rtActions"><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelTimelineChuyen')">Ẩn</button><button class="small ghost" onclick="quetDiscordNgay()">Quét Discord</button><button class="small primary" id="nutGoiYNhanSuTop" onclick="hienGoiYNhanSu()">Gợi ý nhân sự</button><button class="small ghost" id="nutAutoNhanSu" onclick="toggleAutoNhanSu()">Tự động nhân sự</button><button class="small primary" id="nutLiveTimeline" onclick="toggleLiveFollow()">LIVE</button><button class="small ghost" id="nutThongKeTimeline" onclick="moModalThongKe()">Thống kê</button></span></h2><div class="timeline dongBoTimeline" id="khungTimelineChuyenBay"><div class="timeGrid" id="timelineChuyenBay"></div></div></section>
 
 <div class="grid2" id="gridRealtime">
 <section class="panel realtimeCompact" id="panelTimelineNhanSu"><h2><span class="panelHeadLine"><span>Realtime nhân sự hôm nay</span><span id="rtStaffInfo" class="rtInfo"></span></span><button class="small ghost hideBtn" onclick="togglePanelCollapse('panelTimelineNhanSu')">Ẩn</button></h2><div class="body" style="padding-bottom:0"></div><div class="timeline dongBoTimeline" id="khungTimelineNhanSu"><div class="timeGrid" id="timelineNhanSu"></div></div></section>
@@ -8874,14 +8876,19 @@ function discordCargoLine(cb,kind){
   const item=cargoFind(kind==="den"?state.cargoDen:state.cargoDi,cb,kind);
   if(!item)return kind==="den"?"Hàng đến: Chưa có thông tin":"Hàng đi: Chưa có thông tin";
   const text=cargoDisplayText(item,kind)||"Chưa có thông tin";
-  const oneLine=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).join(" | ");
-  return `${kind==="den"?"Hàng đến":"Hàng đi"}: ${oneLine.length>700?oneLine.slice(0,700)+"...":oneLine}`;
+  const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const body=lines.join("\n");
+  return `${kind==="den"?"Hàng đến":"Hàng đi"}:\n${body.length>900?body.slice(0,900)+"...":body}`;
 }
 function discordMessageForFlight(cb,loai="locked"){
   const pcs=(state.phanCong||[]).filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc));
   const names=pcs.map(pc=>tenNV(pc.maNV)).join(", ")||"Chưa có nhân sự";
   const req=yeuCauCuaChuyen(cb).map(x=>x.label).join(", ")||"Không có";
-  const title=loai==="recall"?"THU HỒI NHÂN SỰ":loai==="move"?"ĐIỀU ĐỘNG NHÂN SỰ":"PHÂN CÔNG CHUYẾN BAY";
+  const title=loai==="confirm"
+    ? "DỰ KIẾN GỬI PHÂN CÔNG CHUYẾN BAY"
+    : loai==="confirmUpdated"
+      ? "DỰ KIẾN GỬI PHÂN CÔNG CHUYẾN BAY SAU CẬP NHẬT"
+      : loai==="recall"?"THU HỒI NHÂN SỰ":loai==="move"?"ĐIỀU ĐỘNG NHÂN SỰ":"PHÂN CÔNG CHUYẾN BAY";
   return [
     `**${title}**`,
     `Chuyến: ${cb.flight||"--"}`,
@@ -8893,7 +8900,17 @@ function discordMessageForFlight(cb,loai="locked"){
     `Nhân sự: ${names}`,
     `Yêu cầu: ${req}`,
     discordCargoLine(cb,"den"),
-    discordCargoLine(cb,"di")
+    discordCargoLine(cb,"di"),
+    (loai==="confirm" || loai==="confirmUpdated") ? [
+      "",
+      "Vui lòng kiểm tra bãi đỗ và dịch vụ trước khi hệ thống chốt danh sách nhân sự.",
+      "Có thể cập nhật bằng cú pháp:",
+      `/Bai ${cb.flight||"--"} <bãi>`,
+      `/STA ${cb.flight||"--"} <HHMM>`,
+      `/ETA ${cb.flight||"--"} <HHMM>`,
+      `/STD ${cb.flight||"--"} <HHMM>`,
+      `/ETD ${cb.flight||"--"} <HHMM>`
+    ].join("\n") : ""
   ].join("\n");
 }
 async function guiDiscordChuyen(cb,loai="locked",manual=false){
@@ -8920,6 +8937,134 @@ async function guiDiscordChuyen(cb,loai="locked",manual=false){
     return false;
   }
 }
+async function guiDiscordRaw(targets,message,type="reply"){
+  try{
+    await fetch("http://127.0.0.1:8788/discord-send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({targets,message,type})});
+  }catch(err){
+    console.warn("Discord raw send failed",err);
+  }
+}
+function setDiscordPollStatus(text,kind=""){
+  const el=document.getElementById("discordPollStatus");
+  if(!el)return;
+  const color=kind==="err"?"#ff7777":kind==="ok"?"#70ff9f":"#8fb0d4";
+  el.style.color=color;
+  el.textContent=text?` | Discord: ${text}`:"";
+}
+function timChuyenTheoDiscordFlight(flightText){
+  const raw=String(flightText||"").toUpperCase().replace(/[^A-Z0-9]+/g,"");
+  const toks=new Set(tokenTrungChuyen(flightText||"").map(t=>String(t).toUpperCase()));
+  if(!toks.size && !raw)return null;
+  return (state.danhSachChuyenBay||[]).find(cb=>{
+    if(cb.ngay!==state.ngayKhaiThac)return false;
+    const cbRaw=String(cb.flight||"").toUpperCase().replace(/[^A-Z0-9]+/g,"");
+    const cbToks=tokenTrungChuyen(cb.flight||"").map(t=>String(t).toUpperCase());
+    return cbToks.some(t=>toks.has(t)) || (raw && cbRaw && (cbRaw.includes(raw) || raw.includes(cbRaw)));
+  })||null;
+}
+function parseDiscordCommand(content){
+  const parts=String(content||"").trim().split(/\s+/).filter(Boolean);
+  if(parts.length<3)return null;
+  const cmdRaw=parts[0].replace(/^\//,"").toLowerCase();
+  const cmdNorm=cmdRaw.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(!["bai","bay","sta","eta","std","etd"].includes(cmdNorm))return null;
+  const value=parts[parts.length-1].replace(/^<+|>+$/g,"");
+  const flight=parts.slice(1,-1).join(" ");
+  if(!flight || !value)return null;
+  return {cmd:cmdNorm,flight,value};
+}
+async function xuLyDiscordCommand(msg,force=false){
+  if(!state.discordCommandSeen)state.discordCommandSeen={};
+  if(!force && msg.message_id && state.discordCommandSeen[msg.message_id])return;
+  const parsed=parseDiscordCommand(msg.content);
+  if(!parsed){
+    if(msg.message_id)state.discordCommandSeen[msg.message_id]=true;
+    luu();
+    return;
+  }
+  const cb=timChuyenTheoDiscordFlight(parsed.flight);
+  if(!cb){
+    await guiDiscordRaw([msg.target],`Không tìm thấy chuyến ${parsed.flight} trong ngày ${state.ngayKhaiThac}.`);
+    if(msg.message_id)state.discordCommandSeen[msg.message_id]=true;
+    luu();
+    return;
+  }
+  const cmd=parsed.cmd;
+  let value=parsed.value;
+  let field="";
+  if(["bai","bay","bãi"].includes(cmd)){
+    field="baiDo";
+  }else{
+    field=cmd.toLowerCase();
+    const t=chuanHoaGio(value);
+    if(!t){
+      await guiDiscordRaw([msg.target],`Giờ ${cmd.toUpperCase()} không đúng định dạng: ${value}. Ví dụ: 0830 hoặc 08:30.`);
+      if(msg.message_id)state.discordCommandSeen[msg.message_id]=true;
+      luu();
+      return;
+    }
+    value=t;
+  }
+  cb[field]=value;
+  capNhatPhanCongTheoKhungChuyen(cb.ma);
+  logAction("DISCORD CẬP NHẬT",`${cmd.toUpperCase()} ${cb.flight} = ${value}`);
+  luu();
+  autoSauKhiNhapChuyen();
+  veTatCa();
+  await guiDiscordRaw([msg.target],`Đã cập nhật ${cmd.toUpperCase()} cho ${cb.flight}: ${value}\n\n${discordMessageForFlight(cb,"confirmUpdated")}`);
+  if(msg.message_id)state.discordCommandSeen[msg.message_id]=true;
+  luu();
+}
+let discordPollBusy=false;
+async function capNhatLenhDiscord(force=false){
+  if(discordPollBusy)return;
+  const targets=[...new Set((state.discordNhanSu||[]).map(x=>String(x.discordId||"").trim()).filter(Boolean))];
+  if(!targets.length){
+    setDiscordPollStatus("chưa có ID", "err");
+    return;
+  }
+  discordPollBusy=true;
+  try{
+    const res=await fetch(`http://127.0.0.1:8788/discord-updates?targets=${encodeURIComponent(targets.join(","))}&limit=20`);
+    const data=await res.json();
+    if(data.ok){
+      let handled=0, skipped=0;
+      for(const msg of data.updates||[]){
+        try{
+          if(!force && msg.message_id && state.discordCommandSeen?.[msg.message_id]){
+            skipped++;
+            continue;
+          }
+          await xuLyDiscordCommand(msg,force);
+          handled++;
+        }catch(err){
+          console.warn("Discord command failed",msg,err);
+          await guiDiscordRaw([msg.target],`Lỗi xử lý lệnh Discord: ${err.message||String(err)}`);
+        }
+      }
+      setDiscordPollStatus(`đọc ${data.updates?.length||0}, xử lý ${handled}, bỏ qua ${skipped}`, "ok");
+    }else{
+      console.warn("Discord updates returned error",data);
+      setDiscordPollStatus(data.error||"bridge lỗi", "err");
+    }
+  }catch(err){
+    console.warn("Discord updates failed",err);
+    setDiscordPollStatus(err.message||String(err), "err");
+  }finally{
+    discordPollBusy=false;
+  }
+}
+async function quetDiscordNgay(){
+  setDiscordPollStatus("đang quét...");
+  await capNhatLenhDiscord(true);
+}
+function khoiDongDiscordPollingSom(){
+  if(window.__discordPollingReady)return;
+  window.__discordPollingReady=true;
+  setTimeout(()=>capNhatLenhDiscord(false),1000);
+  setInterval(()=>capNhatLenhDiscord(false),5000);
+}
+khoiDongDiscordPollingSom();
 function discordBadgeHtml(cb,left){
   const sent=discordDaGui(cb)?"sent":"";
   const blocked=!discordChuyenDaChotNhanSu(cb)?"blocked":"";
@@ -8930,11 +9075,12 @@ function autoGuiDiscordSapChot(){
   const now=hienTaiAbs();
   (state.danhSachChuyenBay||[]).forEach(cb=>{
     if(cb.ngay!==state.ngayKhaiThac)return;
-    if(discordDaGui(cb,"locked"))return;
+    if(discordDaGui(cb,"confirm"))return;
+    if(!chuyenDuDieuKienAuto(cb))return;
     const pcs=(state.phanCong||[]).filter(pc=>pc.maChuyen===cb.ma&&pcDangHieuLuc(pc));
     if(!pcs.length)return;
     const bd=batDauAbs(cb);
-    if(now>=bd-5 && now<bd+1)guiDiscordChuyen(cb,"locked",false);
+    if(now>=bd-40 && now<bd-29)guiDiscordChuyen(cb,"confirm",false);
   });
 }
 
@@ -9010,7 +9156,10 @@ function cargoFind(map,cb,kind){
 }
 function cargoIsNil(item){
   const text=String(item?.cargo_mail||"");
-  return /kh[oô]ng c[oó] h[aà]ng|\bnil+l?\s*cargo\b/i.test(text) || /(^|\n)\s*nil+l?\s*[\.;,:-]?\s*($|\n)/i.test(text);
+  return /kh[oô]ng c[oó] h[aà]ng|\bnil+l?\s*cargo\b/i.test(text)
+    || /(^|\n)\s*nil+l?\s*[\.;,:-]?\s*($|\n)/i.test(text)
+    || /\b[A-Z]{3}\s*\/\s*NIL+L?\b/i.test(text)
+    || /\b[A-Z]{3}\s+NIL+L?\b/i.test(text);
 }
 function cargoBadgeHtml(item,kind,left){
   if(!item)return "";
@@ -12512,7 +12661,6 @@ function apDungGoiYNhanSu(cb, selected){
     luu();
     veTatCa();
     autoSauKhiNhapChuyen();
-    guiDiscordChuyen(cb,"locked",false);
   }else{
     alert("Các nhân sự gợi ý đã có trong chuyến này rồi.");
   }
@@ -13213,6 +13361,9 @@ setInterval(()=>{
     }
   }
 },20000);
+
+setInterval(capNhatLenhDiscord,15000);
+setTimeout(capNhatLenhDiscord,5000);
 
 
 let timelineScrollLeftMemory=null;
