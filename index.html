@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Dương Tú index_v17au</title>
+<title>Duong Tu index_v17bc</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -1348,7 +1348,7 @@ body.taskOnly #khoiYeuCau .scroll{
 
 /* v0.80 - sửa lỗi scale timeline: header, grid, lane dùng cùng RONG_GIO=250 */
 :root{
-  --timelineLabelWidth:185px;
+  --timelineLabelWidth:205px;
   --timelineHourWidth:250px;
   --timelineTotalWidth:6435px; /* 185 + 25*250 */
 }
@@ -1418,10 +1418,10 @@ body.taskOnly #khoiYeuCau .scroll{
 
 /* v0.82 - thước thời gian theo giờ tròn + 26 giờ, tránh lệch cảm giác 30 phút */
 :root{
-  --timelineLabelWidth:185px;
+  --timelineLabelWidth:205px;
   --timelineHourWidth:250px;
   --timelineHourCount:26;
-  --timelineTotalWidth:6685px; /* 185 + 26*250 */
+  --timelineTotalWidth:6705px; /* 205 + 26*250 */
 }
 .timeGrid{
   min-width:var(--timelineTotalWidth)!important;
@@ -1505,10 +1505,10 @@ body.taskOnly #khoiYeuCau .scroll{
    Dùng chung cho: thước giờ, phút, LIVE line, thanh chuyến, thanh nhân sự.
 */
 :root{
-  --timelineLabelWidth:185px;
+  --timelineLabelWidth:205px;
   --timelineHourWidth:250px;
   --timelineHourCount:26;
-  --timelineTotalWidth:6685px; /* 185 + 26*250 */
+  --timelineTotalWidth:6705px; /* 205 + 26*250 */
   --timelineHeaderHeight:28px;
 }
 .timeGrid{
@@ -1625,11 +1625,11 @@ body.taskOnly #khoiYeuCau .scroll{
    absoluteX = TIMELINE_LABEL_WIDTH + laneX
 */
 :root{
-  --timelineLabelWidth:185px;
+  --timelineLabelWidth:205px;
   --timelineHourWidth:250px;
   --timelineHourCount:26;
   --timelineLaneWidth:6500px;   /* 26 * 250 */
-  --timelineTotalWidth:6685px;  /* 185 + 6500 */
+  --timelineTotalWidth:6705px;  /* 205 + 6500 */
   --timelineHeaderHeight:30px;
   --timelineRowHeight:62px;
 }
@@ -3905,8 +3905,8 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
    --flightInfoCardHeight = chiều cao ô thông tin bên trái
 */
 :root{
-  --flightInfoRowHeight:64px;
-  --flightInfoCardHeight:56px;
+  --flightInfoRowHeight:78px;
+  --flightInfoCardHeight:70px;
 }
 
 /* Ép riêng dòng Realtime chuyến bay, không để .tlRow chung 62px ghi đè */
@@ -3935,7 +3935,7 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
   min-height:var(--flightInfoCardHeight)!important;
   width:calc(100% - 13px)!important;
   margin:4px 5px 4px 8px!important;
-  padding:7px 8px!important;
+  padding:8px 8px!important;
   display:flex!important;
   flex-direction:column!important;
   justify-content:center!important;
@@ -3944,7 +3944,7 @@ body.viewerFlightOnly .rtActions button:not(#nutLiveTimeline){display:none!impor
 }
 
 #timelineChuyenBay .flightRtCard .flightLabelTop{
-  min-height:18px!important;
+  min-height:22px!important;
 }
 
 #timelineChuyenBay .flightRtCard .flightCaSelect{
@@ -4861,7 +4861,182 @@ body.timelineNavDragging #khungTimelineNhanSu{
   opacity:.92!important;
 }
 #timelineChuyenBay .flightRtCard .standPill{
-  right:6px!important;
+  right:2px!important;
+}
+.flightInfoBtn{
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  border:1px solid #7dd3fc;
+  background:#071426;
+  color:#7dd3fc;
+  font-weight:900;
+  font-size:12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  box-shadow:0 0 10px rgba(125,211,252,.28);
+}
+.flightInfoBtn:hover{
+  border-color:#66ff99;
+  color:#66ff99;
+}
+#timelineChuyenBay .flightInfoBtn{
+  position:absolute;
+  right:2px;
+  bottom:2px;
+  z-index:2147483000;
+}
+#timelineChuyenBay .flightRtCard .standPill{
+  position:absolute!important;
+  right:2px!important;
+  top:2px!important;
+}
+#timelineChuyenBay .flightRtCard.selected{
+  background:#3a0710!important;
+  border-color:#fb7185!important;
+  filter:brightness(1.2)!important;
+  box-shadow:
+    0 0 0 2px rgba(248,113,113,.96),
+    0 0 18px rgba(248,113,113,.72),
+    inset 0 0 18px rgba(248,113,113,.18)!important;
+  z-index:80!important;
+}
+#timelineChuyenBay .tlLane.selected .bar.flight{
+  box-shadow:
+    0 0 0 2px rgba(248,113,113,.9),
+    0 0 16px rgba(248,113,113,.65)!important;
+  filter:brightness(1.18)!important;
+}
+#timelineChuyenBay .tlLabel.flightScopeLabel,
+#timelineChuyenBay .flightRtCard{
+  overflow:visible!important;
+}
+#timelineChuyenBay .tlLabel.flightScopeLabel{
+  z-index:500!important;
+}
+#timelineChuyenBay .flightRtCard{
+  position:relative!important;
+  z-index:600!important;
+}
+#timelineChuyenBay .flightInfoBtn{
+  position:static!important;
+  right:auto!important;
+  bottom:auto!important;
+  width:22px!important;
+  height:22px!important;
+  min-width:22px!important;
+  flex:0 0 22px!important;
+  border-radius:50%!important;
+  padding:0!important;
+  z-index:30!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+}
+#timelineChuyenBay .flightRtCard .standPill{
+  position:absolute!important;
+  right:2px!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  z-index:40!important;
+  pointer-events:none!important;
+}
+.flightDetailBox{
+  width:min(1120px,calc(100vw - 34px));
+  max-height:86vh;
+}
+.flightDetailGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.flightDetailGrid.single{
+  grid-template-columns:minmax(0,1fr);
+}
+.flightDetailCol{
+  border:1px solid rgba(125,211,252,.24);
+  border-radius:8px;
+  padding:10px;
+  background:rgba(7,20,38,.74);
+}
+.flightDetailCol h3{
+  margin:0 0 8px;
+  font-size:14px;
+  color:#bae6fd;
+}
+.flightDetailFields{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.flightDetailFields label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  font-size:11px;
+  color:#9bd6ff;
+  font-weight:800;
+}
+.flightDetailFields input,.flightDetailFields select,.flightDetailFields textarea{
+  width:100%;
+  min-width:0;
+  border:1px solid rgba(125,211,252,.26);
+  border-radius:8px;
+  background:#06172a;
+  color:#e8f7ff;
+  padding:7px 8px;
+  font-weight:800;
+  box-sizing:border-box;
+}
+.flightDetailFields textarea{
+  min-height:92px;
+  resize:vertical;
+  grid-column:1/-1;
+  font-family:inherit;
+  line-height:1.35;
+}
+.flightDetailWide{grid-column:1/-1}
+.flightDetailActions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+@media(max-width:820px){
+  .flightDetailGrid{grid-template-columns:1fr}
+}
+
+/* index_v17bc - doi vi tri: i sau fr24, bai do giua o */
+#timelineChuyenBay .flightRtCard .flightLabelTop{
+  align-content:center!important;
+  flex-wrap:wrap!important;
+  padding-right:42px!important;
+  row-gap:3px!important;
+  column-gap:5px!important;
+}
+#timelineChuyenBay .flightRtCard .flightLabelNo{
+  flex:1 1 100%!important;
+  max-width:calc(100% - 44px)!important;
+}
+#timelineChuyenBay .flightInfoBtn{
+  position:static!important;
+  inset:auto!important;
+  width:22px!important;
+  height:22px!important;
+  min-width:22px!important;
+  flex:0 0 22px!important;
+  border-radius:50%!important;
+  padding:0!important;
+  z-index:30!important;
+}
+#timelineChuyenBay .flightRtCard .standPill{
+  position:absolute!important;
+  right:2px!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  z-index:40!important;
 }
 
 </style>
@@ -4985,7 +5160,8 @@ body.timelineNavDragging #khungTimelineNhanSu{
 <section class="panel" id="panelNhapChuyen">
 <h2><span>Nhập / sửa chuyến bay</span><span class="rtActions"><button class="small danger" id="nutXoaChuyenTrongNgay" type="button" onclick="moXoaChuyenTrongNgay()">Xóa chuyến trong ngày</button><button class="small danger" id="nutXoaDuLieuCargo" type="button" onclick="xoaDuLieuCargoNgay()">Xóa dữ liệu cargo</button><button class="small primary" id="nutNhapLichTong" type="button" onclick="moNhapLichTong()">Nhập lịch tổng</button></span></h2>
 <div class="body">
-<div class="row">
+<div class="row"><button class="primary" type="button" onclick="moFlightQuickModal(chuyenDangChon)">Nhập/sửa chuyến bay</button></div>
+<div class="row hidden" id="legacyFlightForm">
 <label class="hidden">Ngày khai thác <input type="date" id="ngayKhaiThac"></label>
 <input id="flight" placeholder="Chuyến bay VD: RS511/512">
 <input id="acRegn" class="aircraftInput" placeholder="A/C Regn">
@@ -5248,7 +5424,7 @@ body.timelineNavDragging #khungTimelineNhanSu{
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script>
 const KHO_LUU="duong_tu_rampops_v030";
-const TIMELINE_LABEL_WIDTH=185;
+const TIMELINE_LABEL_WIDTH=205;
 const GIO_BAT_DAU=4*60, SO_GIO=26, RONG_GIO=250;
 
 function isoLocalDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
@@ -7571,13 +7747,13 @@ function tachTokenChuyen(flight){
   let hang="";
   parts.forEach(p=>{
     out.add(p);
-    const m=p.match(/^([A-Z]+)(\d+)$/);
+    const m=p.match(/^([A-Z0-9]*[A-Z][A-Z0-9]*?)(\d+)$/);
     if(m){
       hang=m[1];
       out.add(hang);
       out.add(m[2]);
       out.add(hang+m[2]);
-    }else if(/^[A-Z]+$/.test(p)){
+    }else if(/^[A-Z0-9]*[A-Z][A-Z0-9]*$/.test(p)){
       hang=p;
       out.add(hang);
     }else if(/^\d+$/.test(p)){
@@ -7596,11 +7772,11 @@ function tokenTrungChuyen(flight){
   const out=new Set();
   let hang="";
   parts.forEach(p=>{
-    const m=p.match(/^([A-Z]+)(\d+)$/);
+    const m=p.match(/^([A-Z0-9]*[A-Z][A-Z0-9]*?)(\d+)$/);
     if(m){
       hang=m[1];
       out.add(hang+m[2]);
-    }else if(/^[A-Z]+$/.test(p)){
+    }else if(/^[A-Z0-9]*[A-Z][A-Z0-9]*$/.test(p)){
       hang=p;
     }else if(/^\d+$/.test(p)){
       if(hang) out.add(hang+p);
@@ -8837,7 +9013,8 @@ function veTimelineChuyen(){
       const warnHtml=warnText?`<div class="requireWarn ${fallbackTowWarn?"fallbackTowWarn":""}" style="left:${warnLeft}px;width:${warnRong}px;max-width:${warnRong}px">${warnText}</div>`:"";
       const readyHtml=htmlCoTauSan(cb);
       const fr24Html=htmlNutFr24(cb);
-      htmlParts.push(`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls}" onclick="chonChuyen('${cb.ma}')"><div class="flightRtCard ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}"><div class="flightLabelTop"><span class="flightLabelNo">${escHtml(cb.flight||"")}</span><select class="flightCaSelect" onclick="event.stopPropagation()" onchange='doiCaPhuTrachChuyen("${cb.ma}",this.value)'>${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select>${fr24Html}<span class="standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span></div><div class="flightLabelTime">STA ${gioHienThi(cb.sta)} / ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</div>${acMeta?`<div class="flightLabelMeta">${escHtml(acMeta)}</div>`:""}<span class="flightLabelWarn ${mau==="planned"?"mutedPlanned":(["activeOk","futureOk","doneOk"].includes(mau)?"greenText":mau==="warn"?"orangeText":"redText")}">${mau==="planned"?"":ghiChu(cb.ma)}</span></div></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${waitEta?"waitEta":""} ${waitReady?"waitReady":""} ${departureReady?"departureReady":""} ${caCls} ${scopeCls}" title="${escHtml(titleChuyen)}" style="left:${left}px;width:${width}px"><span class="flightLeft"><span class="flightNo">${escHtml(cb.flight||"")}</span>${readyHtml}<span class="flightStand standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span><span class="flightGround">${escHtml(thoiGianNamSanText(cb))}</span></span><span class="flightCount">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)}</span></div>${waitEtaHtml}${shiftHtml}${monAfterHtml}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`);
+      const infoHtml=`<button type="button" class="flightInfoBtn" title="Thông tin chuyến bay" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation();event.preventDefault();moFlightDetailModal('${cb.ma}')">i</button>`;
+      htmlParts.push(`<div class="tlRow flightScopeRow ${scopeCls}"><div class="tlLabel flightScopeLabel ${caCls} ${scopeCls}" onclick="chonChuyen('${cb.ma}')"><div class="flightRtCard ${caCls} ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNow":""}"><div class="flightLabelTop"><span class="flightLabelNo">${escHtml(cb.flight||"")}</span><select class="flightCaSelect" onclick="event.stopPropagation()" onchange='doiCaPhuTrachChuyen("${cb.ma}",this.value)'>${caPhuTrachOptionsHtml(cb.caPhuTrach)}</select>${fr24Html}${infoHtml}<span class="standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span></div><div class="flightLabelTime">STA ${gioHienThi(cb.sta)} / ETA ${gioHienThi(cb.eta)} / STD ${gioHienThi(cb.std)}</div>${acMeta?`<div class="flightLabelMeta">${escHtml(acMeta)}</div>`:""}<span class="flightLabelWarn ${mau==="planned"?"mutedPlanned":(["activeOk","futureOk","doneOk"].includes(mau)?"greenText":mau==="warn"?"orangeText":"redText")}">${mau==="planned"?"":ghiChu(cb.ma)}</span></div></div><div class="tlLane flightScopeLane ${scopeCls} ${sel?"selected":""} ${dangLive?"activeNowLane":""}" onclick="chonChuyen('${cb.ma}')"><div class="bar flight ${mau} ${waitEta?"waitEta":""} ${waitReady?"waitReady":""} ${departureReady?"departureReady":""} ${caCls} ${scopeCls}" title="${escHtml(titleChuyen)}" style="left:${left}px;width:${width}px"><span class="flightLeft"><span class="flightNo">${escHtml(cb.flight||"")}</span>${readyHtml}<span class="flightStand standPill">${escHtml(normBaiDo(cb.baiDo||"--"))}</span><span class="flightGround">${escHtml(thoiGianNamSanText(cb))}</span></span><span class="flightCount">${soHieuLuc(cb.ma)}/${soNguoiCan(cb.ma)}</span></div>${waitEtaHtml}${shiftHtml}${monAfterHtml}${noteHtml}${warnHtml}<div class="tenSau" style="left:${tenLeft}px">${names}</div></div></div>`);
     });
   el.innerHTML=htmlParts.join("");
 }
@@ -10730,6 +10907,213 @@ function canhBaoGioChuyenTheoCa(cb){
 function baoGioChuyenTheoCaNeuCan(cb){
   const msg=canhBaoGioChuyenTheoCa(cb);
   if(msg)moActionModal({title:"Cảnh báo giờ phục vụ chuyến",htmlBody:msg,buttons:[]});
+}
+
+function tachFlightDetail(cb){
+  const toks=tokenTrungChuyen(cb?.flight||"");
+  if(toks.length>=2)return {den:toks[0],di:toks[1]};
+  const one=toks[0]||"";
+  return {den:(cb?.sta||cb?.eta)?one:"",di:cb?.std?one:""};
+}
+function tachRouteDetail(cb){
+  const r=String(cb?.route||"").trim().toUpperCase();
+  if(!r)return {den:"",di:""};
+  const t=tachChangBay(r);
+  return {den:t.den||r,di:t.di||""};
+}
+function flightDetailField(prefix,label,id,value,type="text",extra=""){
+  return `<label class="${extra||""}">${label}<input id="${prefix}_${id}" type="${type}" value="${escHtml(value||"")}"></label>`;
+}
+function flightDetailTextarea(prefix,label,id,value,extra=""){
+  return `<label class="${extra||""}">${label}<textarea id="${prefix}_${id}" readonly>${escHtml(value||"")}</textarea></label>`;
+}
+function flightDetailCaSelect(prefix,value){
+  return `<label>Ca phục vụ<select id="${prefix}_ca">
+    <option value="tatca" ${value==="tatca"||!value?"selected":""}>N</option>
+    <option value="doidoi" ${value==="doidoi"?"selected":""}>ALL</option>
+    ${[1,2,3,4,5].map(n=>`<option value="${n}" ${String(value)===String(n)?"selected":""}>${n}</option>`).join("")}
+  </select></label>`;
+}
+function flightDetailCargoText(cb,kind){
+  const item=cargoFind(kind==="den"?state.cargoDen:state.cargoDi,cb,kind);
+  return item?cargoDisplayText(item,kind):"";
+}
+function moFlightQuickModal(ma=null){
+  if(ma)chuyenDangChon=ma;
+  const cb=chuyen(ma||chuyenDangChon)||{};
+  const old=document.getElementById("flightQuickOverlay");
+  if(old)old.remove();
+  const overlay=document.createElement("div");
+  overlay.id="flightQuickOverlay";
+  overlay.className="suggestOverlay";
+  const ca=cb.caPhuTrach||"tatca";
+  overlay.innerHTML=`<div class="suggestBox flightDetailBox" role="dialog" aria-modal="true">
+    <div class="suggestHead">${cb.ma?"Nhập/sửa chuyến bay":"Nhập chuyến bay"}</div>
+    <div class="suggestBody">
+      <div class="flightDetailCol">
+        <div class="flightDetailFields">
+          ${flightDetailField("fq","Chuyến bay","flight",cb.flight||"","text","flightDetailWide")}
+          ${flightDetailField("fq","A/C Regn","acRegn",cb.acRegn||"")}
+          ${flightDetailField("fq","A/C Type","acType",cb.acType||"")}
+          ${flightDetailField("fq","STA","sta",cb.sta||"")}
+          ${flightDetailField("fq","ETA","eta",cb.eta||"")}
+          ${flightDetailField("fq","STD","std",cb.std||"")}
+          ${flightDetailField("fq","ETD","etd",cb.etd||"")}
+          ${flightDetailField("fq","GroundTime","groundTime",cb.groundTime||groundTimeMacDinh(cb))}
+          ${flightDetailCaSelect("fq",ca)}
+          ${flightDetailField("fq","Bãi đỗ","stand",cb.baiDo||"")}
+          ${flightDetailField("fq","Số người tối thiểu","minStaff",cb.soNguoiToiThieu||2,"number")}
+          ${flightDetailField("fq","Dịch vụ / ghi chú","service",cb.ghiChu||"","text","flightDetailWide")}
+        </div>
+      </div>
+      <div class="flightDetailActions">
+        <button class="good" id="fqSave">Xác nhận</button>
+        <button class="ghost" id="fqRefresh">Làm mới</button>
+        <button class="ghost" id="fqClose">Đóng</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.addEventListener("click",e=>{if(e.target===overlay)close();});
+  overlay.querySelector("#fqClose").onclick=close;
+  overlay.querySelector("#fqRefresh").onclick=()=>{close();moFlightQuickModal(chuyenDangChon);};
+  overlay.querySelector("#fqSave").onclick=()=>luuFlightQuickModal(overlay,close);
+}
+function luuFlightQuickModal(root,close){
+  setVal("flight",fdVal(root,"fq_flight"));
+  setVal("acRegn",fdVal(root,"fq_acRegn"));
+  setVal("acType",fdVal(root,"fq_acType"));
+  setVal("sta",fdVal(root,"fq_sta"));
+  setVal("eta",fdVal(root,"fq_eta"));
+  setVal("std",fdVal(root,"fq_std"));
+  setVal("etd",fdVal(root,"fq_etd"));
+  setVal("groundTime",fdVal(root,"fq_groundTime"));
+  setVal("caPhuTrachChuyen",fdVal(root,"fq_ca")||"tatca");
+  setVal("baiDo",fdVal(root,"fq_stand"));
+  setVal("soNguoiToiThieu",fdVal(root,"fq_minStaff")||2);
+  setVal("ghiChuChuyen",fdVal(root,"fq_service"));
+  setVal("dichVuChuyen","");
+  themSuaChuyen();
+  close();
+  moActionModal({title:"Hoàn tất",htmlBody:"Đã nhập/cập nhật thành công.",buttons:[]});
+}
+function flightDetailColumnHtml(prefix,title,data,cargoText){
+  return `<div class="flightDetailCol"><h3>${title}</h3><div class="flightDetailFields">
+    ${flightDetailField(prefix,"Số hiệu chuyến bay","flight",data.flight)}
+    ${flightDetailField(prefix,"Ngày bay","ngay",data.ngay,"date")}
+    ${flightDetailField(prefix,"A/C Regn","acRegn",data.acRegn)}
+    ${flightDetailField(prefix,"A/C Type","acType",data.acType)}
+    ${flightDetailField(prefix,"Route","route",data.route,"text","flightDetailWide")}
+    ${data.kind==="den"?flightDetailField(prefix,"STA","sta",data.sta):flightDetailField(prefix,"STD","std",data.std)}
+    ${data.kind==="den"?flightDetailField(prefix,"ETA","eta",data.eta):flightDetailField(prefix,"ETD","etd",data.etd)}
+    ${flightDetailField(prefix,"Stand","stand",data.stand)}
+    ${flightDetailCaSelect(prefix,data.ca)}
+    ${flightDetailField(prefix,"Dịch vụ","service",data.service,"text","flightDetailWide")}
+    ${flightDetailTextarea(prefix,`Thông tin hàng ${data.kind==="den"?"đến":"đi"}`,"cargo",cargoText,"flightDetailWide")}
+  </div></div>`;
+}
+function flightDetailModalMode(cb){
+  const hasDen=!!(cb?.sta||cb?.eta);
+  const hasDi=!!(cb?.std||cb?.etd);
+  if(hasDen&&hasDi)return "turn";
+  if(hasDen)return "den";
+  if(hasDi)return "di";
+  return "turn";
+}
+function moFlightDetailModal(ma=null){
+  if(ma)chuyenDangChon=ma;
+  const cb=chuyen(ma||chuyenDangChon)||{};
+  const f=tachFlightDetail(cb), r=tachRouteDetail(cb);
+  const common={
+    ngay:cb.ngay||state.ngayKhaiThac,
+    acRegn:cb.acRegn||"",
+    acType:cb.acType||"",
+    stand:cb.baiDo||"",
+    ca:cb.caPhuTrach||"tatca",
+    service:cb.ghiChu||""
+  };
+  const den={...common,kind:"den",flight:f.den,route:r.den,sta:cb.sta||"",eta:cb.eta||""};
+  const di={...common,kind:"di",flight:f.di,route:r.di,std:cb.std||"",etd:cb.etd||""};
+  const mode=flightDetailModalMode(cb);
+  const gridClass=mode==="turn"?"flightDetailGrid":"flightDetailGrid single";
+  const gridHtml=mode==="turn"
+    ? `${flightDetailColumnHtml("fd_den","Chuyến đến",den,flightDetailCargoText(cb,"den"))}${flightDetailColumnHtml("fd_di","Chuyến đi",di,flightDetailCargoText(cb,"di"))}`
+    : mode==="den"
+      ? flightDetailColumnHtml("fd_den","Chuyến đến",den,flightDetailCargoText(cb,"den"))
+      : flightDetailColumnHtml("fd_di","Chuyến đi",di,flightDetailCargoText(cb,"di"));
+
+  const old=document.getElementById("flightDetailOverlay");
+  if(old)old.remove();
+  const overlay=document.createElement("div");
+  overlay.id="flightDetailOverlay";
+  overlay.className="suggestOverlay";
+  overlay.innerHTML=`<div class="suggestBox flightDetailBox" role="dialog" aria-modal="true">
+    <div class="suggestHead">${cb.ma?"Thông tin / sửa chuyến bay":"Nhập chuyến bay"}</div>
+    <div class="suggestBody">
+      <div class="${gridClass}">${gridHtml}</div>
+      <div class="flightDetailActions">
+        <button class="good" id="fdSave">Xác nhận</button>
+        <button class="ghost" id="fdSplit">Tách chuyến</button>
+        <button class="ghost" id="fdRefresh">Làm mới</button>
+        <button class="ghost" id="fdClose">Đóng</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.addEventListener("click",e=>{if(e.target===overlay)close();});
+  overlay.querySelector("#fdClose").onclick=close;
+  overlay.querySelector("#fdRefresh").onclick=()=>{close();moFlightDetailModal(chuyenDangChon);};
+  overlay.querySelector("#fdSplit").onclick=()=>{close();tachChuyenDangChon();};
+  overlay.querySelector("#fdSave").onclick=()=>luuFlightDetailModal(overlay,close);
+}
+function fdVal(root,id){return (root.querySelector("#"+id)?.value||"").trim();}
+function ghepFlightDetail(den,di){
+  const a=String(den||"").trim().toUpperCase(), d=String(di||"").trim().toUpperCase();
+  if(a&&d){
+    const prefix=a.slice(0,2);
+    return d.startsWith(prefix)?`${a} ${d.slice(2)}`:`${a} ${d}`;
+  }
+  return a||d;
+}
+function ghepRouteDetail(den,di){
+  const a=String(den||"").trim().toUpperCase(), d=String(di||"").trim().toUpperCase();
+  if(a&&d){
+    const ap=a.split("-"), dp=d.split("-");
+    if(ap.length>=2&&dp.length>=2&&ap[1]===dp[0])return `${ap[0]}-${ap[1]}-${dp[1]}`;
+    return `${a} / ${d}`;
+  }
+  return a||d;
+}
+function luuFlightDetailModal(root,close){
+  const denFlight=fdVal(root,"fd_den_flight");
+  const diFlight=fdVal(root,"fd_di_flight");
+  setVal("flight",ghepFlightDetail(denFlight,diFlight));
+  setVal("ngayKhaiThac",fdVal(root,"fd_den_ngay")||fdVal(root,"fd_di_ngay")||state.ngayKhaiThac);
+  state.ngayKhaiThac=val("ngayKhaiThac")||state.ngayKhaiThac;
+  if($("lichChinh"))$("lichChinh").value=state.ngayKhaiThac;
+  setVal("acRegn",fdVal(root,"fd_den_acRegn")||fdVal(root,"fd_di_acRegn"));
+  setVal("acType",fdVal(root,"fd_den_acType")||fdVal(root,"fd_di_acType"));
+  setVal("sta",fdVal(root,"fd_den_sta"));
+  setVal("eta",fdVal(root,"fd_den_eta"));
+  setVal("std",fdVal(root,"fd_di_std"));
+  setVal("etd",fdVal(root,"fd_di_etd"));
+  setVal("baiDo",fdVal(root,"fd_den_stand")||fdVal(root,"fd_di_stand"));
+  setVal("caPhuTrachChuyen",fdVal(root,"fd_den_ca")||fdVal(root,"fd_di_ca")||"tatca");
+  setVal("ghiChuChuyen",[fdVal(root,"fd_den_service"),fdVal(root,"fd_di_service")].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(", "));
+  setVal("dichVuChuyen","");
+  const route=ghepRouteDetail(fdVal(root,"fd_den_route"),fdVal(root,"fd_di_route"));
+  const before=chuyenDangChon;
+  themSuaChuyen();
+  const cb=chuyen(before||chuyenDangChon);
+  if(cb){
+    cb.route=route;
+    luu();
+    veTatCa();
+  }
+  close();
+  moActionModal({title:"Hoàn tất",htmlBody:"Đã nhập/cập nhật thành công.",buttons:[]});
 }
 
 function canhBaoTinhLaiNhanSuKhiDoiChuyen(oldData,newCb){
