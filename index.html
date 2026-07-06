@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Duong Tu index_v17bj</title>
+<title>Duong Tu index_v17bl</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -5873,9 +5873,11 @@ if(!state.discordSent) state.discordSent={};
 function seedDiscordNhanSu(){
   const ma="1730";
   const item={ma,ten:"Đặng Dương Tú",chucVu:"Ca phó",discordId:"1479483028450578630"};
+  if(!Array.isArray(state.discordNhanSu)) state.discordNhanSu=[];
   const i=state.discordNhanSu.findIndex(x=>String(x.ma)===ma);
   if(i>=0) state.discordNhanSu[i]={...state.discordNhanSu[i],...item};
   else state.discordNhanSu.push(item);
+  return item;
 }
 seedDiscordNhanSu();
 function seedAdminAccount(){
@@ -7415,6 +7417,11 @@ function chucVuTuNhanSu(ma){
 }
 function veBangDiscordNhanSu(){
   const el=$("bangDiscordNhanSu"); if(!el)return;
+  if(!Array.isArray(state.discordNhanSu))state.discordNhanSu=[];
+  if(!state.discordNhanSu.length){
+    seedDiscordNhanSu();
+    luu();
+  }
   const list=state.discordNhanSu||[];
   el.innerHTML=list.map(x=>`<tr>
     <td><b>${escHtml(x.ma||"")}</b></td>
@@ -7435,7 +7442,7 @@ function suaDiscordNhanSu(ma){
   $("discordId").value=x.discordId||"";
 }
 function themSuaDiscordNhanSu(){
-  if(!isAdmin())return alert("Chỉ Admin được sửa Discord.");
+  if(!Array.isArray(state.discordNhanSu))state.discordNhanSu=[];
   const ma=val("discordMaNV").trim(), ten=val("discordTenNV").trim(), discordId=val("discordId").trim();
   const chucVu=val("discordChucVu").trim()||chucVuTuNhanSu(ma);
   if(!ma||!ten||!discordId)return moActionModal({title:"Thiếu thông tin",htmlBody:"Nhập đủ mã nhân viên, tên nhân viên và ID Discord.",buttons:[]});
@@ -7443,13 +7450,12 @@ function themSuaDiscordNhanSu(){
   const i=state.discordNhanSu.findIndex(x=>String(x.ma)===String(ma));
   if(i>=0)state.discordNhanSu[i]=item; else state.discordNhanSu.push(item);
   logAction("DISCORD",`Cập nhật Discord ${ten} (${ma})`);
-  lamMoiDiscordForm(); luu(); veBangDiscordNhanSu();
+  luu(); veBangDiscordNhanSu(); setDiscordPollStatus(`đã lưu ID ${discordId}`,"ok");
 }
 function xoaDiscordNhanSu(ma){
-  if(!isAdmin())return alert("Chỉ Admin được sửa Discord.");
   if(!confirm("Xóa ID Discord này?"))return;
   state.discordNhanSu=state.discordNhanSu.filter(x=>String(x.ma)!==String(ma));
-  luu(); veBangDiscordNhanSu();
+  luu(); veBangDiscordNhanSu(); setDiscordPollStatus("đã xóa ID Discord","ok");
 }
 function moLog(){
   if($("logPassword").value!==LOG_PASSWORD){
@@ -8909,7 +8915,9 @@ function discordMessageForFlight(cb,loai="locked"){
       `/STA ${cb.flight||"--"} <HHMM>`,
       `/ETA ${cb.flight||"--"} <HHMM>`,
       `/STD ${cb.flight||"--"} <HHMM>`,
-      `/ETD ${cb.flight||"--"} <HHMM>`
+      `/ETD ${cb.flight||"--"} <HHMM>`,
+      `/DV ${cb.flight||"--"} <dịch vụ/ghi chú>`,
+      `/DichVu ${cb.flight||"--"} <dịch vụ/ghi chú>`
     ].join("\n") : ""
   ].join("\n");
 }
@@ -8967,22 +8975,47 @@ function parseDiscordCommand(content){
   if(parts.length<3)return null;
   const cmdRaw=parts[0].replace(/^\//,"").toLowerCase();
   const cmdNorm=cmdRaw.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-  if(!["bai","bay","sta","eta","std","etd"].includes(cmdNorm))return null;
+  if(!["bai","bay","sta","eta","std","etd","dv","dichvu","service","ghichu"].includes(cmdNorm))return null;
   const value=parts[parts.length-1].replace(/^<+|>+$/g,"");
   const flight=parts.slice(1,-1).join(" ");
   if(!flight || !value)return null;
   return {cmd:cmdNorm,flight,value};
 }
+function parseDiscordServiceCommand(content){
+  const parts=String(content||"").trim().split(/\s+/).filter(Boolean);
+  if(parts.length<3)return null;
+  const cmdRaw=parts[0].replace(/^\//,"").toLowerCase();
+  const cmdNorm=cmdRaw.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(!["dv","dichvu","service","ghichu"].includes(cmdNorm))return null;
+  const args=parts.slice(1);
+  const candidates=[];
+  for(let i=1;i<args.length;i++){
+    const flight=args.slice(0,i).join(" ");
+    const service=args.slice(i).join(" ").replace(/^<+|>+$/g,"").trim();
+    if(!service)continue;
+    if(/^\d+$/.test(service) && timChuyenTheoDiscordFlight(args.slice(0,i+1).join(" ")))continue;
+    const last=args[i-1]||"";
+    if(i>1 && /^[A-Za-zÀ-ỹ]+$/.test(last))continue;
+    const cb=timChuyenTheoDiscordFlight(flight);
+    if(!cb)continue;
+    const cbToks=new Set(tokenTrungChuyen(cb.flight||"").map(t=>String(t).toUpperCase()));
+    const ftoks=tokenTrungChuyen(flight||"").map(t=>String(t).toUpperCase());
+    if(ftoks.length && !ftoks.every(t=>cbToks.has(t)))continue;
+    candidates.push({cmd:cmdNorm,flight,value:service,cb,score:ftoks.length});
+  }
+  candidates.sort((a,b)=>b.score-a.score || b.flight.length-a.flight.length);
+  return candidates[0]||null;
+}
 async function xuLyDiscordCommand(msg,force=false){
   if(!state.discordCommandSeen)state.discordCommandSeen={};
   if(!force && msg.message_id && state.discordCommandSeen[msg.message_id])return;
-  const parsed=parseDiscordCommand(msg.content);
+  const parsed=parseDiscordServiceCommand(msg.content)||parseDiscordCommand(msg.content);
   if(!parsed){
     if(msg.message_id)state.discordCommandSeen[msg.message_id]=true;
     luu();
     return;
   }
-  const cb=timChuyenTheoDiscordFlight(parsed.flight);
+  const cb=parsed.cb||timChuyenTheoDiscordFlight(parsed.flight);
   if(!cb){
     await guiDiscordRaw([msg.target],`Không tìm thấy chuyến ${parsed.flight} trong ngày ${state.ngayKhaiThac}.`);
     if(msg.message_id)state.discordCommandSeen[msg.message_id]=true;
@@ -8994,6 +9027,15 @@ async function xuLyDiscordCommand(msg,force=false){
   let field="";
   if(["bai","bay","bãi"].includes(cmd)){
     field="baiDo";
+  }else if(["dv","dichvu","service","ghichu"].includes(cmd)){
+    field="ghiChu";
+    value=String(value||"").trim();
+    if(!value){
+      await guiDiscordRaw([msg.target],`Dịch vụ / ghi chú cho ${cb.flight} đang trống.`);
+      if(msg.message_id)state.discordCommandSeen[msg.message_id]=true;
+      luu();
+      return;
+    }
   }else{
     field=cmd.toLowerCase();
     const t=chuanHoaGio(value);
