@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=0.55, maximum-scale=5, user-scalable=yes">
-<title>Duong Tu index_v17br</title>
+<title>Duong Tu index_v17bs</title>
 <style>
 :root{--bg:#061120;--panel:#0b1b31;--line:#213a5c;--text:#eaf3ff;--muted:#8fb0d4;--green:#16a34a;--blue:#2563eb;--orange:#f59e0b;--red:#dc2626;--gray:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:13px}
@@ -5218,7 +5218,7 @@ body.timelineNavDragging #khungTimelineNhanSu{
 </div>
 <div class="wrap">
 <section class="panel" id="panelNhapChuyen">
-<h2><span>Nhập / sửa chuyến bay</span><span class="rtActions"><button class="small danger" id="nutXoaChuyenTrongNgay" type="button" onclick="moXoaChuyenTrongNgay()">Xóa chuyến trong ngày</button><button class="small danger" id="nutXoaDuLieuCargo" type="button" onclick="xoaDuLieuCargoNgay()">Xóa dữ liệu cargo</button><button class="small primary" id="nutNhapLichTong" type="button" onclick="moNhapLichTong()">Nhập lịch tổng</button><button class="small primary" id="nutCapNhatLich" type="button" onclick="moCapNhatLich()">Cập nhật lịch</button></span></h2>
+<h2><span>Nhập / sửa chuyến bay</span><span class="rtActions"><button class="small danger" id="nutXoaChuyenTrongNgay" type="button" onclick="moXoaChuyenTrongNgay()">Xóa chuyến trong ngày</button><button class="small danger" id="nutXoaDuLieuCargo" type="button" onclick="xoaDuLieuCargoNgay()">Xóa dữ liệu cargo</button><button class="small primary" id="nutNhapLichTong" type="button" onclick="moNhapLichTong()">Nhập lịch tổng</button></span></h2>
 <div class="body">
 <div class="row"><button class="primary" type="button" onclick="moFlightQuickModal(chuyenDangChon)">Nhập/sửa chuyến bay</button></div>
 <div class="row hidden" id="legacyFlightForm">
@@ -10793,6 +10793,28 @@ function standTuCellUpdate(v){
   const parts=s.split("-").map(x=>x.trim()).filter(x=>x&&x!=="__");
   return parts[0]||s.replace(/__/g,"").replace(/-/g,"").trim();
 }
+function parseCapNhatLichCols(line){
+  const raw=String(line||"").trim();
+  if(!raw)return [];
+  if(raw.includes("\t"))return raw.split(/\t/).map(x=>x.trim());
+  const t=raw.split(/\s+/).filter(Boolean);
+  if(t.length<9)return t;
+  const hy=t.findIndex((x,i)=>i>8 && x==="-");
+  const standIdx=hy>0?hy-1:-1;
+  const status=/^(CLS|OPN)$/i.test(t[t.length-1]||"")?t[t.length-1].toUpperCase():"";
+  const ca=status?t[t.length-2]||"":t[t.length-1]||"";
+  const tailStart=standIdx>0?standIdx:t.length;
+  const extra=t.slice(9,tailStart);
+  const extraTimes=extra.filter(x=>/^\d{1,2}:\d{2}$/.test(x)||/^\d{4}$/.test(x));
+  const delay=extra.find(x=>/^\d{4}$/.test(x))||"";
+  const nums=extra.filter(x=>/^\d+$/.test(x)&&x!==delay);
+  return [
+    t[0],t[1],t[2]||"",t[3]||"",t[4]||"",t[5]||"",t[6]||"",t[7]||"",t[8]||"",
+    extraTimes[0]||"",extraTimes[1]||"",extraTimes[2]||"",extraTimes[0]||"",
+    extraTimes[extraTimes.length-1]||"",delay,nums[0]||"",nums[1]||"",
+    standIdx>0?t[standIdx]:"",ca,status
+  ];
+}
 function parseNgayUpdateCell(v,baseNgay){
   const s=String(v||"").trim();
   const m=s.match(/^(\d{1,2})[-\/\s]([A-Za-z]{3})/);
@@ -10888,7 +10910,7 @@ function parseCapNhatLichText(text,baseNgay){
   const loi=[];
   String(text||"").split(/\r?\n/).forEach((line,idx)=>{
     if(!line.trim())return;
-    const cols=line.includes("\t")?line.split(/\t/).map(x=>x.trim()):line.trim().split(/\s{2,}|\t/).map(x=>x.trim()).filter(Boolean);
+    const cols=parseCapNhatLichCols(line);
     if(cols.length<10){
       loi.push(`Dòng ${idx+1}: thiếu cột dữ liệu cập nhật`);
       return;
@@ -10904,6 +10926,7 @@ function parseCapNhatLichText(text,baseNgay){
     const eta=chuanHoaGio(cols[13]||"")||"";
     const stand=standTuCellUpdate(cols[17]||cols[16]||"");
     const ca=caNhapTong(cols[18]||"");
+    const status=String(cols[19]||"").trim().toUpperCase();
     const acRegn=String(cols[3]||"").trim().toUpperCase();
     const acType=String(cols[4]||"").trim().toUpperCase();
     if(!flight||!acRegn||!dep||!arr||!schedDep||!schedArr){
@@ -10912,7 +10935,7 @@ function parseCapNhatLichText(text,baseNgay){
     }
     rawRows.push({
       line:idx+1,ngay,flight,acRegn,acType,dep,arr,route:routeTuCapSanBay(dep,arr),
-      schedDep,schedArr,etd,eta,stand,caPhuTrach:ca,raw:line
+      schedDep,schedArr,etd,eta,stand,caPhuTrach:ca,status,raw:line
     });
   });
   const arrivals=rawRows.filter(r=>r.arr==="DAD").sort((a,b)=>(absNgayGioSafe(a.ngay,a.schedArr)||0)-(absNgayGioSafe(b.ngay,b.schedArr)||0));
@@ -10933,7 +10956,7 @@ function parseCapNhatLichText(text,baseNgay){
       route,sta:arr.schedArr,eta:arr.eta,std:dep?.schedDep||"",etd:dep?.etd||"",
       baiDo:arr.stand||dep?.stand||"36",ghiChu:dichVuTheoLoaiMayBay(arr.acType),groundTime:groundTimeMacDinh({ngay:arr.ngay,sta:arr.schedArr,std:dep?.schedDep||"",eta:arr.eta,groundTime:""}),
       soNguoiToiThieu:2,caPhuTrach:"",caDen:"",caDi:"",
-      arrivalLeg:arr,departureLeg:dep||null,capNhatLich:true
+      arrivalLeg:arr,departureLeg:dep||null,vjStatus:arr.status||dep?.status||"",capNhatLich:true
     });
   });
   departures.filter(d=>!usedDep.has(d.line)).forEach(dep=>{
@@ -10947,7 +10970,7 @@ function parseCapNhatLichText(text,baseNgay){
       line:dep.line,ngay:dep.ngay,flight:dep.flight,acRegn:dep.acRegn,acType:dep.acType,route:dep.route,
       sta:"",eta:"",std:dep.schedDep,etd:dep.etd,baiDo:dep.stand||"36",ghiChu:dichVuTheoLoaiMayBay(dep.acType),
       groundTime:75,soNguoiToiThieu:2,caPhuTrach:"",caDen:"",caDi:"",
-      arrivalLeg:null,departureLeg:dep,linkedArrivalLeg:linkedArrival,capNhatLich:true
+      arrivalLeg:null,departureLeg:dep,linkedArrivalLeg:linkedArrival,vjStatus:dep.status||"",capNhatLich:true
     });
   });
   return {rows,loi,all:rows,legs:rawRows};
@@ -10970,34 +10993,48 @@ function parseCapNhatLichTheoDinhDangCu(text,baseNgay){
   }));
   return parsed;
 }
-let bulkMode="import";
+let bulkMode="auto";
+let bulkDetectedMode="import";
+let bulkDetectedKind="lichTong";
+function ngayDaCoDuLieuChuyenBay(ngay){
+  return (state.danhSachChuyenBay||[]).some(cb=>cb.ngay===ngay);
+}
+function detectBulkInputKind(text){
+  const first=String(text||"").split(/\r?\n/).find(x=>x.trim())||"";
+  return laDongCapNhatLichMoi(first)?"vietjet":"lichTong";
+}
+function setParsedAsUpdate(parsed,isUpdate,kind){
+  if(!parsed)return parsed;
+  parsed.rows=(parsed.rows||[]).map(r=>({...r,capNhatLich:!!isUpdate,capNhatKind:kind}));
+  parsed.all=(parsed.all||[]).map(r=>({...r,capNhatLich:!!isUpdate,capNhatKind:kind}));
+  return parsed;
+}
+function parseBulkAuto(text,base){
+  const kind=detectBulkInputKind(text);
+  const isUpdate=ngayDaCoDuLieuChuyenBay(base);
+  bulkDetectedKind=kind;
+  bulkDetectedMode=isUpdate?"update":"import";
+  const parsed=kind==="vietjet"?parseCapNhatLichText(text,base):parseLichTongText(text,base);
+  return setParsedAsUpdate(parsed,isUpdate,kind);
+}
 function setupBulkModal(mode){
-  bulkMode=mode||"import";
-  const isUpdate=bulkMode==="update";
+  bulkMode="auto";
   const title=$("bulkModalTitle"), hint=$("bulkModalHint"), btn=$("bulkActionButton");
-  if(title)title.textContent=isUpdate?"Cập nhật lịch":"Nhập lịch tổng";
-  if(hint)hint.textContent=isUpdate
-    ?"Dán dữ liệu cập nhật lịch dạng bảng khai thác. Hệ thống chỉ xử lý VJ, match theo A/C regn, ghép chuyến đến/đi DAD trong vòng <= 2 giờ."
-    :"Dán dữ liệu lịch tổng dạng text/tab từ file. Cột hiểu theo thứ tự: Ca | Chuyến bay | A/C Regn | A/C type | Chặng bay | STA | STD | Bãi.";
-  if(btn)btn.textContent=isUpdate?"Cập nhật lịch":"Nhập lịch tổng";
+  if(title)title.textContent="Nhập lịch tổng";
+  if(hint)hint.textContent="Dán lịch tổng dự kiến hoặc dữ liệu cập nhật VietJet. Hệ thống tự nhận dạng loại dữ liệu; nếu ngày đã có chuyến thì tự cập nhật, nếu chưa có thì nhập mới.";
+  if(btn)btn.textContent="Nhập / cập nhật lịch";
 }
 function moNhapLichTong(){
   if(!canPerm("nhapChuyen")){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
   const m=$("modalNhapLichTong"); if(!m)return;
-  setupBulkModal("import");
+  setupBulkModal("auto");
   setVal("bulkNgayNhap",ngayNhapLichTongMacDinh());
   setVal("bulkTextNhap","");
   const k=$("bulkKetQua"); if(k)k.innerHTML="";
   m.classList.remove("hidden");
 }
 function moCapNhatLich(){
-  if(!canPerm("nhapChuyen")){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
-  const m=$("modalNhapLichTong"); if(!m)return;
-  setupBulkModal("update");
-  setVal("bulkNgayNhap",ngayNhapLichTongMacDinh());
-  setVal("bulkTextNhap","");
-  const k=$("bulkKetQua"); if(k)k.innerHTML="";
-  m.classList.remove("hidden");
+  moNhapLichTong();
 }
 function dongNhapLichTong(){
   const m=$("modalNhapLichTong"); if(m)m.classList.add("hidden");
@@ -11013,7 +11050,7 @@ function bulkCell(v,field,editable=true){
   return `<td${ed}${f}>${escHtml(v||"")}</td>`;
 }
 function bulkPreviewToText(){
-  if(bulkMode==="update" && laDongCapNhatLichMoi((val("bulkTextNhap")||"").split(/\r?\n/).find(x=>x.trim())||""))return;
+  if(detectBulkInputKind(val("bulkTextNhap"))==="vietjet")return;
   const table=document.querySelector(".bulkPreviewTable");
   if(!table)return;
   const lines=[...table.querySelectorAll("tbody tr")].map(tr=>{
@@ -11035,7 +11072,7 @@ function bulkPreviewToText(){
   setVal("bulkTextNhap",lines.join("\n"));
 }
 function nhapLichTongTuBangSua(){
-  if(bulkMode==="update" && laDongCapNhatLichMoi((val("bulkTextNhap")||"").split(/\r?\n/).find(x=>x.trim())||"")){
+  if(detectBulkInputKind(val("bulkTextNhap"))==="vietjet"){
     nhapLichTongTuText();
     return;
   }
@@ -11093,7 +11130,10 @@ function bulkPreviewTable(items){
 function baoCaoNhapLichTong(kq){
   const el=$("bulkKetQua"); if(!el)return;
   const ok=kq.ok||[], updated=kq.updated||[], skip=kq.skip||[], loi=kq.loi||[], preview=kq.preview||[];
+  const modeLabel=bulkDetectedMode==="update"?"Cập nhật dữ liệu":"Nhập lịch mới";
+  const kindLabel=bulkDetectedKind==="vietjet"?"Dữ liệu VietJet":"Lịch tổng dự kiến";
   el.innerHTML=[
+    `<div><b>${modeLabel}</b> | ${kindLabel}</div>`,
     `<div><b class="greenText">Thêm mới:</b> ${ok.length} chuyến</div>`,
     `<div><b class="orangeText">Cập nhật:</b> ${updated.length} chuyến</div>`,
     skip.length?`<div><b class="orangeText">Bỏ qua:</b> ${skip.length} chuyến</div>`:"",
@@ -11124,6 +11164,7 @@ function capNhatChuyenTuLichTong(cb,row){
   cb.etd=isUpdate?(row.etd||cb.etd||""):(row.etd||cb.etd||"");
   cb.groundTime=row.groundTime||groundTimeMacDinh(row);
   if(!isUpdate)cb.baiDo=row.baiDo||"36";
+  cb.vjStatus=row.vjStatus||cb.vjStatus||"";
   cb.ghiChu=row.ghiChu||cb.ghiChu||"";
   cb.soNguoiToiThieu=row.soNguoiToiThieu||2;
   if(!isUpdate)cb.caPhuTrach=row.caPhuTrach||cb.caPhuTrach||"tatca";
@@ -11161,14 +11202,26 @@ function timChuyenTrungCapNhat(row){
     }) || null;
 }
 function parseBulkTheoMode(text,base){
-  if(bulkMode!=="update")return parseLichTongText(text,base);
-  const first=String(text||"").split(/\r?\n/).find(x=>x.trim())||"";
-  return laDongCapNhatLichMoi(first)?parseCapNhatLichText(text,base):parseCapNhatLichTheoDinhDangCu(text,base);
+  return parseBulkAuto(text,base);
+}
+function moTaThayDoiCapNhat(cb,row){
+  if(!cb||!row)return "";
+  const oldLayerSig=flightLayerSig(cb.arrivalLeg,cb.departureLeg);
+  const newLayerSig=flightLayerSig(row.arrivalLeg,row.departureLeg);
+  const ds=[];
+  const summary=updateDiffSummary(cb,row,oldLayerSig,newLayerSig);
+  if(summary)ds.push(summary);
+  if(String(cb.baiDo||"")!==String(row.baiDo||"") && row.baiDo)ds.push(`Bay ${cb.baiDo||"--"} -> ${row.baiDo}`);
+  const oldStatus=String(cb.vjStatus||cb.status||"").trim().toUpperCase();
+  const newStatus=String(row.arrivalLeg?.status||row.departureLeg?.status||row.vjStatus||"").trim().toUpperCase();
+  if(newStatus && oldStatus!==newStatus)ds.push(`Status ${oldStatus||"--"} -> ${newStatus}`);
+  return ds.filter(Boolean).join("; ");
 }
 function xemThuNhapLichTong(){
   const base=val("bulkNgayNhap")||ngayNhapLichTongMacDinh();
   const parsed=parseBulkTheoMode(val("bulkTextNhap"),base);
   const {rows,loi,all}=parsed;
+  const isUpdate=bulkDetectedMode==="update";
   const updated=[];
   const rowKey=new Map(rows.map(r=>[r.line,r]));
   const preview=(all||[]).map(item=>{
@@ -11176,26 +11229,28 @@ function xemThuNhapLichTong(){
     if(item.errors&&item.errors.length){
       return {...item,statusClass:"bulkErr",statusHtml:'<span class="bulkErrText">Lỗi</span>',note:item.errors.join("; "),soNguoiToiThieu:2};
     }
-    const trung=bulkMode==="update"?timChuyenTrungCapNhat(row||item):timChuyenTrungTheoNgay(item.flight,item.ngay);
+    const trung=isUpdate?timChuyenTrungCapNhat(row||item):timChuyenTrungTheoNgay(item.flight,item.ngay);
     if(trung){
-      const msg=`${item.flight} (${item.ngay}) sẽ cập nhật ${trung.flight} | Bãi ${trung.baiDo}`;
+      const diff=moTaThayDoiCapNhat(trung,row||item)||"không có thay đổi lớn";
+      const msg=`${item.flight} (${item.ngay}) sẽ cập nhật ${trung.flight} | ${diff}`;
       updated.push(msg);
-      return {...item,statusClass:"bulkDup",statusHtml:'<span class="bulkDupText">Sẽ cập nhật</span>',note:`Đã có: ${trung.flight} | giữ ETA nếu đã nhập | cập nhật STA/STD/A/C/Bãi/Ca`,soNguoiToiThieu:2};
+      return {...item,statusClass:"bulkDup",statusHtml:'<span class="bulkDupText">Sẽ cập nhật</span>',note:`Đã có: ${trung.flight} | ${diff}`,soNguoiToiThieu:2};
     }
     return {...item,statusClass:"bulkOk",statusHtml:'<span class="bulkOkText">Thêm mới</span>',note:item.baiDo==="36"?"Nếu file thiếu bãi thì đã mặc định 36":"",soNguoiToiThieu:2};
   });
-  baoCaoNhapLichTong({ok:rows.filter(r=>!(bulkMode==="update"?timChuyenTrungCapNhat(r):timChuyenTrungTheoNgay(r.flight,r.ngay))),updated,skip:[],loi,preview});
+  baoCaoNhapLichTong({ok:rows.filter(r=>!(isUpdate?timChuyenTrungCapNhat(r):timChuyenTrungTheoNgay(r.flight,r.ngay))),updated,skip:[],loi,preview});
 }
 function nhapLichTongTuText(){
   if(!canPerm("nhapChuyen")){alert("Tài khoản của bạn chưa được cấp quyền: nhập chuyến bay.");return;}
   const base=val("bulkNgayNhap")||ngayNhapLichTongMacDinh();
   const parsed=parseBulkTheoMode(val("bulkTextNhap"),base);
   const {rows,loi,all}=parsed;
-  if(bulkMode==="update"){
+  const isUpdate=bulkDetectedMode==="update";
+  if(isUpdate){
     state.lastScheduleUpdateBatchId="UPD_"+Date.now();
     clearVuaCapNhatLich();
   }
-  if(bulkMode==="update" && parsed.legs){
+  if(parsed.legs){
     if(!state.flightLegs)state.flightLegs={};
     state.flightLegs[base]=parsed.legs;
   }
@@ -11209,18 +11264,19 @@ function nhapLichTongTuText(){
       preview.push({...item,statusClass:"bulkErr",statusHtml:'<span class="bulkErrText">Lỗi</span>',note:item.errors.join("; "),soNguoiToiThieu:2});
       return;
     }
-    const trung=bulkMode==="update"?timChuyenTrungCapNhat(row):timChuyenTrungTheoNgay(item.flight,item.ngay);
+    const trung=isUpdate?timChuyenTrungCapNhat(row):timChuyenTrungTheoNgay(item.flight,item.ngay);
     if(trung){
+      const diff=moTaThayDoiCapNhat(trung,row)||"không có thay đổi lớn";
       capNhatChuyenTuLichTong(trung,row);
-      const msg=`${item.flight} (${item.ngay}) đã cập nhật ${trung.flight} | Bãi ${trung.baiDo}`;
+      const msg=`${item.flight} (${item.ngay}) đã cập nhật ${trung.flight} | ${diff}`;
       updated.push(msg);
-      preview.push({...item,statusClass:"bulkDup",statusHtml:'<span class="bulkDupText">Đã cập nhật</span>',note:`Cập nhật lịch tổng, giữ ETA nếu đã có`,soNguoiToiThieu:2});
+      preview.push({...item,statusClass:"bulkDup",statusHtml:'<span class="bulkDupText">Đã cập nhật</span>',note:diff,soNguoiToiThieu:2});
       return;
     }
     const cb={ma:"CB"+Date.now()+"_"+Math.random().toString(16).slice(2),...row};
     if(row.arrivalLeg||row.departureLeg){
       capNhatFlightLayers(cb,row.arrivalLeg,row.departureLeg);
-      if(bulkMode==="update"){
+      if(isUpdate){
         cb.vuaCapNhatLich=true;
         cb.updateBatchId=state.lastScheduleUpdateBatchId||"";
         cb.updateSummary="them moi tu cap nhat lich";
@@ -11233,7 +11289,7 @@ function nhapLichTongTuText(){
   });
 
   if(ok.length||updated.length){
-    logAction(bulkMode==="update"?"CẬP NHẬT LỊCH":"NHẬP LỊCH TỔNG",`Thêm mới ${ok.length} chuyến, cập nhật ${updated.length} chuyến.`);
+    logAction(isUpdate?"CẬP NHẬT LỊCH":"NHẬP LỊCH TỔNG",`Thêm mới ${ok.length} chuyến, cập nhật ${updated.length} chuyến.`);
     luu();
     veTatCa();
   }
