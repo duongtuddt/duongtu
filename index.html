@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>DTU V11.23 dtu - Ramp Dashboard</title>
+<title>DTU V11.27 - Ramp Dashboard</title>
 
 <!-- Firebase: khi dùng thật cần internet để load 2 file này -->
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -1568,7 +1568,7 @@ button{
 }
 
 
-/* Bản V11.23 - unified pair engine */
+/* Bản V11.27 - unified pair engine */
 .dtu-pair-action-btn{border:0;border-radius:9px;padding:10px 14px;font-weight:900;cursor:pointer;margin-left:8px}
 .dtu-pair-split{background:#f59e0b!important;color:#071426!important}
 .dtu-pair-join{background:#22c55e!important;color:#071426!important}
@@ -2746,7 +2746,7 @@ button.fr24-badge:disabled{
     <div class="topbar">
         <div class="hamburger" onclick="toggleSidebar()">☰</div>
         <div class="title-block">
-            <strong>Sân đỗ - Dashboard vận hành • Bản V11.23</strong>
+            <strong>Sân đỗ - Dashboard vận hành • Bản V11.27</strong>
             <span>Realtime chuyến bay 04:30 → 06:00 hôm sau</span>
         </div>
     </div>
@@ -2820,7 +2820,7 @@ button.fr24-badge:disabled{
 
     <main class="content">
         <div class="dashboard-title">
-            <h2>Dashboard vận hành <span class="version-badge">Bản V11.23</span></h2>
+            <h2>Dashboard vận hành <span class="version-badge">Bản V11.27</span></h2>
             
         </div>
 
@@ -2899,13 +2899,13 @@ button.fr24-badge:disabled{
    Nếu chưa điền, hệ thống tự dùng localStorage để chạy demo.
 ===================================================== */
 const firebaseConfig = {
-    apiKey: "",
-    authDomain: "",
-    databaseURL: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey: "AIzaSyD_eKnFDqH34gaPApWh0xl9E1X7OBXmVyw",
+    authDomain: "ramp-dtu.firebaseapp.com",
+    databaseURL: "https://ramp-dtu-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "ramp-dtu",
+    storageBucket: "ramp-dtu.firebasestorage.app",
+    messagingSenderId: "569906369731",
+    appId: "1:569906369731:web:c36fbc2d5aca8ae40fbe76"
 };
 
 
@@ -2928,6 +2928,601 @@ Object.assign(firebaseConfig,loadFirebaseConfigLocal());
 let firebaseReady = false;
 let db = null;
 
+
+
+const GLOBAL_SETTINGS_PATH_V1125="dtu/globalSettings";
+const GLOBAL_SETTINGS_META_KEY_V1125="DTU_GLOBAL_SETTINGS_META_V1";
+
+let applyingGlobalSettingsV1125=false;
+let globalSettingsLoadedV1125=false;
+let globalSettingsRevisionV1125=0;
+let globalSettingsUpdatedAtV1125="";
+let globalSettingsLastStableV1125="";
+
+function isAdminClientV1125(){
+    const role=String(data?.account?.role||"").toLowerCase();
+    const username=String(data?.account?.username||"").toLowerCase();
+    return role==="admin" || username==="admin";
+}
+
+function cloneJsonV1125(value,fallback){
+    try{
+        return JSON.parse(JSON.stringify(value));
+    }catch(e){
+        return fallback;
+    }
+}
+
+function loadGlobalSettingsMetaV1125(){
+    try{
+        const meta=JSON.parse(localStorage.getItem(GLOBAL_SETTINGS_META_KEY_V1125)||"{}");
+        globalSettingsRevisionV1125=Math.max(0,Number(meta.revision)||0);
+        globalSettingsUpdatedAtV1125=String(meta.updatedAt||"");
+    }catch(e){
+        globalSettingsRevisionV1125=0;
+        globalSettingsUpdatedAtV1125="";
+    }
+}
+
+function saveGlobalSettingsMetaV1125(revision,updatedAt){
+    globalSettingsRevisionV1125=Math.max(0,Number(revision)||0);
+    globalSettingsUpdatedAtV1125=String(updatedAt||"");
+    localStorage.setItem(
+        GLOBAL_SETTINGS_META_KEY_V1125,
+        JSON.stringify({
+            revision:globalSettingsRevisionV1125,
+            updatedAt:globalSettingsUpdatedAtV1125
+        })
+    );
+}
+
+loadGlobalSettingsMetaV1125();
+
+function globalSettingsStablePayloadV1125(){
+    return {
+        config:cloneJsonV1125(data.config||{},{}),
+        systemConfig:cloneJsonV1125(data.systemConfig||{},{}),
+        operationRequirements:cloneJsonV1125(data.operationRequirements||{},{}),
+
+        // Yêu cầu hãng là object chứa groundTimes, không phải array.
+        airlineRequirements:cloneJsonV1125(data.airlineRequirements||{},{}),
+
+        // Các quyết định/cấu hình ghép tách thủ công dùng chung.
+        manualPairOverrides:cloneJsonV1125(data.manualPairOverrides||{},{}),
+
+        // Ghi chú cập nhật thuộc cấu hình chung của hệ thống.
+        updateNotes:cloneJsonV1125(data.updateNotes||[],[])
+    };
+}
+
+function collectGlobalSettingsV1125(nextRevision){
+    const stable=globalSettingsStablePayloadV1125();
+
+    return {
+        schemaVersion:3,
+        revision:Math.max(1,Number(nextRevision)||1),
+        updatedAt:new Date().toISOString(),
+        updatedBy:String(data?.account?.username||"admin"),
+        ...stable
+    };
+}
+
+function applyGlobalSettingsV1125(settings){
+    if(!settings || typeof settings!=="object") return false;
+
+    const incomingRevision=Math.max(0,Number(settings.revision)||0);
+    const incomingUpdatedAt=String(settings.updatedAt||"");
+
+    const shouldApply =
+        incomingRevision>globalSettingsRevisionV1125 ||
+        (!globalSettingsLoadedV1125 && incomingRevision===globalSettingsRevisionV1125) ||
+        (
+            incomingRevision===globalSettingsRevisionV1125 &&
+            incomingUpdatedAt &&
+            incomingUpdatedAt>globalSettingsUpdatedAtV1125
+        );
+
+    if(!shouldApply) return false;
+
+    applyingGlobalSettingsV1125=true;
+
+    try{
+        if(settings.config && typeof settings.config==="object"){
+            data.config=cloneJsonV1125(settings.config,{});
+        }
+
+        if(settings.systemConfig && typeof settings.systemConfig==="object"){
+            data.systemConfig=cloneJsonV1125(settings.systemConfig,{});
+        }
+
+        if(settings.operationRequirements && typeof settings.operationRequirements==="object"){
+            data.operationRequirements=cloneJsonV1125(settings.operationRequirements,{});
+        }
+
+        if(settings.airlineRequirements && typeof settings.airlineRequirements==="object"){
+            data.airlineRequirements=cloneJsonV1125(settings.airlineRequirements,{});
+        }
+
+        if(settings.manualPairOverrides && typeof settings.manualPairOverrides==="object"){
+            data.manualPairOverrides=cloneJsonV1125(settings.manualPairOverrides,{});
+        }
+
+        if(Array.isArray(settings.updateNotes)){
+            data.updateNotes=cloneJsonV1125(settings.updateNotes,[]);
+        }
+
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+
+        if(typeof ensureSystemConfig==="function") ensureSystemConfig();
+        if(typeof ensureMaterialConfigV1016==="function") ensureMaterialConfigV1016();
+        if(typeof ensureGroundTimeStoreV105==="function") ensureGroundTimeStoreV105();
+        if(typeof ensureStairRequirementsV108==="function") ensureStairRequirementsV108();
+        if(typeof ensureOperationServiceRulesV1111==="function") ensureOperationServiceRulesV1111();
+        if(typeof setupMailAutoScanV1119==="function") setupMailAutoScanV1119();
+        if(typeof restartEtaSchedulerV1017==="function") restartEtaSchedulerV1017();
+
+        globalSettingsLoadedV1125=true;
+        globalSettingsLastStableV1125=JSON.stringify(globalSettingsStablePayloadV1125());
+        saveGlobalSettingsMetaV1125(incomingRevision,incomingUpdatedAt);
+
+        if(typeof renderAll==="function") renderAll();
+        return true;
+
+    }finally{
+        applyingGlobalSettingsV1125=false;
+    }
+}
+
+async function saveGlobalSettingsV1125(){
+    queueRealtimeSyncV1127();
+    return true;
+}
+
+function listenGlobalSettingsV1125(){
+    if(!firebaseReady || !db) return;
+
+    db.ref(GLOBAL_SETTINGS_PATH_V1125).on("value",snap=>{
+        const settings=snap.val();
+
+        if(settings && typeof settings==="object"){
+            applyGlobalSettingsV1125(settings);
+            return;
+        }
+
+        // Firebase chưa có cấu hình:
+        // không tự upload local của client.
+        globalSettingsLoadedV1125=true;
+        globalSettingsLastStableV1125="";
+        saveGlobalSettingsMetaV1125(0,"");
+    });
+}
+
+function canSaveGlobalSettingsV1125(){
+    if(!isAdminClientV1125()) return false;
+    if(!firebaseReady || !db) return false;
+    if(!globalSettingsLoadedV1125) return false;
+    return true;
+}
+
+
+
+// =========================================================
+// V11.27 - FIREBASE REALTIME: MỌI THAY ĐỔI TỰ ĐỒNG ĐỒNG BỘ
+// =========================================================
+const LIVE_ROOT_V1127="dtu/liveV1";
+let liveReadyV1127=false;
+let applyingRemoteV1127=false;
+let liveSaveTimerV1127=null;
+let liveSnapshotV1127=null;
+let liveListenersBoundV1127=false;
+
+function syncCloneV1127(value,fallback){
+    try{
+        return JSON.parse(JSON.stringify(value));
+    }catch(e){
+        return fallback;
+    }
+}
+
+function syncUserV1127(){
+    return String(data?.account?.username||"unknown");
+}
+
+function syncEnvelopeV1127(value){
+    return {
+        value:syncCloneV1127(value,null),
+        updatedAt:new Date().toISOString(),
+        updatedBy:syncUserV1127()
+    };
+}
+
+function syncUnwrapV1127(node,fallback){
+    if(node && typeof node==="object" && Object.prototype.hasOwnProperty.call(node,"value")){
+        return syncCloneV1127(node.value,fallback);
+    }
+    return syncCloneV1127(node,fallback);
+}
+
+function mapByIdV1127(list){
+    const out={};
+    (list||[]).forEach(item=>{
+        if(item && item.id!==undefined && item.id!==null){
+            out[String(item.id)]=syncCloneV1127(item,{});
+        }
+    });
+    return out;
+}
+
+function stableJsonV1127(value){
+    const sortValue=v=>{
+        if(Array.isArray(v)) return v.map(sortValue);
+        if(v && typeof v==="object"){
+            const out={};
+            Object.keys(v).sort().forEach(k=>out[k]=sortValue(v[k]));
+            return out;
+        }
+        return v;
+    };
+    try{
+        return JSON.stringify(sortValue(value));
+    }catch(e){
+        return "";
+    }
+}
+
+function currentLiveStateV1127(){
+    return {
+        flightsById:mapByIdV1127(data.flights||[]),
+        staffsById:mapByIdV1127(data.staffs||[]),
+        shiftByDate:syncCloneV1127(data.shiftByDate||{},{}),
+        shared:{
+            config:syncCloneV1127(data.config||{},{}),
+            systemConfig:syncCloneV1127(data.systemConfig||{},{}),
+            operationRequirements:syncCloneV1127(data.operationRequirements||{},{}),
+            airlineRequirements:syncCloneV1127(data.airlineRequirements||{},{}),
+            manualPairOverrides:syncCloneV1127(data.manualPairOverrides||{},{}),
+            updateNotes:syncCloneV1127(data.updateNotes||[],[])
+        }
+    };
+}
+
+function snapshotFromFirebaseV1127(raw){
+    const out={
+        flightsById:{},
+        staffsById:{},
+        shiftByDate:{},
+        shared:{}
+    };
+
+    Object.entries(raw?.flightsById||{}).forEach(([id,node])=>{
+        out.flightsById[id]=syncUnwrapV1127(node,{});
+    });
+    Object.entries(raw?.staffsById||{}).forEach(([id,node])=>{
+        out.staffsById[id]=syncUnwrapV1127(node,{});
+    });
+    Object.entries(raw?.shiftByDate||{}).forEach(([date,node])=>{
+        out.shiftByDate[date]=syncUnwrapV1127(node,{});
+    });
+    Object.entries(raw?.shared||{}).forEach(([key,node])=>{
+        out.shared[key]=syncUnwrapV1127(node,key==="updateNotes"?[]:{});
+    });
+
+    return out;
+}
+
+function applyFullLiveStateV1127(state){
+    applyingRemoteV1127=true;
+    try{
+        data.flights=Object.values(state.flightsById||{});
+        data.staffs=Object.values(state.staffsById||{});
+        data.shiftByDate=syncCloneV1127(state.shiftByDate||{},{});
+
+        const shared=state.shared||{};
+        if(shared.config && typeof shared.config==="object") data.config=syncCloneV1127(shared.config,{});
+        if(shared.systemConfig && typeof shared.systemConfig==="object") data.systemConfig=syncCloneV1127(shared.systemConfig,{});
+        if(shared.operationRequirements && typeof shared.operationRequirements==="object") data.operationRequirements=syncCloneV1127(shared.operationRequirements,{});
+        if(shared.airlineRequirements && typeof shared.airlineRequirements==="object") data.airlineRequirements=syncCloneV1127(shared.airlineRequirements,{});
+        if(shared.manualPairOverrides && typeof shared.manualPairOverrides==="object") data.manualPairOverrides=syncCloneV1127(shared.manualPairOverrides,{});
+        if(Array.isArray(shared.updateNotes)) data.updateNotes=syncCloneV1127(shared.updateNotes,[]);
+
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+
+        if(typeof ensureSystemConfig==="function") ensureSystemConfig();
+        if(typeof ensureMaterialConfigV1016==="function") ensureMaterialConfigV1016();
+        if(typeof ensureGroundTimeStoreV105==="function") ensureGroundTimeStoreV105();
+        if(typeof ensureStairRequirementsV108==="function") ensureStairRequirementsV108();
+        if(typeof ensureOperationServiceRulesV1111==="function") ensureOperationServiceRulesV1111();
+        if(typeof setupMailAutoScanV1119==="function") setupMailAutoScanV1119();
+        if(typeof restartEtaSchedulerV1017==="function") restartEtaSchedulerV1017();
+
+        liveSnapshotV1127=currentLiveStateV1127();
+        liveReadyV1127=true;
+
+        if(typeof renderAll==="function") renderAll();
+        if(typeof renderShiftTable==="function") renderShiftTable();
+    }finally{
+        applyingRemoteV1127=false;
+    }
+}
+
+function localDataMeaningfulV1127(){
+    const defaultLikeFlights=(data.flights||[]).length<=2;
+    const defaultLikeStaffs=(data.staffs||[]).length<=3;
+    const hasConfig=Object.keys(data.config||{}).length>0;
+    const hasOps=Object.keys(data.operationRequirements||{}).length>0;
+    const hasAirline=Object.keys(data.airlineRequirements||{}).length>0;
+    return !defaultLikeFlights || !defaultLikeStaffs || hasConfig || hasOps || hasAirline;
+}
+
+async function migrateExistingFirebaseV1127(){
+    const [flightsSnap,staffsSnap,shiftSnap,globalSnap]=await Promise.all([
+        db.ref("dtu/realtimeFlights").once("value"),
+        db.ref("dtu/staffs").once("value"),
+        db.ref("dtu/shiftByDate").once("value"),
+        db.ref("dtu/globalSettings").once("value")
+    ]);
+
+    const migrated={
+        flightsById:{},
+        staffsById:{},
+        shiftByDate:{},
+        shared:{}
+    };
+
+    const flightsRoot=flightsSnap.val()||{};
+    Object.values(flightsRoot).forEach(dayList=>{
+        const list=Array.isArray(dayList)?dayList:Object.values(dayList||{});
+        list.forEach(f=>{
+            if(f?.id) migrated.flightsById[String(f.id)]=f;
+        });
+    });
+
+    const staffsVal=staffsSnap.val();
+    const staffsList=Array.isArray(staffsVal)?staffsVal:Object.values(staffsVal||{});
+    staffsList.forEach(s=>{
+        if(s?.id) migrated.staffsById[String(s.id)]=s;
+    });
+
+    migrated.shiftByDate=shiftSnap.val()||{};
+
+    const global=globalSnap.val()||{};
+    ["config","systemConfig","operationRequirements","airlineRequirements","manualPairOverrides","updateNotes"].forEach(k=>{
+        if(global[k]!==undefined) migrated.shared[k]=global[k];
+    });
+
+    const hasMigrated=
+        Object.keys(migrated.flightsById).length ||
+        Object.keys(migrated.staffsById).length ||
+        Object.keys(migrated.shiftByDate).length ||
+        Object.keys(migrated.shared).length;
+
+    if(hasMigrated) return migrated;
+
+    // Firebase hoàn toàn trống: chỉ máy đang có dữ liệu thực tế mới được khởi tạo.
+    if(localDataMeaningfulV1127()) return currentLiveStateV1127();
+
+    return null;
+}
+
+function firebasePayloadFromStateV1127(state){
+    const out={
+        flightsById:{},
+        staffsById:{},
+        shiftByDate:{},
+        shared:{}
+    };
+
+    Object.entries(state.flightsById||{}).forEach(([id,v])=>out.flightsById[id]=syncEnvelopeV1127(v));
+    Object.entries(state.staffsById||{}).forEach(([id,v])=>out.staffsById[id]=syncEnvelopeV1127(v));
+    Object.entries(state.shiftByDate||{}).forEach(([date,v])=>out.shiftByDate[date]=syncEnvelopeV1127(v));
+    Object.entries(state.shared||{}).forEach(([key,v])=>out.shared[key]=syncEnvelopeV1127(v));
+
+    return out;
+}
+
+async function initRealtimeSyncV1127(){
+    if(!firebaseReady || !db || liveReadyV1127 || liveListenersBoundV1127) return;
+
+    try{
+        const ref=db.ref(LIVE_ROOT_V1127);
+        const snap=await ref.once("value");
+
+        if(snap.exists()){
+            applyFullLiveStateV1127(snapshotFromFirebaseV1127(snap.val()));
+        }else{
+            const migrated=await migrateExistingFirebaseV1127();
+
+            if(migrated){
+                await ref.set(firebasePayloadFromStateV1127(migrated));
+                applyFullLiveStateV1127(migrated);
+            }else{
+                // Thiết bị mới và Firebase chưa có dữ liệu: không upload default.
+                liveSnapshotV1127=currentLiveStateV1127();
+                liveReadyV1127=true;
+            }
+        }
+
+        bindRealtimeListenersV1127();
+    }catch(err){
+        console.warn("Firebase realtime init error:",err);
+    }
+}
+
+function bindRealtimeListenersV1127(){
+    if(liveListenersBoundV1127 || !db) return;
+    liveListenersBoundV1127=true;
+
+    const root=db.ref(LIVE_ROOT_V1127);
+
+    const bindCollection=(path,dataKey)=>{
+        const ref=root.child(path);
+
+        ref.on("child_added",snap=>applyRemoteRecordV1127(dataKey,snap.key,snap.val()));
+        ref.on("child_changed",snap=>applyRemoteRecordV1127(dataKey,snap.key,snap.val()));
+        ref.on("child_removed",snap=>removeRemoteRecordV1127(dataKey,snap.key));
+    };
+
+    bindCollection("flightsById","flights");
+    bindCollection("staffsById","staffs");
+
+    root.child("shiftByDate").on("child_added",snap=>applyRemoteShiftV1127(snap.key,snap.val()));
+    root.child("shiftByDate").on("child_changed",snap=>applyRemoteShiftV1127(snap.key,snap.val()));
+    root.child("shiftByDate").on("child_removed",snap=>removeRemoteShiftV1127(snap.key));
+
+    root.child("shared").on("child_added",snap=>applyRemoteSharedV1127(snap.key,snap.val()));
+    root.child("shared").on("child_changed",snap=>applyRemoteSharedV1127(snap.key,snap.val()));
+}
+
+function applyRemoteRecordV1127(dataKey,id,node){
+    if(!liveReadyV1127) return;
+    const value=syncUnwrapV1127(node,{});
+    const list=data[dataKey]||[];
+    const idx=list.findIndex(x=>String(x.id)===String(id));
+
+    if(idx>=0 && stableJsonV1127(list[idx])===stableJsonV1127(value)) return;
+
+    applyingRemoteV1127=true;
+    try{
+        if(idx>=0) list[idx]=value;
+        else list.push(value);
+        data[dataKey]=list;
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+        liveSnapshotV1127=currentLiveStateV1127();
+        renderAll();
+    }finally{
+        applyingRemoteV1127=false;
+    }
+}
+
+function removeRemoteRecordV1127(dataKey,id){
+    if(!liveReadyV1127) return;
+    applyingRemoteV1127=true;
+    try{
+        data[dataKey]=(data[dataKey]||[]).filter(x=>String(x.id)!==String(id));
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+        liveSnapshotV1127=currentLiveStateV1127();
+        renderAll();
+    }finally{
+        applyingRemoteV1127=false;
+    }
+}
+
+function applyRemoteShiftV1127(date,node){
+    if(!liveReadyV1127) return;
+    const value=syncUnwrapV1127(node,{});
+    if(stableJsonV1127((data.shiftByDate||{})[date]||{})===stableJsonV1127(value)) return;
+
+    applyingRemoteV1127=true;
+    try{
+        if(!data.shiftByDate) data.shiftByDate={};
+        data.shiftByDate[date]=value;
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+        liveSnapshotV1127=currentLiveStateV1127();
+        if(typeof renderShiftTable==="function") renderShiftTable();
+        if(typeof renderStaffRealtime==="function") renderStaffRealtime();
+    }finally{
+        applyingRemoteV1127=false;
+    }
+}
+
+function removeRemoteShiftV1127(date){
+    if(!liveReadyV1127) return;
+    applyingRemoteV1127=true;
+    try{
+        if(data.shiftByDate) delete data.shiftByDate[date];
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+        liveSnapshotV1127=currentLiveStateV1127();
+        if(typeof renderShiftTable==="function") renderShiftTable();
+    }finally{
+        applyingRemoteV1127=false;
+    }
+}
+
+function applyRemoteSharedV1127(key,node){
+    if(!liveReadyV1127) return;
+    const fallback=key==="updateNotes"?[]:{};
+    const value=syncUnwrapV1127(node,fallback);
+
+    const current={
+        config:data.config||{},
+        systemConfig:data.systemConfig||{},
+        operationRequirements:data.operationRequirements||{},
+        airlineRequirements:data.airlineRequirements||{},
+        manualPairOverrides:data.manualPairOverrides||{},
+        updateNotes:data.updateNotes||[]
+    }[key];
+
+    if(stableJsonV1127(current)===stableJsonV1127(value)) return;
+
+    applyingRemoteV1127=true;
+    try{
+        data[key]=value;
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+
+        if(typeof ensureSystemConfig==="function") ensureSystemConfig();
+        if(typeof ensureMaterialConfigV1016==="function") ensureMaterialConfigV1016();
+        if(typeof ensureGroundTimeStoreV105==="function") ensureGroundTimeStoreV105();
+        if(typeof ensureStairRequirementsV108==="function") ensureStairRequirementsV108();
+        if(typeof ensureOperationServiceRulesV1111==="function") ensureOperationServiceRulesV1111();
+        if(typeof setupMailAutoScanV1119==="function") setupMailAutoScanV1119();
+        if(typeof restartEtaSchedulerV1017==="function") restartEtaSchedulerV1017();
+
+        liveSnapshotV1127=currentLiveStateV1127();
+        renderAll();
+    }finally{
+        applyingRemoteV1127=false;
+    }
+}
+
+function queueRealtimeSyncV1127(){
+    if(!liveReadyV1127 || !firebaseReady || !db || applyingRemoteV1127) return;
+
+    if(liveSaveTimerV1127) clearTimeout(liveSaveTimerV1127);
+    liveSaveTimerV1127=setTimeout(flushRealtimeSyncV1127,180);
+}
+
+async function flushRealtimeSyncV1127(){
+    liveSaveTimerV1127=null;
+    if(!liveReadyV1127 || !db || applyingRemoteV1127) return;
+
+    const current=currentLiveStateV1127();
+    const previous=liveSnapshotV1127||{
+        flightsById:{},staffsById:{},shiftByDate:{},shared:{}
+    };
+    const updates={};
+
+    const diffCollection=(path,oldMap,newMap)=>{
+        const keys=new Set([...Object.keys(oldMap||{}),...Object.keys(newMap||{})]);
+        keys.forEach(key=>{
+            const oldVal=oldMap?.[key];
+            const newVal=newMap?.[key];
+            if(newVal===undefined){
+                updates[`${LIVE_ROOT_V1127}/${path}/${key}`]=null;
+            }else if(oldVal===undefined || stableJsonV1127(oldVal)!==stableJsonV1127(newVal)){
+                updates[`${LIVE_ROOT_V1127}/${path}/${key}`]=syncEnvelopeV1127(newVal);
+            }
+        });
+    };
+
+    diffCollection("flightsById",previous.flightsById,current.flightsById);
+    diffCollection("staffsById",previous.staffsById,current.staffsById);
+    diffCollection("shiftByDate",previous.shiftByDate,current.shiftByDate);
+    diffCollection("shared",previous.shared,current.shared);
+
+    if(!Object.keys(updates).length) return;
+
+    // Cập nhật snapshot trước để listener trả về không tạo vòng lặp.
+    liveSnapshotV1127=current;
+
+    try{
+        await db.ref().update(updates);
+    }catch(err){
+        console.warn("Firebase realtime save error:",err);
+        // Cho phép lần save sau thử lại.
+        liveSnapshotV1127=previous;
+    }
+}
+
 function initFirebase(){
     try{
         if(!firebaseConfig.apiKey || !firebaseConfig.databaseURL || !window.firebase){
@@ -2942,7 +3537,10 @@ function initFirebase(){
         db=firebase.database();
         firebaseReady=true;
         addLog("Firebase đã kết nối");
-        listenFirebase();
+
+        // Thiết bị mới tự tải toàn bộ dữ liệu ngay.
+        initRealtimeSyncV1127();
+
     }catch(e){
         firebaseReady=false;
         console.warn("Firebase init error:",e);
@@ -3032,60 +3630,14 @@ document.addEventListener("keydown", function(e){
     }
 });
 function saveData(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    saveFirebase();
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+    queueRealtimeSyncV1127();
 }
 function saveFirebase(){
-    if(!firebaseReady || !db) return;
-
-    const date=document.getElementById("workDate")?.value || selectedDate() || todayStr();
-    const shiftDate=selectedShiftDateV93 ? selectedShiftDateV93() : date;
-
-    const updates={};
-    updates["dtu/realtimeFlights/"+date]=(data.flights||[]).filter(f=>f.workDate===date);
-    updates["dtu/staffs"]=data.staffs||[];
-    updates["dtu/shiftByDate/"+shiftDate]=(data.shiftByDate||{})[shiftDate]||{};
-    updates["dtu/operationRequirements"]=data.operationRequirements||{};
-    updates["dtu/systemConfig"]=data.systemConfig||{};
-
-    db.ref().update(updates).catch(err=>{
-        console.warn("Firebase save error:",err);
-    });
+    queueRealtimeSyncV1127();
 }
 function listenFirebase(){
-    if(!firebaseReady || !db) return;
-
-    const date=document.getElementById("workDate")?.value || selectedDate() || todayStr();
-    const shiftDate=selectedShiftDateV93 ? selectedShiftDateV93() : date;
-
-    db.ref("dtu/realtimeFlights/"+date).on("value",snap=>{
-        const val=snap.val();
-        if(Array.isArray(val)){
-            data.flights=(data.flights||[]).filter(f=>f.workDate!==date).concat(val);
-            localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-            renderAll();
-        }
-    });
-
-    db.ref("dtu/staffs").on("value",snap=>{
-        const val=snap.val();
-        if(Array.isArray(val)){
-            data.staffs=val;
-            localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-            renderAll();
-        }
-    });
-
-    db.ref("dtu/shiftByDate/"+shiftDate).on("value",snap=>{
-        const val=snap.val();
-        if(val && typeof val==="object"){
-            if(!data.shiftByDate) data.shiftByDate={};
-            data.shiftByDate[shiftDate]=val;
-            localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-            if(typeof renderShiftTable==="function") renderShiftTable();
-            if(typeof renderStaffRealtime==="function") renderStaffRealtime();
-        }
-    });
+    // V11.27 sử dụng listener theo từng bản ghi tại dtu/liveV1.
 }
 function addLog(text){
     const t=new Date().toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
@@ -3540,7 +4092,7 @@ function isDepartureAfterArrivalBySchedule(arr, dep){
 
 
 
-/* ===== Bản V11.23: Unified Pair Engine - không chồng lớp ===== */
+/* ===== Bản V11.27: Unified Pair Engine - không chồng lớp ===== */
 const SHIFT_UNKNOWN_824 = "Chưa xác định";
 
 function normalizeShift824(v){
@@ -7717,6 +8269,12 @@ function openModal(title,html){
             autoResizeMessageTextareasV1115();
         }
     });
+
+    requestAnimationFrame(()=>{
+        if(typeof applyGlobalConfigPermissionsV1125==="function"){
+            applyGlobalConfigPermissionsV1125();
+        }
+    });
 }
 function closeModal(){document.getElementById("modalBackdrop").classList.add("hidden")}
 
@@ -8045,6 +8603,63 @@ function openActionLog(){
     openModal("Nhật ký thao tác",`<div class="log-box">${data.logs.map(l=>`<div class="log-line">${l}</div>`).join("") || "Chưa có nhật ký."}</div>`);
 }
 function clearLog(){data.logs=[];localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}
+
+
+async function uploadAllCurrentSettingsV1126(){
+    if(!firebaseReady || !db){
+        alert("Firebase chưa kết nối.");
+        return;
+    }
+
+    if(!liveReadyV1127){
+        alert("Hệ thống đang tải dữ liệu mới nhất từ Firebase.");
+        return;
+    }
+
+    liveSnapshotV1127={
+        flightsById:{},
+        staffsById:{},
+        shiftByDate:{},
+        shared:{}
+    };
+    await flushRealtimeSyncV1127();
+    alert("Đã kiểm tra và đồng bộ toàn bộ dữ liệu hiện tại.");
+}
+
+async function initializeGlobalSettingsV1125(){
+    if(!isAdminClientV1125()){
+        alert("Chỉ Admin được khởi tạo cấu hình chung.");
+        return;
+    }
+
+    if(!firebaseReady || !db){
+        alert("Firebase chưa kết nối.");
+        return;
+    }
+
+    try{
+        const snap=await db.ref(GLOBAL_SETTINGS_PATH_V1125).once("value");
+
+        if(snap.exists()){
+            alert("Firebase đã có cấu hình chung. Không cần khởi tạo lại.");
+            return;
+        }
+
+        globalSettingsLoadedV1125=true;
+        globalSettingsRevisionV1125=0;
+        globalSettingsLastStableV1125="";
+
+        const ok=await saveGlobalSettingsV1125();
+
+        if(ok){
+            alert("Đã khởi tạo cấu hình chung trên Firebase.");
+        }
+    }catch(err){
+        console.warn(err);
+        alert("Không khởi tạo được cấu hình chung.");
+    }
+}
+
 function openFirebaseConfig(){
     openSystemConfig();
     setTimeout(()=>{
@@ -8073,8 +8688,17 @@ function saveFirebaseConfigV1117(){
         return;
     }
 
+    if(!isAdminClientV1125()){
+        alert("Chỉ Admin được thay đổi cấu hình Firebase.");
+        return;
+    }
+
     saveFirebaseConfigLocal(next);
     Object.assign(firebaseConfig,next);
+
+    if(firebaseReady && globalSettingsLoadedV1125){
+        saveGlobalSettingsV1125();
+    }
 
     alert("Đã lưu cấu hình Firebase. Hệ thống sẽ tải lại để kết nối.");
     location.reload();
@@ -8108,6 +8732,11 @@ async function testFirebaseConnectionV1117(){
 /* INIT */
 document.addEventListener("DOMContentLoaded",()=>{
     document.getElementById("workDate").value=todayStr();
+
+    // Cấu hình Firebase đã được nhúng sẵn trong file.
+    // Thiết bị mới tự kết nối và tải dữ liệu, không cần nhập lại.
+    initFirebase();
+
     renderAll();
 });
 
@@ -10539,8 +11168,8 @@ function cfgNum(key){
 function saveSystemConfig(){
     ensureSystemConfig();
     saveData();
-    if(typeof renderAll === "function") renderAll();
-    if(typeof renderTimeline === "function") renderTimeline();
+
+    if(typeof renderAll==="function") renderAll();
 }
 
 function closeSidebarAfterMenuClick(){
@@ -11272,6 +11901,32 @@ function materialEscapeV1016(value){
         .replace(/>/g,"&gt;");
 }
 
+
+function applyGlobalConfigPermissionsV1125(){
+    const admin=isAdminClientV1125();
+    const modal=document.getElementById("modalBody");
+    if(!modal) return;
+
+    modal.querySelectorAll("input,select,textarea,button").forEach(el=>{
+        const text=String(el.textContent||"").trim().toLowerCase();
+
+        const safeButton=
+            text.includes("đóng") ||
+            text.includes("hủy") ||
+            text.includes("kiểm tra kết nối") ||
+            text.includes("quét mail");
+
+        if(!admin && !safeButton){
+            if(["INPUT","SELECT","TEXTAREA"].includes(el.tagName)){
+                el.disabled=true;
+            }else if(el.tagName==="BUTTON"){
+                el.disabled=true;
+            }
+        }
+    });
+}
+
+
 function materialConfigBlockV1016(){
     ensureMaterialConfigV1016();
     const m=data.config.materials;
@@ -11343,8 +11998,10 @@ function materialConfigBlockV1016(){
                 <div class="mail-scan-actions">
                     <button onclick="saveFirebaseConfigV1117()">Lưu và kết nối Firebase</button>
                     <button class="secondary" onclick="testFirebaseConnectionV1117()">Kiểm tra kết nối</button>
+                    <button class="secondary" onclick="initializeGlobalSettingsV1125()">Khởi tạo cấu hình chung</button>
+                    <button onclick="uploadAllCurrentSettingsV1126()">Đồng bộ toàn bộ cấu hình máy này</button>
                 </div>
-                <div class="note" id="fbStatusV1117">Trạng thái: ${firebaseReady?"Đã kết nối":"Chưa kết nối"}</div>
+                <div class="note" id="fbStatusV1117">Trạng thái: ${firebaseReady?(globalSettingsLoadedV1125?"Đã kết nối và tải cấu hình chung":"Đang tải cấu hình chung"):"Chưa kết nối"}</div>
             </div>
         </div>
     `;
@@ -11381,7 +12038,8 @@ function saveMaterialConfigV1016(){
 
     saveData();
     setupMailAutoScanV1119();
-    alert("Đã lưu cấu hình Nguyên liệu.");
+
+    alert("Đã lưu cấu hình Nguyên liệu dùng chung.");
 }
 
 
@@ -12962,7 +13620,8 @@ if(typeof shouldDisplayAsTurnaround === "function" && !window.__shouldDisplayAsT
 function saveSystemConfig(){
     ensureSystemConfig();
     saveData();
-    if(typeof renderAll === "function") renderAll();
+
+    if(typeof renderAll==="function") renderAll();
 }
 
 /* Bảng cấu hình */
@@ -13151,7 +13810,7 @@ function manualSplitPair824(arrId, depId){
 }
 
 function applyVersionTooltip824(){
-    const desc = "Bản V11.23: làm lại từ V8.1 sạch; một Pair Engine duy nhất; sửa nhập/cập nhật lịch không lệch ca trống; Chưa xác định là ca hợp lệ; manual Nối/Tách ưu tiên realtime và popup; auto chỉ xử lý chuyến tương lai.";
+    const desc = "Bản V11.27: làm lại từ V8.1 sạch; một Pair Engine duy nhất; sửa nhập/cập nhật lịch không lệch ca trống; Chưa xác định là ca hợp lệ; manual Nối/Tách ưu tiên realtime và popup; auto chỉ xử lý chuyến tương lai.";
     Array.from(document.querySelectorAll("*")).forEach(el=>{
         if(el.children.length === 0 && /Bản 8\.2_4/.test(el.textContent || "")){
             el.title = desc;
