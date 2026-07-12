@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>DTU V11.30 - Ramp Dashboard</title>
+<title>DTU V11.31 - Ramp Dashboard</title>
 
 <!-- Firebase: khi dùng thật cần internet để load 2 file này -->
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -1568,7 +1568,7 @@ button{
 }
 
 
-/* Bản V11.30 - unified pair engine */
+/* Bản V11.31 - unified pair engine */
 .dtu-pair-action-btn{border:0;border-radius:9px;padding:10px 14px;font-weight:900;cursor:pointer;margin-left:8px}
 .dtu-pair-split{background:#f59e0b!important;color:#071426!important}
 .dtu-pair-join{background:#22c55e!important;color:#071426!important}
@@ -2746,7 +2746,7 @@ button.fr24-badge:disabled{
     <div class="topbar">
         <div class="hamburger" onclick="toggleSidebar()">☰</div>
         <div class="title-block">
-            <strong>Sân đỗ - Dashboard vận hành • Bản V11.30</strong>
+            <strong>Sân đỗ - Dashboard vận hành • Bản V11.31</strong>
             <span>Realtime chuyến bay 04:30 → 06:00 hôm sau</span>
         </div>
     </div>
@@ -2820,7 +2820,7 @@ button.fr24-badge:disabled{
 
     <main class="content">
         <div class="dashboard-title">
-            <h2>Dashboard vận hành <span class="version-badge">Bản V11.30</span></h2>
+            <h2>Dashboard vận hành <span class="version-badge">Bản V11.31</span></h2>
             
         </div>
 
@@ -4161,7 +4161,7 @@ function isDepartureAfterArrivalBySchedule(arr, dep){
 
 
 
-/* ===== Bản V11.30: Unified Pair Engine - không chồng lớp ===== */
+/* ===== Bản V11.31: Unified Pair Engine - không chồng lớp ===== */
 const SHIFT_UNKNOWN_824 = "Chưa xác định";
 
 function normalizeShift824(v){
@@ -5600,21 +5600,60 @@ function appendPreservingManualV1114(current,label,raw){
 
 function findFlightForMailV1114(item){
     const key=normalizeMailFlightV1114(item.flightno);
-    const type=String(item.message_type||"");
+    const type=String(item.message_type||"").toUpperCase();
 
     let matches=(data.flights||[]).filter(f=>
         normalizeMailFlightV1114(f.flight)===key
     );
 
-    if(type==="CARGO_ARR") matches=matches.filter(f=>f.kind==="ARR");
-    if(type==="CARGO_DEP") matches=matches.filter(f=>f.kind==="DEP");
-
+    // Bắt buộc đúng ngày thực tế của chặng.
     if(!item.ngay) return null;
 
-    matches=matches.filter(f=>flightActualDateForMatch(f)===item.ngay);
+    matches=matches.filter(f=>
+        flightActualDateForMatch(f)===item.ngay
+    );
+
     if(!matches.length) return null;
 
-    return matches[0]||null;
+    /*
+      Quy tắc phía khai thác:
+      - Cargo đến, LDM, CPM: ưu tiên/bắt buộc ARR.
+      - Cargo đi: bắt buộc DEP.
+      - MVT:
+          + có ETA/EA/AD => ARR
+          + có ETD/AA => DEP
+          + nếu parser đã trả direction thì dùng direction.
+    */
+    if(["CARGO_ARR","LDM","CPM"].includes(type)){
+        const arr=matches.find(f=>f.kind==="ARR");
+        return arr||null;
+    }
+
+    if(type==="CARGO_DEP"){
+        const dep=matches.find(f=>f.kind==="DEP");
+        return dep||null;
+    }
+
+    if(type==="MVT"){
+        const direction=String(item.direction||"").toUpperCase();
+
+        if(direction==="ARR" || item.eta){
+            const arr=matches.find(f=>f.kind==="ARR");
+            if(arr) return arr;
+        }
+
+        if(direction==="DEP" || item.etd){
+            const dep=matches.find(f=>f.kind==="DEP");
+            if(dep) return dep;
+        }
+
+        // Không đoán bừa nếu có cả ARR/DEP cùng số hiệu/ngày.
+        if(matches.length===1) return matches[0];
+        return null;
+    }
+
+    // Loại điện khác sau này: chỉ nhận khi xác định được duy nhất một record.
+    return matches.length===1 ? matches[0] : null;
 }
 
 function updatePairRegV1114(flight,reg){
@@ -5685,8 +5724,6 @@ function applyMailItemV1114(item){
     const incomingTime=mailTimeMsV1114(item.mail_datetime);
     const oldTime=mailTimeMsV1114(f.mailUpdateMeta[type]);
 
-    // Mail cũ hơn thì bỏ. Mail cùng thời gian hoặc trùng nội dung được thay thế,
-    // không cộng dồn.
     if(oldTime && incomingTime && incomingTime<oldTime){
         return false;
     }
@@ -5714,6 +5751,12 @@ function applyMailItemV1114(item){
             f.etaUpdatedAt=item.mail_datetime||new Date().toISOString();
         }
 
+        if(item.etd){
+            f.etd=item.etd;
+            f.etdSource="MVT";
+            f.etdUpdatedAt=item.mail_datetime||new Date().toISOString();
+        }
+
         if(item.reg){
             f.reg=String(item.reg).toUpperCase();
             updatePairRegV1114(f,f.reg);
@@ -5723,20 +5766,20 @@ function applyMailItemV1114(item){
     }
 
     if(type==="LDM"){
-        if(f.cpmRaw){
-            return false;
-        }
-
-        const field=f.kind==="ARR"?"cargoIn":"cargoOut";
+        // LDM thuộc ARR. Nếu đã có CPM vẫn giữ LDM để người dùng đọc,
+        // nhưng dữ liệu cargo ưu tiên CPM nếu CPM đã có.
         f.ldmRaw=replaceLatestRawMessageV1121("LDM",item.raw);
-        f[field]=replaceLatestMailBlockV1121(f[field],"LDM",item.raw);
-        applyLoadMessageCargoV1118(f,item);
+        f.cargoIn=replaceLatestMailBlockV1121(f.cargoIn,"LDM",item.raw);
+
+        if(!f.cpmRaw){
+            applyLoadMessageCargoV1118(f,item);
+        }
     }
 
     if(type==="CPM"){
-        const field=f.kind==="ARR"?"cargoIn":"cargoOut";
+        // CPM thuộc ARR và có độ chi tiết cao hơn LDM.
         f.cpmRaw=replaceLatestRawMessageV1121("CPM",item.raw);
-        f[field]=replaceLatestMailBlockV1121(f[field],"CPM",item.raw);
+        f.cargoIn=replaceLatestMailBlockV1121(f.cargoIn,"CPM",item.raw);
         applyLoadMessageCargoV1118(f,item);
     }
 
@@ -5851,12 +5894,25 @@ function setupMailAutoScanV1119(){
 
 function hasOperationalMessageV1119(f,role){
     const prefix=role==="ARR"?"cargoIn":"cargoOut";
+
+    if(role==="ARR"){
+        return !!(
+            f?.mvtRaw ||
+            f?.ldmRaw ||
+            f?.cpmRaw ||
+            f?.cargoInKnown ||
+            f?.cargoInMailText ||
+            String(f?.cargoIn||"").trim() ||
+            String(f?.note||"").trim()
+        );
+    }
+
     return !!(
         f?.mvtRaw ||
-        f?.ldmRaw ||
-        f?.cpmRaw ||
-        f?.[prefix+"Known"] ||
-        String(f?.[prefix]||"").trim()
+        f?.cargoOutKnown ||
+        f?.cargoOutMailText ||
+        String(f?.cargoOut||"").trim() ||
+        String(f?.note||"").trim()
     );
 }
 
@@ -5947,11 +6003,16 @@ function messageTypesForFlightV1115(f,role){
     const types=[];
 
     if(f?.mvtRaw) types.push("MVT");
-    if(f?.ldmRaw) types.push("LDM");
-    if(f?.cpmRaw) types.push("CPM");
+
+    if(role==="ARR"){
+        if(f?.ldmRaw) types.push("LDM");
+        if(f?.cpmRaw) types.push("CPM");
+    }
 
     const prefix=role==="ARR"?"cargoIn":"cargoOut";
-    if(f?.[prefix+"Known"]) types.push(role==="ARR"?"HÀNG ĐẾN":"HÀNG ĐI");
+    if(f?.[prefix+"Known"] || f?.[prefix+"MailText"]){
+        types.push(role==="ARR"?"HÀNG ĐẾN":"HÀNG ĐI");
+    }
 
     return [...new Set(types)];
 }
@@ -6086,6 +6147,20 @@ function cargoTooltipTextV1115(f,role){
 
     const parts=[title,""];
 
+    if(role==="ARR"){
+        parts.push(`Chuyến đến: ${f?.flight||"—"}`);
+        parts.push(`STA: ${f?.sta||"—"} | ETA: ${f?.eta||"—"} | CHOCK ON: ${f?.chockOn||"—"}`);
+        parts.push(`AC REGN: ${f?.reg||"—"} | AC TYPE: ${f?.type||"—"}`);
+        parts.push(`Bãi: ${f?.stand||"—"} | Route: ${f?.route||"—"}`);
+        parts.push("");
+    }else{
+        parts.push(`Chuyến đi: ${f?.flight||"—"}`);
+        parts.push(`STD: ${f?.std||"—"} | ETD: ${f?.etd||"—"} | CHOCK OFF: ${f?.chockOff||"—"}`);
+        parts.push(`AC REGN: ${f?.reg||"—"} | AC TYPE: ${f?.type||"—"}`);
+        parts.push(`Bãi: ${f?.stand||"—"} | Route: ${f?.route||"—"}`);
+        parts.push("");
+    }
+
     if(known){
         parts.push(`Trạng thái hàng: ${nil?"Không có hàng":"Có hàng"}`);
         parts.push(`Trọng lượng hàng: ${weight.toLocaleString("vi-VN")} kg`);
@@ -6096,8 +6171,11 @@ function cargoTooltipTextV1115(f,role){
     }
 
     appendMessageBlockV1120(parts,"MVT",f?.mvtRaw);
-    appendMessageBlockV1120(parts,"LDM",f?.ldmRaw);
-    appendMessageBlockV1120(parts,"CPM",f?.cpmRaw);
+
+    if(role==="ARR"){
+        appendMessageBlockV1120(parts,"LDM",f?.ldmRaw);
+        appendMessageBlockV1120(parts,"CPM",f?.cpmRaw);
+    }
 
     const cargoRaw=String(f?.[prefix+"MailText"]||"").trim();
     if(cargoRaw){
@@ -6106,6 +6184,12 @@ function cargoTooltipTextV1115(f,role){
             role==="ARR"?"HÀNG ĐẾN":"HÀNG ĐI",
             cargoRaw
         );
+    }
+
+    if(String(f?.note||"").trim()){
+        parts.push("[GHI CHÚ]");
+        parts.push(String(f.note).trim());
+        parts.push("");
     }
 
     while(parts.length && !parts[parts.length-1]) parts.pop();
@@ -13955,7 +14039,7 @@ function manualSplitPair824(arrId, depId){
 }
 
 function applyVersionTooltip824(){
-    const desc = "Bản V11.30: làm lại từ V8.1 sạch; một Pair Engine duy nhất; sửa nhập/cập nhật lịch không lệch ca trống; Chưa xác định là ca hợp lệ; manual Nối/Tách ưu tiên realtime và popup; auto chỉ xử lý chuyến tương lai.";
+    const desc = "Bản V11.31: làm lại từ V8.1 sạch; một Pair Engine duy nhất; sửa nhập/cập nhật lịch không lệch ca trống; Chưa xác định là ca hợp lệ; manual Nối/Tách ưu tiên realtime và popup; auto chỉ xử lý chuyến tương lai.";
     Array.from(document.querySelectorAll("*")).forEach(el=>{
         if(el.children.length === 0 && /Bản 8\.2_4/.test(el.textContent || "")){
             el.title = desc;
