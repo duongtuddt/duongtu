@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>DTU V11.27 - Ramp Dashboard</title>
+<title>DTU V11.29 - Ramp Dashboard</title>
 
 <!-- Firebase: khi dùng thật cần internet để load 2 file này -->
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -1568,7 +1568,7 @@ button{
 }
 
 
-/* Bản V11.27 - unified pair engine */
+/* Bản V11.29 - unified pair engine */
 .dtu-pair-action-btn{border:0;border-radius:9px;padding:10px 14px;font-weight:900;cursor:pointer;margin-left:8px}
 .dtu-pair-split{background:#f59e0b!important;color:#071426!important}
 .dtu-pair-join{background:#22c55e!important;color:#071426!important}
@@ -2746,7 +2746,7 @@ button.fr24-badge:disabled{
     <div class="topbar">
         <div class="hamburger" onclick="toggleSidebar()">☰</div>
         <div class="title-block">
-            <strong>Sân đỗ - Dashboard vận hành • Bản V11.27</strong>
+            <strong>Sân đỗ - Dashboard vận hành • Bản V11.29</strong>
             <span>Realtime chuyến bay 04:30 → 06:00 hôm sau</span>
         </div>
     </div>
@@ -2820,7 +2820,7 @@ button.fr24-badge:disabled{
 
     <main class="content">
         <div class="dashboard-title">
-            <h2>Dashboard vận hành <span class="version-badge">Bản V11.27</span></h2>
+            <h2>Dashboard vận hành <span class="version-badge">Bản V11.29</span></h2>
             
         </div>
 
@@ -3115,6 +3115,51 @@ let applyingRemoteV1127=false;
 let liveSaveTimerV1127=null;
 let liveSnapshotV1127=null;
 let liveListenersBoundV1127=false;
+let liveInitializingV1129=false;
+let liveRenderTimerV1129=null;
+let liveNeedsFullRenderV1129=false;
+let liveNeedsStaffRenderV1129=false;
+
+
+function normalizeRemoteRecordV1129(dataKey,value){
+    const normalized=syncCloneV1127(value,{});
+
+    if(dataKey==="flights" && normalized){
+        delete normalized.pairLabel;
+    }
+
+    return normalized;
+}
+
+function scheduleRemoteRenderV1129(fullRender=true){
+    if(fullRender) liveNeedsFullRenderV1129=true;
+    else liveNeedsStaffRenderV1129=true;
+
+    if(liveRenderTimerV1129) return;
+
+    liveRenderTimerV1129=setTimeout(()=>{
+        liveRenderTimerV1129=null;
+
+        applyingRemoteV1127=true;
+        try{
+            localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+            liveSnapshotV1127=currentLiveStateV1127();
+
+            if(liveNeedsFullRenderV1129){
+                liveNeedsFullRenderV1129=false;
+                liveNeedsStaffRenderV1129=false;
+                renderAll();
+            }else if(liveNeedsStaffRenderV1129){
+                liveNeedsStaffRenderV1129=false;
+                if(typeof renderShiftTable==="function") renderShiftTable();
+                if(typeof renderStaffRealtime==="function") renderStaffRealtime();
+            }
+        }finally{
+            applyingRemoteV1127=false;
+        }
+    },50);
+}
+
 
 function syncCloneV1127(value,fallback){
     try{
@@ -3212,9 +3257,16 @@ function snapshotFromFirebaseV1127(raw){
 
 function applyFullLiveStateV1127(state){
     applyingRemoteV1127=true;
+
     try{
-        data.flights=Object.values(state.flightsById||{});
-        data.staffs=Object.values(state.staffsById||{});
+        data.flights=Object.values(state.flightsById||{}).map(f=>
+            normalizeRemoteRecordV1129("flights",f)
+        );
+
+        data.staffs=Object.values(state.staffsById||{}).map(s=>
+            normalizeRemoteRecordV1129("staffs",s)
+        );
+
         data.shiftByDate=syncCloneV1127(state.shiftByDate||{},{});
 
         const shared=state.shared||{};
@@ -3225,8 +3277,6 @@ function applyFullLiveStateV1127(state){
         if(shared.manualPairOverrides && typeof shared.manualPairOverrides==="object") data.manualPairOverrides=syncCloneV1127(shared.manualPairOverrides,{});
         if(Array.isArray(shared.updateNotes)) data.updateNotes=syncCloneV1127(shared.updateNotes,[]);
 
-        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-
         if(typeof ensureSystemConfig==="function") ensureSystemConfig();
         if(typeof ensureMaterialConfigV1016==="function") ensureMaterialConfigV1016();
         if(typeof ensureGroundTimeStoreV105==="function") ensureGroundTimeStoreV105();
@@ -3235,11 +3285,12 @@ function applyFullLiveStateV1127(state){
         if(typeof setupMailAutoScanV1119==="function") setupMailAutoScanV1119();
         if(typeof restartEtaSchedulerV1017==="function") restartEtaSchedulerV1017();
 
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
         liveSnapshotV1127=currentLiveStateV1127();
         liveReadyV1127=true;
 
-        if(typeof renderAll==="function") renderAll();
-        if(typeof renderShiftTable==="function") renderShiftTable();
+        renderAll();
+
     }finally{
         applyingRemoteV1127=false;
     }
@@ -3321,7 +3372,17 @@ function firebasePayloadFromStateV1127(state){
 }
 
 async function initRealtimeSyncV1127(){
-    if(!firebaseReady || !db || liveReadyV1127 || liveListenersBoundV1127) return;
+    if(
+        !firebaseReady ||
+        !db ||
+        liveReadyV1127 ||
+        liveListenersBoundV1127 ||
+        liveInitializingV1129
+    ){
+        return;
+    }
+
+    liveInitializingV1129=true;
 
     try{
         const ref=db.ref(LIVE_ROOT_V1127);
@@ -3336,15 +3397,17 @@ async function initRealtimeSyncV1127(){
                 await ref.set(firebasePayloadFromStateV1127(migrated));
                 applyFullLiveStateV1127(migrated);
             }else{
-                // Thiết bị mới và Firebase chưa có dữ liệu: không upload default.
                 liveSnapshotV1127=currentLiveStateV1127();
                 liveReadyV1127=true;
             }
         }
 
         bindRealtimeListenersV1127();
+
     }catch(err){
         console.warn("Firebase realtime init error:",err);
+    }finally{
+        liveInitializingV1129=false;
     }
 }
 
@@ -3375,71 +3438,74 @@ function bindRealtimeListenersV1127(){
 
 function applyRemoteRecordV1127(dataKey,id,node){
     if(!liveReadyV1127) return;
-    const value=syncUnwrapV1127(node,{});
+
+    const value=normalizeRemoteRecordV1129(
+        dataKey,
+        syncUnwrapV1127(node,{})
+    );
+
     const list=data[dataKey]||[];
     const idx=list.findIndex(x=>String(x.id)===String(id));
 
-    if(idx>=0 && stableJsonV1127(list[idx])===stableJsonV1127(value)) return;
-
-    applyingRemoteV1127=true;
-    try{
-        if(idx>=0) list[idx]=value;
-        else list.push(value);
-        data[dataKey]=list;
-        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-        liveSnapshotV1127=currentLiveStateV1127();
-        renderAll();
-    }finally{
-        applyingRemoteV1127=false;
+    if(
+        idx>=0 &&
+        stableJsonV1127(
+            normalizeRemoteRecordV1129(dataKey,list[idx])
+        )===stableJsonV1127(value)
+    ){
+        return;
     }
+
+    if(idx>=0) list[idx]=value;
+    else list.push(value);
+
+    data[dataKey]=list;
+
+    // Nhiều child_added/changed liên tiếp chỉ render một lần.
+    scheduleRemoteRenderV1129(true);
 }
 
 function removeRemoteRecordV1127(dataKey,id){
     if(!liveReadyV1127) return;
-    applyingRemoteV1127=true;
-    try{
-        data[dataKey]=(data[dataKey]||[]).filter(x=>String(x.id)!==String(id));
-        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-        liveSnapshotV1127=currentLiveStateV1127();
-        renderAll();
-    }finally{
-        applyingRemoteV1127=false;
+
+    const before=(data[dataKey]||[]).length;
+    data[dataKey]=(data[dataKey]||[]).filter(
+        x=>String(x.id)!==String(id)
+    );
+
+    if(data[dataKey].length!==before){
+        scheduleRemoteRenderV1129(true);
     }
 }
 
 function applyRemoteShiftV1127(date,node){
     if(!liveReadyV1127) return;
-    const value=syncUnwrapV1127(node,{});
-    if(stableJsonV1127((data.shiftByDate||{})[date]||{})===stableJsonV1127(value)) return;
 
-    applyingRemoteV1127=true;
-    try{
-        if(!data.shiftByDate) data.shiftByDate={};
-        data.shiftByDate[date]=value;
-        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-        liveSnapshotV1127=currentLiveStateV1127();
-        if(typeof renderShiftTable==="function") renderShiftTable();
-        if(typeof renderStaffRealtime==="function") renderStaffRealtime();
-    }finally{
-        applyingRemoteV1127=false;
+    const value=syncUnwrapV1127(node,{});
+    const current=(data.shiftByDate||{})[date]||{};
+
+    if(stableJsonV1127(current)===stableJsonV1127(value)){
+        return;
     }
+
+    if(!data.shiftByDate) data.shiftByDate={};
+    data.shiftByDate[date]=value;
+
+    scheduleRemoteRenderV1129(false);
 }
 
 function removeRemoteShiftV1127(date){
-    if(!liveReadyV1127) return;
-    applyingRemoteV1127=true;
-    try{
-        if(data.shiftByDate) delete data.shiftByDate[date];
-        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-        liveSnapshotV1127=currentLiveStateV1127();
-        if(typeof renderShiftTable==="function") renderShiftTable();
-    }finally{
-        applyingRemoteV1127=false;
+    if(!liveReadyV1127 || !data.shiftByDate || !(date in data.shiftByDate)){
+        return;
     }
+
+    delete data.shiftByDate[date];
+    scheduleRemoteRenderV1129(false);
 }
 
 function applyRemoteSharedV1127(key,node){
     if(!liveReadyV1127) return;
+
     const fallback=key==="updateNotes"?[]:{};
     const value=syncUnwrapV1127(node,fallback);
 
@@ -3452,26 +3518,21 @@ function applyRemoteSharedV1127(key,node){
         updateNotes:data.updateNotes||[]
     }[key];
 
-    if(stableJsonV1127(current)===stableJsonV1127(value)) return;
-
-    applyingRemoteV1127=true;
-    try{
-        data[key]=value;
-        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-
-        if(typeof ensureSystemConfig==="function") ensureSystemConfig();
-        if(typeof ensureMaterialConfigV1016==="function") ensureMaterialConfigV1016();
-        if(typeof ensureGroundTimeStoreV105==="function") ensureGroundTimeStoreV105();
-        if(typeof ensureStairRequirementsV108==="function") ensureStairRequirementsV108();
-        if(typeof ensureOperationServiceRulesV1111==="function") ensureOperationServiceRulesV1111();
-        if(typeof setupMailAutoScanV1119==="function") setupMailAutoScanV1119();
-        if(typeof restartEtaSchedulerV1017==="function") restartEtaSchedulerV1017();
-
-        liveSnapshotV1127=currentLiveStateV1127();
-        renderAll();
-    }finally{
-        applyingRemoteV1127=false;
+    if(stableJsonV1127(current)===stableJsonV1127(value)){
+        return;
     }
+
+    data[key]=value;
+
+    if(typeof ensureSystemConfig==="function") ensureSystemConfig();
+    if(typeof ensureMaterialConfigV1016==="function") ensureMaterialConfigV1016();
+    if(typeof ensureGroundTimeStoreV105==="function") ensureGroundTimeStoreV105();
+    if(typeof ensureStairRequirementsV108==="function") ensureStairRequirementsV108();
+    if(typeof ensureOperationServiceRulesV1111==="function") ensureOperationServiceRulesV1111();
+    if(typeof setupMailAutoScanV1119==="function") setupMailAutoScanV1119();
+    if(typeof restartEtaSchedulerV1017==="function") restartEtaSchedulerV1017();
+
+    scheduleRemoteRenderV1129(true);
 }
 
 function queueRealtimeSyncV1127(){
@@ -3536,10 +3597,11 @@ function initFirebase(){
 
         db=firebase.database();
         firebaseReady=true;
-        addLog("Firebase đã kết nối");
 
-        // Thiết bị mới tự tải toàn bộ dữ liệu ngay.
-        initRealtimeSyncV1127();
+        if(!liveReadyV1127 && !liveListenersBoundV1127 && !liveInitializingV1129){
+            addLog("Firebase đã kết nối");
+            initRealtimeSyncV1127();
+        }
 
     }catch(e){
         firebaseReady=false;
@@ -3841,6 +3903,13 @@ function normalizeLegacyServicesV1015(){
 }
 
 function renderAll(){
+    // Dữ liệu cũ có thể còn pairLabel của một cặp trước đó.
+    // Không cho nhãn cache này làm sai vùng thông tin bên trái.
+    (data.flights||[]).forEach(f=>{
+        if(f && Object.prototype.hasOwnProperty.call(f,"pairLabel")){
+            delete f.pairLabel;
+        }
+    });
     if(typeof resyncAllFlightLoadingMethodsV1112==='function') resyncAllFlightLoadingMethodsV1112();
     if(typeof hideRealtimeTooltipV116==='function') hideRealtimeTooltipV116();
     if(typeof normalizeLegacyServicesV1015==='function') normalizeLegacyServicesV1015();
@@ -4092,7 +4161,7 @@ function isDepartureAfterArrivalBySchedule(arr, dep){
 
 
 
-/* ===== Bản V11.27: Unified Pair Engine - không chồng lớp ===== */
+/* ===== Bản V11.29: Unified Pair Engine - không chồng lớp ===== */
 const SHIFT_UNKNOWN_824 = "Chưa xác định";
 
 function normalizeShift824(v){
@@ -4611,9 +4680,13 @@ function makeTimelineRows(flights){
                 type:"pair",
                 arr,
                 dep,
-                label:arr.pairLabel || dep.pairLabel || makePairLabel(arr.flight, dep.flight),
+
+                // Không dùng pairLabel đã lưu từ cặp cũ.
+                // Tên hiển thị luôn được dựng lại từ ARR/DEP hiện tại.
+                label:makePairLabel(arr.flight,dep.flight),
                 longStay:false
             });
+
             used.add(arr.id);
             used.add(dep.id);
         }
@@ -4621,15 +4694,18 @@ function makeTimelineRows(flights){
 
     for(const f of flights){
         if(!used.has(f.id)){
-            rows.push({type:"single", flight:f});
+            rows.push({
+                type:"single",
+                flight:f
+            });
             used.add(f.id);
         }
     }
 
     return rows.sort((a,b)=>{
-        const fa = a.type === "pair" ? a.arr : a.flight;
-        const fb = b.type === "pair" ? b.arr : b.flight;
-        return getFlightBarStartMinute(fa) - getFlightBarStartMinute(fb);
+        const fa=a.type==="pair" ? a.arr : a.flight;
+        const fb=b.type==="pair" ? b.arr : b.flight;
+        return getFlightBarStartMinute(fa)-getFlightBarStartMinute(fb);
     });
 }
 
@@ -6196,7 +6272,7 @@ function renderTimeline(){
             info.innerHTML=`
                 <div class="info-line">
                     <button class="info-btn" onclick="event.stopPropagation(); openTurnaroundEdit('${rowObj.arr.id}','${rowObj.dep.id}')">i</button>
-                    <b>${rowObj.label || makePairLabel(rowObj.arr.flight,rowObj.dep.flight)}</b>
+                    <b>${makePairLabel(rowObj.arr.flight,rowObj.dep.flight)}</b>
                     <span class="stand-box">${rowObj.arr.stand || rowObj.dep.stand || "-"}</span>
                 </div>
                 <div class="flight-subinfo-row">
@@ -13810,7 +13886,7 @@ function manualSplitPair824(arrId, depId){
 }
 
 function applyVersionTooltip824(){
-    const desc = "Bản V11.27: làm lại từ V8.1 sạch; một Pair Engine duy nhất; sửa nhập/cập nhật lịch không lệch ca trống; Chưa xác định là ca hợp lệ; manual Nối/Tách ưu tiên realtime và popup; auto chỉ xử lý chuyến tương lai.";
+    const desc = "Bản V11.29: làm lại từ V8.1 sạch; một Pair Engine duy nhất; sửa nhập/cập nhật lịch không lệch ca trống; Chưa xác định là ca hợp lệ; manual Nối/Tách ưu tiên realtime và popup; auto chỉ xử lý chuyến tương lai.";
     Array.from(document.querySelectorAll("*")).forEach(el=>{
         if(el.children.length === 0 && /Bản 8\.2_4/.test(el.textContent || "")){
             el.title = desc;
